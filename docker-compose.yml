@@ -1,0 +1,114 @@
+version: "3.9"
+
+services:
+  reverse-proxy:
+    image: caddy:2.8
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    volumes:
+      - uploads_data:/app/uploads
+      - ./config:/app/config:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-township}:${POSTGRES_PASSWORD:-township}@db:5432/${POSTGRES_DB:-township}
+      REDIS_URL: redis://redis:6379/0
+
+  worker:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app worker --loglevel=INFO
+    env_file:
+      - .env.local
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-township}:${POSTGRES_PASSWORD:-township}@db:5432/${POSTGRES_DB:-township}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - uploads_data:/app/uploads
+      - ./config:/app/config:ro
+    depends_on:
+      - backend
+      - redis
+
+  scheduler:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app beat --loglevel=INFO
+    env_file:
+      - .env.local
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-township}:${POSTGRES_PASSWORD:-township}@db:5432/${POSTGRES_DB:-township}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./config:/app/config:ro
+    depends_on:
+      - worker
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-township}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-township}
+      POSTGRES_DB: ${POSTGRES_DB:-township}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-township}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+volumes:
+  pg_data:
+  redis_data:
+  uploads_data:
+  caddy_data:
+  caddy_config:

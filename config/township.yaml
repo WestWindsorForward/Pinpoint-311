@@ -1,0 +1,55 @@
+township:
+  name: "Example Township"
+  primary_color: "#004080"
+  secondary_color: "#FFC20E"
+  timezone: "America/New_York"
+  logo_path: ""
+
+jurisdictions:
+  - name: "State of New Jersey"
+    type: "state"
+    roads:
+      - "US-1"
+      - "Route 571"
+  - name: "Mercer County"
+    type: "county"
+    roads:
+      - "County Road 535"
+      - "Old Trenton Road"
+
+issue_categories:
+  - code: "pothole"
+    label: "Pothole"
+    description: "Damage or pothole in the roadway"
+    default_priority: "Medium"
+    default_department: "Road Maintenance"
+  - code: "streetlight"
+    label: "Streetlight Out"
+    description: "Streetlight not functioning"
+    default_priority: "Low"
+    default_department: "Facilities"
+  - code: "flooding"
+    label: "Flooding"
+    description: "Water accumulation or flooding"
+    default_priority: "High"
+    default_department: "Stormwater"
+
+notification:
+  email_sender: "noreply@exampletownship.gov"
+  sms_sender: ""
+  webhook_timeout_seconds: 10
+
+open311:
+  jurisdiction_id: "example-township-nj"
+  endpoint_url: ""
+  api_key: ""
+
+feature_flags:
+  enable_sms: true
+  enable_email: true
+  enable_ai_priority: true
+  require_completion_photo: true
+
+branding:
+  hero_headline: "Report an issue in Example Township"
+  hero_subtitle: "Help us keep our community safe by reporting issues quickly."
