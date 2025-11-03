@@ -46,7 +46,7 @@ Upon startup the backend seeds lookup tables (`issue_categories`, `jurisdictions
 
 - **Mapping** ? Provide `VITE_GOOGLE_MAPS_API_KEY` (and optionally `GOOGLE_MAPS_API_KEY` for backend services) in `.env.local` so residents can drop map pins. Without a key, the form falls back to manual address entry.
 - **Email / SMS** ? Configure Mailgun and Twilio credentials (or SMTP fallback) to enable outbound notifications when statuses change. The system respects resident opt-in choices.
-- **Vertex AI** ? Supply `GOOGLE_VERTEX_AI_ENDPOINT`, model metadata, and Google application credentials to auto-classify priority and department. When absent, category defaults are used.
+- **Vertex AI** ? Supply your Google application credentials alongside `GOOGLE_VERTEX_AI_PROJECT`, `GOOGLE_VERTEX_AI_LOCATION`, and `GOOGLE_VERTEX_AI_MODEL` (e.g., `gemini-1.5-flash`). The backend will invoke Vertex AI Gemini to auto-classify priority and department; without these settings it falls back to category defaults.
 - **Open311 Webhooks** ? Set `OPEN311_ENDPOINT_URL` and optional API key to push status changes into Township asset management tools. Webhook deliveries are retried asynchronously by Celery.
 
 ## Services
