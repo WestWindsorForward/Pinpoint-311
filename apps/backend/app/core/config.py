@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, BaseSettings, Field, HttpUrl, model_validator
+from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic_settings import BaseSettings
 
 
 class TownshipBranding(BaseModel):

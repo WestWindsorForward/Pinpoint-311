@@ -19,3 +19,5 @@ tenacity==8.3.0
 uvicorn[standard]==0.29.0
 python-slugify==8.0.4
 pendulum==3.0.0
+pydantic-settings
+asyncpg
