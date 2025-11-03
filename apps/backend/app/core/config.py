@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
     redis_url: str | None = Field(default="redis://redis:6379/0", alias="REDIS_URL")
     public_base_url: str = Field(default="http://localhost", alias="PUBLIC_BASE_URL")
-    mapbox_access_token: str | None = Field(default=None, alias="MAPBOX_ACCESS_TOKEN")
+    google_maps_api_key: str | None = Field(default=None, alias="GOOGLE_MAPS_API_KEY")
     township_config_path: str = Field(default="config/township.yaml", alias="TOWNSHIP_CONFIG_PATH")
     uploads_dir: str = Field(default="uploads", alias="UPLOADS_DIR")
     open311_endpoint_url: str | None = Field(default=None, alias="OPEN311_ENDPOINT_URL")

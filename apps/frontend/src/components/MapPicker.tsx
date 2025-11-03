@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import Map, { MapLayerMouseEvent, Marker, NavigationControl } from "react-map-gl";
+import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
 interface MapPickerProps {
   latitude: number | null;
@@ -7,48 +7,50 @@ interface MapPickerProps {
   onChange: (lat: number, lng: number) => void;
 }
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || "";
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 export default function MapPicker({ latitude, longitude, onChange }: MapPickerProps) {
-  if (!MAPBOX_TOKEN) {
+  if (!GOOGLE_MAPS_API_KEY) {
     return (
       <div className="card" style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
         <p style={{ margin: 0 }}>
-          Mapbox token not configured. Township IT can set <code>VITE_MAPBOX_TOKEN</code> in <code>.env.local</code> to
-          enable interactive mapping. For now, please enter the street address manually.
+          Google Maps API key not configured. Township IT can set <code>VITE_GOOGLE_MAPS_API_KEY</code> in <code>.env.local</code>
+          to enable interactive mapping. For now, please enter the street address manually.
         </p>
       </div>
     );
   }
 
-  const initialView = useMemo(
+  const { isLoaded } = useJsApiLoader({ googleMapsApiKey: GOOGLE_MAPS_API_KEY });
+
+  const center = useMemo(
     () => ({
-      latitude: latitude ?? 40.2995,
-      longitude: longitude ?? -74.6197,
-      zoom: 12
+      lat: latitude ?? 40.2995,
+      lng: longitude ?? -74.6197
     }),
     [latitude, longitude]
   );
 
-  function handleClick(event: MapLayerMouseEvent) {
-    onChange(event.lngLat.lat, event.lngLat.lng);
+  if (!isLoaded) {
+    return <div className="card">Loading map...</div>;
   }
 
   return (
     <div style={{ height: "320px", borderRadius: "16px", overflow: "hidden" }}>
-      <Map
-        mapboxAccessToken={MAPBOX_TOKEN}
-        initialViewState={initialView}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
-        style={{ width: "100%", height: "100%" }}
-        onClick={handleClick}
-        reuseMaps
+      <GoogleMap
+        mapContainerStyle={{ width: "100%", height: "100%" }}
+        center={center}
+        zoom={12}
+        onClick={(event) => {
+          const latLng = event.latLng;
+          if (latLng) {
+            onChange(latLng.lat(), latLng.lng());
+          }
+        }}
+        options={{ streetViewControl: false, mapTypeControl: false }}
       >
-        <NavigationControl position="bottom-right" />
-        {latitude && longitude && (
-          <Marker latitude={latitude} longitude={longitude} color="#0c6bd6" />
-        )}
-      </Map>
+        {latitude !== null && longitude !== null && <Marker position={{ lat: latitude, lng: longitude }} />}
+      </GoogleMap>
     </div>
   );
 }
