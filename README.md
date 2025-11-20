@@ -42,3 +42,7 @@ docker compose up --build
 ```
 
 Caddy will expose everything on `http://localhost` with `/api/*` routed to FastAPI.
+
+## Custom Domains
+
+To serve the stack from `311.yourtown.gov` (with automatic HTTPS), set `APP_DOMAIN` and `TLS_EMAIL` in `infrastructure/.env`, point your DNS record to the server, and restart the Compose stack. See `docs/CUSTOM_DOMAIN.md` for detailed instructions.

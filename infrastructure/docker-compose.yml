@@ -63,8 +63,12 @@ services:
     image: caddy:2.9
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-:80}
+      TLS_EMAIL: ${TLS_EMAIL:-}
     depends_on:
       - backend
       - frontend
