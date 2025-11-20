@@ -7,12 +7,13 @@ from fastapi import Form as FastAPIForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_optional_user
+from app.api.deps import get_db, get_optional_user, rate_limit
+from app.core.config import settings
 from app.models.issue import IssueCategory, RequestAttachment, ServiceRequest, ServiceStatus
 from app.models.settings import BrandingAsset, TownshipSetting
 from app.models.user import User, UserRole
 from app.schemas.issue import ServiceRequestRead
-from app.services import gis
+from app.services import antivirus, gis
 from app.services.ai import analyze_request
 from app.services.notifications import notify_resident
 from app.utils.storage import save_upload
@@ -49,7 +50,11 @@ async def get_resident_config(session: AsyncSession = Depends(get_db)) -> dict:
     }
 
 
-@router.post("/requests", response_model=ServiceRequestRead)
+@router.post(
+    "/requests",
+    response_model=ServiceRequestRead,
+    dependencies=[Depends(rate_limit(settings.rate_limit_resident_per_minute, "resident-create"))],
+)
 async def create_resident_request(
     service_code: Annotated[str, FastAPIForm(...)],
     description: Annotated[str, FastAPIForm(...)],
@@ -102,6 +107,7 @@ async def create_resident_request(
     await session.refresh(request)
 
     if media:
+        await antivirus.scan_file(media.file)
         file_path = save_upload(media.file, f"resident-{request.external_id}-{media.filename}")
         attachment = RequestAttachment(request_id=request.id, file_path=file_path, content_type=media.content_type)
         session.add(attachment)

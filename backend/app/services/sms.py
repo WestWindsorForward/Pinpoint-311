@@ -1,18 +1,15 @@
 import logging
 
 import httpx
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.settings import ApiCredential
+from app.services.secrets import get_credentials
 
 logger = logging.getLogger(__name__)
 
 
 async def send_sms(session: AsyncSession, *, to: str, body: str) -> None:
-    stmt = select(ApiCredential).where(ApiCredential.provider == "sms")
-    result = await session.execute(stmt)
-    cred = result.scalar_one_or_none()
+    cred = await get_credentials(session, "sms")
     if not cred:
         logger.warning("SMS credentials missing; skipping SMS to %s", to)
         return

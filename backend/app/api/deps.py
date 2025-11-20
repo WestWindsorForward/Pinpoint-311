@@ -1,7 +1,7 @@
 import uuid
 from typing import Callable
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_session
 from app.models.user import User, UserRole
+from app.services import rate_limit as rate_limit_service
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_prefix}/auth/login")
 optional_bearer = HTTPBearer(auto_error=False)
@@ -56,5 +57,14 @@ def require_roles(*roles: UserRole) -> Callable[[User], User]:
         if allowed_roles and current_user.role not in allowed_roles:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
         return current_user
+
+    return dependency
+
+
+def rate_limit(limit: int, scope: str):
+    async def dependency(request: Request) -> None:
+        client_ip = request.client.host if request.client else "anonymous"
+        identifier = f"{scope}:{client_ip}"
+        await rate_limit_service.allow(identifier, limit)
 
     return dependency

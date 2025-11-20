@@ -9,6 +9,7 @@
   - `ai_triage_task` enriches requests via Vertex AI / heuristics.
   - `developer_heartbeat_task` emails weekly aggregate statistics (configurable recipient).
 - **Services** for AI (Vertex Gemini 2.5 Flash), email (generic SMTP), SMS (generic webhook), PDF generation (ReportLab), and GIS (Shapely boundary check).
+- **Security Layer**: Redis-backed rate limiting, HashiCorp Vault secret resolution (optional), ClamAV-powered attachment scanning, and audit trail persistence for admin/staff actions.
 
 ## Frontend (React + Vite)
 - **Pages**: Resident Portal (PWA-style hero, categories, request form + Google Map picker), Township Settings (no-code configuration), Staff Command Center (real-time inbox + AI insights).

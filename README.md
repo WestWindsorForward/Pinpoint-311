@@ -46,3 +46,11 @@ Caddy will expose everything on `http://localhost` with `/api/*` routed to FastA
 ## Custom Domains
 
 To serve the stack from `311.yourtown.gov` (with automatic HTTPS), set `APP_DOMAIN` and `TLS_EMAIL` in `infrastructure/.env`, point your DNS record to the server, and restart the Compose stack. See `docs/CUSTOM_DOMAIN.md` for detailed instructions.
+
+## Security & Compliance
+
+- **Secrets**: Credentials can be stored in Postgres or pulled dynamically from HashiCorp Vault via `VAULT_*` env vars.
+- **Rate limiting**: Redis-backed guardrails for Open311 and resident submissions (`RATE_LIMIT_*` settings).
+- **Attachment scanning**: All uploads are scanned by ClamAV (provided via the `clamav` service).
+- **Audit trails**: Admin/staff actions are persisted to `audit_events` for compliance reviews.
+- See `docs/SECURITY_HARDENING.md` for configuration details.

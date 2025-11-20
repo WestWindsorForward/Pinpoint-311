@@ -2,11 +2,11 @@ import logging
 import smtplib
 from email.message import EmailMessage
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.settings import ApiCredential
+from app.services.secrets import get_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +34,8 @@ async def send_email(session: AsyncSession, *, to: str, subject: str, body: str)
         logger.error("Failed to send email: %s", exc)
 
 
-async def _load_smtp_credentials(session: AsyncSession) -> ApiCredential | None:
-    stmt = select(ApiCredential).where(ApiCredential.provider == "smtp")
-    result = await session.execute(stmt)
-    cred = result.scalar_one_or_none()
+async def _load_smtp_credentials(session: AsyncSession):
+    cred = await get_credentials(session, "smtp")
     if cred:
         return cred
     if settings.mailgun_api_key:

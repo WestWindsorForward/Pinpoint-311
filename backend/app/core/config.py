@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/township"
     redis_url: str = "redis://localhost:6379/0"
+    redis_rate_limit_url: str | None = None
 
     backend_cors_origins: List[AnyHttpUrl] = []
 
@@ -31,8 +32,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     admin_api_key: str = "dev-admin-key"
     refresh_token_expire_days: int = 30
+    rate_limit_resident_per_minute: int = 30
+    rate_limit_public_per_minute: int = 60
 
     storage_dir: str = "./storage"
+
+    clamav_host: str = "clamav"
+    clamav_port: int = 3310
 
     google_maps_api_key: str | None = None
     twilio_api_key: str | None = None
@@ -40,6 +46,11 @@ class Settings(BaseSettings):
     vertex_ai_project: str | None = None
     vertex_ai_location: str = "us-central1"
     vertex_ai_model: str = "gemini-2.5-flash"
+
+    vault_enabled: bool = False
+    vault_addr: str | None = None
+    vault_token: str | None = None
+    vault_kv_mount: str = "secret"
 
     developer_report_email: str = "311reports@westwindsorforward.org"
     heartbeat_day_of_week: int = 0  # Monday

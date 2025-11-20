@@ -2,68 +2,97 @@ import uuid
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, require_roles
 from app.models.issue import RequestAttachment, ServiceRequest, ServiceStatus
-from app.models.user import UserRole
+from app.models.user import User, UserRole
 from app.schemas.issue import ServiceRequestRead
+from app.services import antivirus
+from app.services.audit import log_event
 from app.services.notifications import notify_resident
 from app.services.pdf import generate_case_pdf
 from app.services.webhook import broadcast_status_change
 from app.utils.storage import save_file
 
-router = APIRouter(
-    prefix="/staff",
-    tags=["Staff"],
-    dependencies=[Depends(require_roles(UserRole.staff, UserRole.admin))],
-)
+router = APIRouter(prefix="/staff", tags=["Staff"])
 
 
 @router.get("/requests", response_model=list[ServiceRequestRead])
-async def list_requests(session: AsyncSession = Depends(get_db)) -> list[ServiceRequestRead]:
+async def list_requests(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.staff, UserRole.admin)),
+) -> list[ServiceRequestRead]:
     result = await session.execute(select(ServiceRequest).order_by(ServiceRequest.created_at.desc()).limit(200))
     return [ServiceRequestRead.model_validate(req) for req in result.scalars().all()]
 
 
 @router.patch("/requests/{request_id}", response_model=ServiceRequestRead)
-async def update_request(request_id: uuid.UUID, payload: dict, session: AsyncSession = Depends(get_db)) -> ServiceRequestRead:
-    request = await session.get(ServiceRequest, request_id)
-    if not request:
+async def update_request(
+    request_id: uuid.UUID,
+    payload: dict,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.staff, UserRole.admin)),
+) -> ServiceRequestRead:
+    service_request = await session.get(ServiceRequest, request_id)
+    if not service_request:
         raise HTTPException(status_code=404, detail="Request not found")
     if "status" in payload:
-        request.status = ServiceStatus(payload["status"])
+        service_request.status = ServiceStatus(payload["status"])
     if "priority" in payload:
-        request.priority = payload["priority"]
+        service_request.priority = payload["priority"]
     if "assigned_department" in payload:
-        request.assigned_department = payload["assigned_department"]
+        service_request.assigned_department = payload["assigned_department"]
     await session.commit()
-    await session.refresh(request)
-    await broadcast_status_change(session, {"service_request_id": request.external_id, "status": request.status.value})
-    return ServiceRequestRead.model_validate(request)
+    await session.refresh(service_request)
+    await broadcast_status_change(
+        session, {"service_request_id": service_request.external_id, "status": service_request.status.value}
+    )
+    await log_event(
+        session,
+        action="service_request.update",
+        actor=current_user,
+        entity_type="service_request",
+        entity_id=str(service_request.id),
+        request=request,
+        metadata=payload,
+    )
+    return ServiceRequestRead.model_validate(service_request)
 
 
 @router.post("/requests/{request_id}/close", response_model=ServiceRequestRead)
 async def close_request(
     request_id: uuid.UUID,
+    request: Request,
     completion_photo: UploadFile = File(...),
     session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.staff, UserRole.admin)),
 ) -> ServiceRequestRead:
-    request = await session.get(ServiceRequest, request_id)
-    if not request:
+    service_request = await session.get(ServiceRequest, request_id)
+    if not service_request:
         raise HTTPException(status_code=404, detail="Request not found")
     content = await completion_photo.read()
-    file_path = save_file(f"completion-{request.external_id}-{completion_photo.filename}", content)
-    attachment = RequestAttachment(request_id=request.id, file_path=file_path, is_completion_photo=True)
+    await antivirus.scan_bytes(content)
+    file_path = save_file(f"completion-{service_request.external_id}-{completion_photo.filename}", content)
+    attachment = RequestAttachment(request_id=service_request.id, file_path=file_path, is_completion_photo=True)
     session.add(attachment)
-    request.status = ServiceStatus.closed
+    service_request.status = ServiceStatus.closed
     await session.commit()
-    await session.refresh(request)
-    await notify_resident(session, request, template_slug="request_closed")
-    return ServiceRequestRead.model_validate(request)
+    await session.refresh(service_request)
+    await notify_resident(session, service_request, template_slug="request_closed")
+    await log_event(
+        session,
+        action="service_request.close",
+        actor=current_user,
+        entity_type="service_request",
+        entity_id=str(service_request.id),
+        request=request,
+    )
+    return ServiceRequestRead.model_validate(service_request)
 
 
 @router.get("/requests/{request_id}/pdf")

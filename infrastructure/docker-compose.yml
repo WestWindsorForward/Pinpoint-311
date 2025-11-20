@@ -18,6 +18,14 @@ services:
     volumes:
       - redis_data:/data
 
+  clamav:
+    image: clamav/clamav:stable
+    healthcheck:
+      test: ["CMD", "clamdscan", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   backend:
     build:
       context: ../backend
@@ -29,6 +37,7 @@ services:
     depends_on:
       - db
       - redis
+      - clamav
     ports:
       - "8000:8000"
 
