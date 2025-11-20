@@ -1,0 +1,74 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: township
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: ../backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/township
+      REDIS_URL: redis://redis:6379/0
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key}
+      DEVELOPER_REPORT_EMAIL: ${DEVELOPER_REPORT_EMAIL:-311reports@westwindsorforward.org}
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+
+  celery-worker:
+    build:
+      context: ../backend
+    command: ["celery", "-A", "app.workers.celery_app.celery_app", "worker", "-l", "info"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/township
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+
+  celery-beat:
+    build:
+      context: ../backend
+    command: ["celery", "-A", "app.workers.celery_app.celery_app", "beat", "-l", "info"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/township
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: ../frontend
+    expose:
+      - "4173"
+
+  caddy:
+    image: caddy:2.9
+    ports:
+      - "80:80"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+  redis_data:
