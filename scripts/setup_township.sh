@@ -82,6 +82,7 @@ require_cmd() {
 
 require_cmd openssl
 require_cmd curl
+require_cmd python3
 
 if docker compose version >/dev/null 2>&1; then
   DOCKER_COMPOSE=(docker compose)
@@ -96,7 +97,7 @@ set_env_var() {
   local file=$1
   local key=$2
   local value=$3
-  python - "$file" "$key" "$value" <<'PY'
+  "${PYTHON_BIN:-python3}" - "$file" "$key" "$value" <<'PY'
 import pathlib, sys
 path = pathlib.Path(sys.argv[1])
 key = sys.argv[2]

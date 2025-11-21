@@ -35,7 +35,7 @@ Set environment variables using `backend/.env.example`. (`ADMIN_API_KEY` remains
 
 ## One-Command Stack Setup
 
-For on-prem or VM installs, run the automated bootstrapper (requires Docker, Docker Compose, `curl`, `openssl`, and `jq`):
+For on-prem or VM installs, run the automated bootstrapper (requires Docker, Docker Compose, `python3`, `curl`, `openssl`, and `jq`):
 
 ```bash
 ./scripts/setup_township.sh \
