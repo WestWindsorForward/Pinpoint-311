@@ -35,7 +35,7 @@ Set environment variables using `backend/.env.example`. (`ADMIN_API_KEY` remains
 
 ## One-Command Stack Setup
 
-For on-prem or VM installs, run the automated bootstrapper (requires Docker, Docker Compose, `python3`, `curl`, `openssl`, and `jq`):
+For on-prem or VM installs, run the automated bootstrapper (requires Docker, Docker Compose, `python3`, `curl`, `openssl`, and `jq`; pass `--install-deps` to have the script apt-install them automatically):
 
 ```bash
 ./scripts/setup_township.sh \
@@ -45,14 +45,30 @@ For on-prem or VM installs, run the automated bootstrapper (requires Docker, Doc
   --public-url https://311.yourtown.gov
 ```
 
+Key flags:
+
+- `--install-deps` installs Docker + supporting CLI tools via apt (requires sudo).
+- `--reset` stops any running containers before rebuilding the stack.
+- `--admin-name`, `--skip-admin`, and `--public-url` let you personalize bootstrap output.
+
 The script will:
 
 - Copy + hydrate `backend/.env` and `infrastructure/.env` with secure defaults
 - Bring up the entire Docker Compose stack (Postgres, Redis, backend, Celery, frontend, Caddy, ClamAV)
-- Run Alembic migrations
-- Create the first admin account so you can log in immediately
+- Run Alembic migrations and verify both internal (`:8000`) and proxied (`/api/*`) health endpoints
+- Create (or verify) the first admin account so you can log in immediately
 
-Residents can submit requests without logging in; staff/admin areas remain behind the `/login` flow.
+Residents can submit requests without logging in; the resident portal now includes copy clarifying that email/phone is optional and only used for status updates. Staff/admin areas remain behind the `/login` flow.
+
+### Self-Serve Diagnostics
+
+If anything looks off after setup, run:
+
+```bash
+./scripts/township_diagnostics.sh
+```
+
+This gathers container status, health checks, pg connectivity, Alembic head info, and tail logs for backend + Caddy so you can zero in on the failure fast.
 
 ## Docker Compose (manual)
 

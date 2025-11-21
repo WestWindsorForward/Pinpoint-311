@@ -50,6 +50,11 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
       onSubmit={onSubmit}
       className="space-y-4 rounded-2xl bg-white/80 p-6 shadow-xl"
     >
+      <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+        No login required—leave your email or phone only if you want status updates for this
+        request.
+      </p>
+
       <div>
         <label className="text-sm font-medium text-slate-600">Category</label>
         <select
@@ -76,34 +81,46 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="text-sm font-medium text-slate-600">Name</label>
-          <input {...register("resident_name")} className="mt-1 w-full rounded-xl border border-slate-300 p-2" />
+          <input
+            {...register("resident_name")}
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+          />
         </div>
         <div>
           <label className="text-sm font-medium text-slate-600">Email</label>
-          <input {...register("resident_email")} className="mt-1 w-full rounded-xl border border-slate-300 p-2" />
+          <input
+            {...register("resident_email")}
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+          />
         </div>
       </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="text-sm font-medium text-slate-600">Phone</label>
-            <input {...register("resident_phone")} className="mt-1 w-full rounded-xl border border-slate-300 p-2" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-600">Address</label>
-            <input {...register("address_string")} className="mt-1 w-full rounded-xl border border-slate-300 p-2" />
-          </div>
-        </div>
-
+      <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="text-sm font-medium text-slate-600">Location</label>
-          <MapPicker apiKey={mapsApiKey} lat={coords?.lat} lng={coords?.lng} onChange={setCoords} />
-          {coords && (
-            <p className="mt-1 text-xs text-slate-500">
-              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-            </p>
-          )}
+          <label className="text-sm font-medium text-slate-600">Phone</label>
+          <input
+            {...register("resident_phone")}
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+          />
         </div>
+        <div>
+          <label className="text-sm font-medium text-slate-600">Address</label>
+          <input
+            {...register("address_string")}
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-slate-600">Location</label>
+        <MapPicker apiKey={mapsApiKey} lat={coords?.lat} lng={coords?.lng} onChange={setCoords} />
+        {coords && (
+          <p className="mt-1 text-xs text-slate-500">
+            {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+          </p>
+        )}
+      </div>
 
       <button
         type="submit"
