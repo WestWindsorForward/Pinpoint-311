@@ -33,7 +33,28 @@ Set environment variables using `backend/.env.example`. (`ADMIN_API_KEY` remains
 - Protected APIs now require `Authorization: Bearer <access_token>`; refresh tokens can be rotated via `POST /api/auth/refresh`.
 - Admins can invite staff accounts through `POST /api/auth/invite` (requires admin role).
 
-## Docker Compose
+## One-Command Stack Setup
+
+For on-prem or VM installs, run the automated bootstrapper (requires Docker, Docker Compose, `curl`, `openssl`, and `jq`):
+
+```bash
+./scripts/setup_township.sh \
+  --admin-email you@yourtown.gov \
+  --admin-password 'StrongPass123!' \
+  --domain 311.yourtown.gov \
+  --public-url https://311.yourtown.gov
+```
+
+The script will:
+
+- Copy + hydrate `backend/.env` and `infrastructure/.env` with secure defaults
+- Bring up the entire Docker Compose stack (Postgres, Redis, backend, Celery, frontend, Caddy, ClamAV)
+- Run Alembic migrations
+- Create the first admin account so you can log in immediately
+
+Residents can submit requests without logging in; staff/admin areas remain behind the `/login` flow.
+
+## Docker Compose (manual)
 
 ```bash
 cd infrastructure

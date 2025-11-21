@@ -8,18 +8,15 @@ from app.api.routes import admin, auth, open311, resident, staff
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.telemetry import configure_tracing
-from app.db.base import Base
-from app.db.session import engine
 from app.middleware.request_id import RequestIDMiddleware
 
 configure_logging()
 
 instrumentator = Instrumentator()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     instrumentator.expose(app)
     configure_tracing(app)
     yield
