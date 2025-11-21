@@ -1,13 +1,31 @@
+import uuid
+
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, require_roles
+from app.core.security import get_password_hash
 from app.models.issue import IssueCategory
-from app.models.settings import ApiCredential, BrandingAsset, GeoBoundary, NotificationTemplate, TownshipSetting
-from app.models.user import User, UserRole
+from app.models.settings import (
+    ApiCredential,
+    BrandingAsset,
+    GeoBoundary,
+    NotificationTemplate,
+    TownshipSetting,
+)
+from app.models.settings import BoundaryKind
+from app.models.user import Department, User, UserRole
+from app.schemas.department import DepartmentCreate, DepartmentRead, DepartmentUpdate
 from app.schemas.issue import IssueCategoryCreate, IssueCategoryRead, IssueCategoryUpdate
-from app.schemas.settings import BrandingUpdate, GeoBoundaryUpload, RuntimeConfigUpdate, SecretsPayload
+from app.schemas.settings import (
+    BrandingUpdate,
+    GeoBoundaryRead,
+    GeoBoundaryUpload,
+    RuntimeConfigUpdate,
+    SecretsPayload,
+)
+from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services import gis, runtime_config as runtime_config_service
 from app.services.audit import log_event
 from app.utils.storage import save_file
@@ -15,6 +33,36 @@ from app.utils.storage import save_file
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
+def _normalize_slug(value: str) -> str:
+    return (
+        value.strip()
+        .lower()
+        .replace(" ", "-")
+        .replace("_", "-")
+    )
+
+
+async def _ensure_department_slug(session: AsyncSession, slug: str | None) -> None:
+    if not slug:
+        return
+    result = await session.execute(select(Department).where(Department.slug == slug))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Department not found")
+
+
+async def _department_name(session: AsyncSession, slug: str | None) -> str | None:
+    if not slug:
+        return None
+    result = await session.execute(select(Department).where(Department.slug == slug))
+    department = result.scalar_one_or_none()
+    return department.name if department else None
+
+
+def _category_response(category: IssueCategory, department_name: str | None) -> IssueCategoryRead:
+    payload = IssueCategoryRead.model_validate(category)
+    if department_name is not None:
+        payload = payload.model_copy(update={"department_name": department_name})
+    return payload
 @router.get("/branding", response_model=dict)
 async def get_branding(
     session: AsyncSession = Depends(get_db),
@@ -77,13 +125,111 @@ async def upload_asset(
     return {"key": asset_key, "file_path": path}
 
 
+@router.get("/departments", response_model=list[DepartmentRead])
+async def list_departments(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.admin)),
+) -> list[DepartmentRead]:
+    result = await session.execute(select(Department).order_by(Department.name))
+    return [DepartmentRead.model_validate(dep) for dep in result.scalars().all()]
+
+
+@router.post("/departments", response_model=DepartmentRead)
+async def create_department(
+    payload: DepartmentCreate,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> DepartmentRead:
+    slug = _normalize_slug(payload.slug or payload.name)
+    existing = await session.execute(select(Department).where(Department.slug == slug))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Slug already exists")
+    department = Department(
+        slug=slug,
+        name=payload.name,
+        description=payload.description,
+        contact_email=payload.contact_email,
+        contact_phone=payload.contact_phone,
+        is_active=payload.is_active,
+    )
+    session.add(department)
+    await session.commit()
+    await log_event(
+        session,
+        action="department.create",
+        actor=current_user,
+        entity_type="department",
+        entity_id=str(department.id),
+        request=None,
+        metadata=payload.model_dump(),
+    )
+    return DepartmentRead.model_validate(department)
+
+
+@router.put("/departments/{department_id}", response_model=DepartmentRead)
+async def update_department(
+    department_id: uuid.UUID,
+    payload: DepartmentUpdate,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> DepartmentRead:
+    department = await session.get(Department, department_id)
+    if not department:
+        raise HTTPException(status_code=404, detail="Department not found")
+    update_data = payload.model_dump(exclude_unset=True)
+    if "slug" in update_data:
+        update_data["slug"] = _normalize_slug(update_data["slug"])
+    for key, value in update_data.items():
+        setattr(department, key, value)
+    await session.commit()
+    await session.refresh(department)
+    await log_event(
+        session,
+        action="department.update",
+        actor=current_user,
+        entity_type="department",
+        entity_id=str(department.id),
+        request=None,
+        metadata=update_data,
+    )
+    return DepartmentRead.model_validate(department)
+
+
+@router.delete("/departments/{department_id}")
+async def delete_department(
+    department_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> dict:
+    department = await session.get(Department, department_id)
+    if not department:
+        raise HTTPException(status_code=404, detail="Department not found")
+    await session.delete(department)
+    await session.commit()
+    await log_event(
+        session,
+        action="department.delete",
+        actor=current_user,
+        entity_type="department",
+        entity_id=str(department.id),
+        request=None,
+    )
+    return {"status": "deleted"}
+
+
 @router.get("/categories", response_model=list[IssueCategoryRead])
 async def list_categories(
     session: AsyncSession = Depends(get_db),
     _: User = Depends(require_roles(UserRole.admin)),
 ) -> list[IssueCategoryRead]:
     result = await session.execute(select(IssueCategory))
-    return [IssueCategoryRead.model_validate(cat) for cat in result.scalars().all()]
+    categories = result.scalars().all()
+    dept_slugs = {cat.default_department_slug for cat in categories if cat.default_department_slug}
+    lookup: dict[str, str] = {}
+    if dept_slugs:
+        deps = await session.execute(select(Department).where(Department.slug.in_(dept_slugs)))
+        lookup = {dep.slug: dep.name for dep in deps.scalars().all()}
+    return [_category_response(cat, lookup.get(cat.default_department_slug)) for cat in categories]
 
 
 @router.post("/categories", response_model=IssueCategoryRead)
@@ -93,7 +239,10 @@ async def create_category(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.admin)),
 ) -> IssueCategoryRead:
-    category = IssueCategory(**payload.model_dump())
+    data = payload.model_dump()
+    data["slug"] = _normalize_slug(data["slug"])
+    await _ensure_department_slug(session, data.get("default_department_slug"))
+    category = IssueCategory(**data)
     session.add(category)
     await session.commit()
     await session.refresh(category)
@@ -106,7 +255,8 @@ async def create_category(
         request=request,
         metadata=payload.model_dump(),
     )
-    return IssueCategoryRead.model_validate(category)
+    dept_name = await _department_name(session, category.default_department_slug)
+    return _category_response(category, dept_name)
 
 
 @router.put("/categories/{category_id}", response_model=IssueCategoryRead)
@@ -120,7 +270,9 @@ async def update_category(
     category = await session.get(IssueCategory, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    update_data = payload.model_dump(exclude_unset=True)
+    await _ensure_department_slug(session, update_data.get("default_department_slug"))
+    for key, value in update_data.items():
         setattr(category, key, value)
     await session.commit()
     await session.refresh(category)
@@ -133,7 +285,8 @@ async def update_category(
         request=request,
         metadata=payload.model_dump(exclude_unset=True),
     )
-    return IssueCategoryRead.model_validate(category)
+    dept_name = await _department_name(session, category.default_department_slug)
+    return _category_response(category, dept_name)
 
 
 @router.delete("/categories/{category_id}")
@@ -202,16 +355,156 @@ async def delete_secret(
     return {"status": "deleted"}
 
 
-@router.post("/geo-boundary", response_model=dict)
+@router.get("/secrets", response_model=list[dict])
+async def list_secrets(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.admin)),
+) -> list[dict]:
+    result = await session.execute(select(ApiCredential))
+    credentials = result.scalars().all()
+    return [
+        {
+            "id": str(cred.id),
+            "provider": cred.provider,
+            "created_at": cred.created_at,
+            "metadata": cred.meta or {},
+        }
+        for cred in credentials
+    ]
+
+
+@router.get("/staff", response_model=list[UserRead])
+async def list_staff(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.admin)),
+) -> list[UserRead]:
+    stmt = select(User).where(User.role != UserRole.resident).order_by(User.display_name)
+    result = await session.execute(stmt)
+    return [UserRead.model_validate(user) for user in result.scalars().all()]
+
+
+@router.post("/staff", response_model=UserRead)
+async def create_staff(
+    payload: UserCreate,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> UserRead:
+    if payload.role == UserRole.resident:
+        raise HTTPException(status_code=400, detail="Staff role must be staff or admin")
+    await _ensure_department_slug(session, payload.department)
+    existing = await session.execute(select(User).where(User.email == payload.email.lower()))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Email already exists")
+    user = User(
+        email=payload.email.lower(),
+        display_name=payload.display_name,
+        password_hash=get_password_hash(payload.password),
+        role=payload.role,
+        department=payload.department,
+        phone_number=payload.phone_number,
+        is_active=True,
+    )
+    session.add(user)
+    await session.commit()
+    await log_event(
+        session,
+        action="staff.create",
+        actor=current_user,
+        entity_type="user",
+        entity_id=str(user.id),
+        request=None,
+        metadata={"email": user.email, "role": user.role.value},
+    )
+    return UserRead.model_validate(user)
+
+
+@router.put("/staff/{user_id}", response_model=UserRead)
+async def update_staff(
+    user_id: uuid.UUID,
+    payload: UserUpdate,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> UserRead:
+    user = await session.get(User, user_id)
+    if not user or user.role == UserRole.resident:
+        raise HTTPException(status_code=404, detail="Staff member not found")
+    if payload.role == UserRole.resident:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    update_data = payload.model_dump(exclude_unset=True)
+    await _ensure_department_slug(session, update_data.get("department"))
+    if "password" in update_data:
+        user.password_hash = get_password_hash(update_data.pop("password"))  # type: ignore[arg-type]
+    for key, value in update_data.items():
+        setattr(user, key, value)
+    await session.commit()
+    await session.refresh(user)
+    await log_event(
+        session,
+        action="staff.update",
+        actor=current_user,
+        entity_type="user",
+        entity_id=str(user.id),
+        request=None,
+        metadata=update_data,
+    )
+    return UserRead.model_validate(user)
+
+
+@router.delete("/staff/{user_id}")
+async def delete_staff(
+    user_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> dict:
+    user = await session.get(User, user_id)
+    if not user or user.role == UserRole.resident:
+        raise HTTPException(status_code=404, detail="Staff member not found")
+    await session.delete(user)
+    await session.commit()
+    await log_event(
+        session,
+        action="staff.delete",
+        actor=current_user,
+        entity_type="user",
+        entity_id=str(user.id),
+        request=None,
+    )
+    return {"status": "deleted"}
+
+
+@router.get("/geo-boundary", response_model=list[GeoBoundaryRead])
+async def list_boundaries(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.admin)),
+) -> list[GeoBoundaryRead]:
+    result = await session.execute(select(GeoBoundary).order_by(GeoBoundary.updated_at.desc()))
+    return [GeoBoundaryRead.model_validate(boundary) for boundary in result.scalars().all()]
+
+
+@router.post("/geo-boundary", response_model=GeoBoundaryRead)
 async def upload_boundary(
     payload: GeoBoundaryUpload,
     request: Request,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.admin)),
-) -> dict:
-    boundary = GeoBoundary(name=payload.name, geojson=payload.geojson, is_active=True)
+) -> GeoBoundaryRead:
+    if payload.kind == BoundaryKind.primary:
+        await session.execute(
+            update(GeoBoundary)
+            .where(GeoBoundary.kind == BoundaryKind.primary)
+            .values(is_active=False)
+        )
+    boundary = GeoBoundary(
+        name=payload.name,
+        geojson=payload.geojson,
+        kind=payload.kind,
+        redirect_url=payload.redirect_url,
+        notes=payload.notes,
+        is_active=True,
+    )
     session.add(boundary)
     await session.commit()
+    await session.refresh(boundary)
     await log_event(
         session,
         action="geo_boundary.upload",
@@ -219,9 +512,31 @@ async def upload_boundary(
         entity_type="geo_boundary",
         entity_id=str(boundary.id),
         request=request,
-        metadata={"name": payload.name},
+        metadata={"name": payload.name, "kind": payload.kind.value},
     )
-    return {"id": boundary.id}
+    return GeoBoundaryRead.model_validate(boundary)
+
+
+@router.delete("/geo-boundary/{boundary_id}")
+async def delete_boundary(
+    boundary_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> dict:
+    boundary = await session.get(GeoBoundary, boundary_id)
+    if not boundary:
+        raise HTTPException(status_code=404, detail="Boundary not found")
+    await session.delete(boundary)
+    await session.commit()
+    await log_event(
+        session,
+        action="geo_boundary.delete",
+        actor=current_user,
+        entity_type="geo_boundary",
+        entity_id=str(boundary.id),
+        request=None,
+    )
+    return {"status": "deleted"}
 
 
 @router.get("/templates", response_model=list[dict])

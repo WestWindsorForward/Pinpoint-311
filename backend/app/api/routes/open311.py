@@ -30,7 +30,7 @@ async def list_services(session: AsyncSession = Depends(get_db)) -> list[Open311
             service_code=category.slug,
             service_name=category.name,
             description=category.description,
-            group=category.default_department,
+            group=category.default_department_slug,
             keywords=[category.slug],
         )
         for category in categories
@@ -52,11 +52,9 @@ async def create_request(payload: Open311RequestCreate, session: AsyncSession = 
     if not category:
         raise HTTPException(status_code=404, detail="Unknown service_code")
 
-    boundary_ok = await gis.is_point_within_boundary(session, payload.lat, payload.long)
-    if not boundary_ok:
+    allowed, warning = await gis.evaluate_location(session, payload.lat, payload.long)
+    if not allowed:
         raise HTTPException(status_code=400, detail="Location outside township boundary")
-
-    warning = await gis.jurisdiction_warning(session, payload.lat, payload.long)
 
     ai_result = await analyze_request(payload.description, payload.media_url)
 

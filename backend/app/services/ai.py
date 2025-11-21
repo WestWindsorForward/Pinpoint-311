@@ -5,6 +5,8 @@ import json
 import logging
 from typing import Any, TypedDict
 
+from vertexai import generative_models, init as vertexai_init
+
 from app.core.config import settings
 from app.services import runtime_config
 
@@ -27,21 +29,30 @@ async def analyze_request(description: str, media_urls: list[str] | None = None)
     vertex_location = await runtime_config.get_value("vertex_ai_location", settings.vertex_ai_location)
     if vertex_project and vertex_model:
         try:
-            from google.cloud import aiplatform
-
             def _call_vertex() -> AIAnalysis:
-                aiplatform.init(project=vertex_project, location=vertex_location)
-                model = aiplatform.GenerativeModel(vertex_model)
+                vertexai_init(project=vertex_project, location=vertex_location)
+                model = generative_models.GenerativeModel(vertex_model)
                 prompt = (
                     "You are triaging civic service requests. "
-                    "Return JSON with severity (1-10), recommended_category, dimensions (width_cm,height_cm,quantity), "
-                    "and confidence (0-1)."
+                    "Respond with JSON containing keys: severity (1-10), recommended_category, "
+                    "dimensions (width_cm,height_cm,quantity), and confidence (0-1)."
                 )
-                response = model.generate_content([
-                    prompt,
-                    {"mime_type": "text/plain", "text": description},
-                ])
-                text = response.text or "{}"
+                response = model.generate_content(
+                    [
+                        generative_models.Content(
+                            parts=[
+                                generative_models.Part.from_text(prompt),
+                                generative_models.Part.from_text(description),
+                            ]
+                        )
+                    ],
+                    generation_config=generative_models.GenerationConfig(response_mime_type="application/json"),
+                )
+                text = "{}"
+                if response.candidates:
+                    parts = response.candidates[0].content.parts
+                    if parts:
+                        text = parts[0].text or "{}"
                 payload = json.loads(text)
                 payload.setdefault("severity", 5)
                 payload.setdefault("recommended_category", "general")

@@ -1,6 +1,7 @@
+import enum
 import uuid
 
-from sqlalchemy import Boolean, JSON, String, Text
+from sqlalchemy import Boolean, Enum, JSON, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,6 +25,11 @@ class TownshipSetting(Base, TimestampMixin):
     value: Mapped[dict] = mapped_column(JSON)
 
 
+class BoundaryKind(str, enum.Enum):
+    primary = "primary"
+    exclusion = "exclusion"
+
+
 class GeoBoundary(Base, TimestampMixin):
     __tablename__ = "geo_boundaries"
 
@@ -31,6 +37,9 @@ class GeoBoundary(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), default="primary")
     geojson: Mapped[dict] = mapped_column(JSON)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    kind: Mapped[BoundaryKind] = mapped_column(Enum(BoundaryKind), default=BoundaryKind.primary)
+    redirect_url: Mapped[str | None] = mapped_column(String(512))
+    notes: Mapped[str | None] = mapped_column(Text)
 
 
 class ApiCredential(Base, TimestampMixin):

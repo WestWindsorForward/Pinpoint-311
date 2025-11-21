@@ -1,27 +1,88 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 
 import client from "../api/client";
-import { useResidentConfig } from "../api/hooks";
+import { useBoundaries, useDepartments, useResidentConfig, useSecrets, useStaffDirectory } from "../api/hooks";
+import type { Department, GeoBoundary, IssueCategory, SecretSummary, StaffUser } from "../types";
+
+type DepartmentFormState = {
+  slug: string;
+  name: string;
+  description: string;
+  contact_email: string;
+  contact_phone: string;
+};
+
+type CategoryFormState = {
+  slug: string;
+  name: string;
+  description: string;
+  default_department_slug: string;
+};
+
+type StaffFormState = {
+  email: string;
+  display_name: string;
+  role: string;
+  department: string;
+  phone_number: string;
+  password: string;
+};
 
 export function AdminPanel() {
-  const { data: config, refetch } = useResidentConfig();
-  const [formState, setFormState] = useState({
-    town_name: config?.branding?.town_name ?? "",
-    hero_text: config?.branding?.hero_text ?? "",
-    primary_color: config?.branding?.primary_color ?? "#0f172a",
-    secondary_color: config?.branding?.secondary_color ?? "#38bdf8",
+  const queryClient = useQueryClient();
+  const { data: residentConfig, refetch } = useResidentConfig();
+  const departmentsQuery = useDepartments();
+  const staffQuery = useStaffDirectory();
+  const secretsQuery = useSecrets();
+  const boundariesQuery = useBoundaries();
+
+  const [brandingForm, setBrandingForm] = useState({
+    town_name: residentConfig?.branding?.town_name ?? "",
+    hero_text: residentConfig?.branding?.hero_text ?? "",
+    primary_color: residentConfig?.branding?.primary_color ?? "#0f172a",
+    secondary_color: residentConfig?.branding?.secondary_color ?? "#38bdf8",
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [newDepartment, setNewDepartment] = useState<DepartmentFormState>({
+    slug: "",
+    name: "",
+    description: "",
+    contact_email: "",
+    contact_phone: "",
+  });
+  const [newCategory, setNewCategory] = useState<CategoryFormState>({
+    slug: "",
+    name: "",
+    description: "",
+    default_department_slug: "",
+  });
+  const [newBoundary, setNewBoundary] = useState({
+    name: "Primary Boundary",
+    kind: "primary",
+    redirect_url: "",
+    notes: "",
+    geojson: "",
+  });
+  const [newStaff, setNewStaff] = useState<StaffFormState>({
+    email: "",
+    display_name: "",
+    role: "staff",
+    department: "",
+    phone_number: "",
+    password: "",
+  });
+  const [secretForm, setSecretForm] = useState({ provider: "smtp", key: "", secret: "" });
 
   useEffect(() => {
-    if (!config?.branding) return;
-    setFormState({
-      town_name: config.branding.town_name ?? "",
-      hero_text: config.branding.hero_text ?? "",
-      primary_color: config.branding.primary_color ?? "#0f172a",
-      secondary_color: config.branding.secondary_color ?? "#38bdf8",
+    if (!residentConfig?.branding) return;
+    setBrandingForm({
+      town_name: residentConfig.branding.town_name ?? "",
+      hero_text: residentConfig.branding.hero_text ?? "",
+      primary_color: residentConfig.branding.primary_color ?? "#0f172a",
+      secondary_color: residentConfig.branding.secondary_color ?? "#38bdf8",
     });
-  }, [config]);
+  }, [residentConfig]);
 
   const runtimeConfigQuery = useQuery({
     queryKey: ["runtime-config"],
@@ -37,123 +98,524 @@ export function AdminPanel() {
     onSuccess: () => runtimeConfigQuery.refetch(),
   });
 
-  const updateBranding = async () => {
-    await client.put("/api/admin/branding", formState);
-    refetch();
-  };
+  const brandingMutation = useMutation({
+    mutationFn: async () => {
+      await client.put("/api/admin/branding", brandingForm);
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append("file", logoFile);
+        await client.post("/api/admin/branding/assets/logo", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+    },
+    onSuccess: () => refetch(),
+  });
 
-  const addCategory = async (payload: { slug: string; name: string }) => {
-    await client.post("/api/admin/categories", { ...payload, default_priority: "medium" });
-    refetch();
-  };
+  const departmentMutation = useMutation({
+    mutationFn: async (payload: typeof newDepartment) =>
+      client.post("/api/admin/departments", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      setNewDepartment({ slug: "", name: "", description: "", contact_email: "", contact_phone: "" });
+    },
+  });
 
-  const storeSecret = async (payload: { provider: string; key: string; secret: string }) => {
-    await client.post("/api/admin/secrets", payload);
-  };
+  const categoryMutation = useMutation({
+    mutationFn: async (payload: typeof newCategory) =>
+      client.post("/api/admin/categories", { ...payload, default_priority: "medium" }),
+    onSuccess: () => {
+      setNewCategory({ slug: "", name: "", description: "", default_department_slug: "" });
+      refetch();
+    },
+  });
+
+  const boundaryMutation = useMutation({
+    mutationFn: async (payload: typeof newBoundary) =>
+      client.post("/api/admin/geo-boundary", {
+        ...payload,
+        geojson: JSON.parse(payload.geojson),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["geo-boundaries"] });
+      setNewBoundary({ name: "Primary Boundary", kind: "primary", redirect_url: "", notes: "", geojson: "" });
+    },
+  });
+
+  const staffMutation = useMutation({
+    mutationFn: async (payload: typeof newStaff) => client.post("/api/admin/staff", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staff-directory"] });
+      setNewStaff({ email: "", display_name: "", role: "staff", department: "", phone_number: "", password: "" });
+    },
+  });
+
+  const secretMutation = useMutation({
+    mutationFn: async (payload: typeof secretForm) => client.post("/api/admin/secrets", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["secrets"] });
+      setSecretForm({ provider: secretForm.provider, key: "", secret: "" });
+    },
+  });
+
+  const departments = departmentsQuery.data ?? [];
+  const boundaries = boundariesQuery.data ?? [];
+  const staff = staffQuery.data ?? [];
+  const secrets = secretsQuery.data ?? [];
+
+  const categories = useMemo(() => residentConfig?.categories ?? [], [residentConfig]);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl bg-white p-6 shadow">
-        <h2 className="text-xl font-semibold">Branding</h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {Object.entries(formState).map(([key, value]) => (
+    <div className="space-y-8">
+      <Section title="Branding & Logo" description="Update live colors, hero copy, and upload a township seal or logo.">
+        <div className="grid gap-4 md:grid-cols-2">
+          {Object.entries(brandingForm).map(([key, value]) => (
             <label key={key} className="text-sm text-slate-600">
               {key.replace("_", " ")}
               <input
                 className="mt-1 w-full rounded-xl border border-slate-300 p-2"
                 value={value}
-                onChange={(event) => setFormState((prev) => ({ ...prev, [key]: event.target.value }))}
+                onChange={(event) =>
+                  setBrandingForm((prev) => ({
+                    ...prev,
+                    [key]: event.target.value,
+                  }))
+                }
               />
             </label>
           ))}
         </div>
-        <button onClick={updateBranding} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-white">
-          Save Branding
-        </button>
-      </section>
+        <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-end">
+          <label className="text-sm text-slate-600">
+            Township Logo
+            <input
+              type="file"
+              accept="image/*"
+              className="mt-1 w-full rounded-xl border border-dashed border-slate-300 p-2"
+              onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)}
+            />
+          </label>
+          <button
+            onClick={() => brandingMutation.mutate()}
+            className="rounded-xl bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
+            disabled={brandingMutation.isPending}
+          >
+            {brandingMutation.isPending ? "Saving..." : "Save Branding"}
+          </button>
+        </div>
+      </Section>
 
-      <section className="rounded-2xl bg-white p-6 shadow">
-        <h2 className="text-xl font-semibold">Runtime Config</h2>
+      <Section
+        title="Jurisdiction Boundaries"
+        description="Upload GeoJSON for your township boundary and optional exclusion zones (county/state roads)."
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="text-sm text-slate-600">
+            Boundary Name
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+              value={newBoundary.name}
+              onChange={(event) => setNewBoundary((prev) => ({ ...prev, name: event.target.value }))}
+            />
+          </label>
+          <label className="text-sm text-slate-600">
+            Boundary Type
+            <select
+              className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+              value={newBoundary.kind}
+              onChange={(event) => setNewBoundary((prev) => ({ ...prev, kind: event.target.value }))}
+            >
+              <option value="primary">Primary (allowed)</option>
+              <option value="exclusion">Excluded jurisdiction</option>
+            </select>
+          </label>
+          <label className="text-sm text-slate-600">
+            Redirect URL (optional)
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+              value={newBoundary.redirect_url}
+              onChange={(event) => setNewBoundary((prev) => ({ ...prev, redirect_url: event.target.value }))}
+            />
+          </label>
+          <label className="text-sm text-slate-600">
+            Notes / Message
+            <input
+              className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+              value={newBoundary.notes}
+              onChange={(event) => setNewBoundary((prev) => ({ ...prev, notes: event.target.value }))}
+            />
+          </label>
+        </div>
+        <label className="mt-3 block text-sm text-slate-600">
+          GeoJSON
+          <textarea
+            className="mt-1 h-32 w-full rounded-xl border border-slate-300 p-2 font-mono text-xs"
+            placeholder='{"type":"Polygon","coordinates":[...]}'
+            value={newBoundary.geojson}
+            onChange={(event) => setNewBoundary((prev) => ({ ...prev, geojson: event.target.value }))}
+          />
+        </label>
+        <div className="mt-3 flex justify-end">
+          <button
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
+            onClick={() => boundaryMutation.mutate(newBoundary)}
+            disabled={boundaryMutation.isPending}
+          >
+            {boundaryMutation.isPending ? "Uploading…" : "Save Boundary"}
+          </button>
+        </div>
+        {boundaries.length > 0 && (
+          <ul className="mt-4 space-y-2 text-sm">
+            {boundaries.map((boundary) => (
+              <li key={boundary.id} className="rounded-xl border border-slate-200 p-3">
+                <p className="font-medium">{boundary.name}</p>
+                <p className="text-xs uppercase text-slate-500">{boundary.kind}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      <Section
+        title="Departments"
+        description="Create departments and assign categories/staff to ensure the right team triages incoming issues."
+      >
+        <DepartmentForm
+          form={newDepartment}
+          departments={departments}
+          onChange={setNewDepartment}
+          onSubmit={() => departmentMutation.mutate(newDepartment)}
+          isSubmitting={departmentMutation.isPending}
+        />
+      </Section>
+
+      <Section title="Categories" description="Link categories to departments so routing stays automated.">
+        <CategoryForm
+          form={newCategory}
+          categories={categories}
+          departments={departments}
+          onChange={setNewCategory}
+          onSubmit={() => categoryMutation.mutate(newCategory)}
+          isSubmitting={categoryMutation.isPending}
+        />
+      </Section>
+
+      <Section
+        title="Staff Directory"
+        description="Invite staff or admins with department assignments. They’ll log in from the staff portal."
+      >
+        <StaffManager
+          staff={staff}
+          departments={departments}
+          form={newStaff}
+          onChange={setNewStaff}
+          onSubmit={() => staffMutation.mutate(newStaff)}
+          isSubmitting={staffMutation.isPending}
+        />
+      </Section>
+
+      <Section
+        title="Runtime Config"
+        description="Runtime overrides for API keys, rate limits, and observability without redeploying."
+      >
         <RuntimeConfigForm
           config={runtimeConfigQuery.data ?? {}}
           isLoading={runtimeConfigQuery.isLoading}
           isSaving={runtimeMutation.isPending}
           onSave={(payload) => runtimeMutation.mutate(payload)}
         />
-      </section>
+      </Section>
 
-      <section className="rounded-2xl bg-white p-6 shadow">
-        <h2 className="text-xl font-semibold">Categories</h2>
-        <CategoryCreator onSubmit={addCategory} />
-        <ul className="mt-4 space-y-2 text-sm">
-          {config?.categories.map((category) => (
-            <li key={category.slug} className="rounded-xl bg-slate-100 p-3">
-              {category.name} ({category.slug})
+      <Section
+        title="Secrets"
+        description="Store provider secrets securely. Values are write-only and masked after submission."
+      >
+        <SecretsForm
+          form={secretForm}
+          secrets={secrets}
+          onChange={setSecretForm}
+          onSubmit={() => secretMutation.mutate(secretForm)}
+          isSubmitting={secretMutation.isPending}
+        />
+      </Section>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl bg-white p-6 shadow">
+      <div className="space-y-1">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        {description && <p className="text-sm text-slate-500">{description}</p>}
+      </div>
+      <div className="mt-4 space-y-4">{children}</div>
+    </section>
+  );
+}
+
+function DepartmentForm({
+  form,
+  onChange,
+  onSubmit,
+  departments,
+  isSubmitting,
+}: {
+  form: DepartmentFormState;
+  onChange: (values: DepartmentFormState) => void;
+  onSubmit: () => void;
+  departments: Department[];
+  isSubmitting: boolean;
+}) {
+  const fields: Array<{ label: string; key: keyof typeof form; type?: string }> = [
+    { label: "Name", key: "name" },
+    { label: "Slug", key: "slug" },
+    { label: "Description", key: "description" },
+    { label: "Contact Email", key: "contact_email", type: "email" },
+    { label: "Contact Phone", key: "contact_phone" },
+  ];
+
+  return (
+    <>
+      <div className="grid gap-3 md:grid-cols-2">
+        {fields.map(({ label, key, type }) => (
+          <label key={key} className="text-sm text-slate-600">
+            {label}
+            <input
+              type={type ?? "text"}
+              className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+              value={form[key]}
+              onChange={(event) => onChange({ ...form, [key]: event.target.value })}
+            />
+          </label>
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <button
+          className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
+          onClick={onSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Saving…" : "Add Department"}
+        </button>
+      </div>
+      {departments.length > 0 && (
+        <ul className="divide-y divide-slate-200 rounded-xl border border-slate-100">
+          {departments.map((dept) => (
+            <li key={dept.id} className="p-3 text-sm">
+              <p className="font-medium">{dept.name}</p>
+              <p className="text-xs uppercase text-slate-500">{dept.slug}</p>
             </li>
           ))}
         </ul>
-      </section>
-
-      <section className="rounded-2xl bg-white p-6 shadow">
-        <h2 className="text-xl font-semibold">Secrets</h2>
-        <SecretsForm onSubmit={storeSecret} />
-      </section>
-    </div>
+      )}
+    </>
   );
 }
 
-function CategoryCreator({ onSubmit }: { onSubmit: (payload: { slug: string; name: string }) => Promise<void> }) {
-  const [form, setForm] = useState({ slug: "", name: "" });
-  return (
-    <div className="mt-2 flex gap-2">
-      <input
-        placeholder="slug"
-        className="flex-1 rounded-xl border border-slate-300 p-2"
-        value={form.slug}
-        onChange={(event) => setForm((prev) => ({ ...prev, slug: event.target.value }))}
-      />
-      <input
-        placeholder="name"
-        className="flex-1 rounded-xl border border-slate-300 p-2"
-        value={form.name}
-        onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-      />
-      <button
-        className="rounded-xl bg-emerald-600 px-4 py-2 text-white"
-        onClick={() => onSubmit(form).then(() => setForm({ slug: "", name: "" }))}
-      >
-        Add
-      </button>
-    </div>
-  );
-}
-
-function SecretsForm({
+function CategoryForm({
+  form,
+  onChange,
   onSubmit,
+  categories,
+  departments,
+  isSubmitting,
 }: {
-  onSubmit: (payload: { provider: string; key: string; secret: string }) => Promise<void>;
+  form: CategoryFormState;
+  onChange: (values: CategoryFormState) => void;
+  onSubmit: () => void;
+  categories: IssueCategory[];
+  departments: Department[];
+  isSubmitting: boolean;
 }) {
-  const [form, setForm] = useState({ provider: "smtp", key: "", secret: "" });
   return (
-    <div className="space-y-2">
-      <div className="grid gap-2 md:grid-cols-3">
-        {Object.entries(form).map(([key, value]) => (
+    <>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="text-sm text-slate-600">
+          Category slug
           <input
-            key={key}
-            placeholder={key}
-            className="rounded-xl border border-slate-300 p-2"
-            value={value}
-            onChange={(event) => setForm((prev) => ({ ...prev, [key]: event.target.value }))}
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.slug}
+            onChange={(event) => onChange({ ...form, slug: event.target.value })}
           />
-        ))}
+        </label>
+        <label className="text-sm text-slate-600">
+          Display name
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.name}
+            onChange={(event) => onChange({ ...form, name: event.target.value })}
+          />
+        </label>
+        <label className="text-sm text-slate-600 md:col-span-2">
+          Description
+          <textarea
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.description}
+            onChange={(event) => onChange({ ...form, description: event.target.value })}
+          />
+        </label>
+        <label className="text-sm text-slate-600 md:col-span-2">
+          Owning department
+          <select
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.default_department_slug}
+            onChange={(event) => onChange({ ...form, default_department_slug: event.target.value })}
+          >
+            <option value="">Unassigned</option>
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.slug}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-      <button
-        className="rounded-xl bg-indigo-600 px-4 py-2 text-white"
-        onClick={() => onSubmit(form)}
-      >
-        Store Secret
-      </button>
-    </div>
+      <div className="flex justify-end">
+        <button
+          className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
+          onClick={onSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Saving…" : "Add Category"}
+        </button>
+      </div>
+      {categories.length > 0 && (
+        <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100">
+          {categories.map((category) => (
+            <li key={category.slug} className="p-3 text-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{category.name}</p>
+                  <p className="text-xs uppercase text-slate-500">{category.slug}</p>
+                </div>
+                {category.department_name && (
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+                    {category.department_name}
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function StaffManager({
+  staff,
+  departments,
+  form,
+  onChange,
+  onSubmit,
+  isSubmitting,
+}: {
+  staff: StaffUser[];
+  departments: Department[];
+  form: StaffFormState;
+  onChange: (values: StaffFormState) => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+}) {
+  return (
+    <>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="text-sm text-slate-600">
+          Email
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.email}
+            onChange={(event) => onChange({ ...form, email: event.target.value })}
+          />
+        </label>
+        <label className="text-sm text-slate-600">
+          Display name
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.display_name}
+            onChange={(event) => onChange({ ...form, display_name: event.target.value })}
+          />
+        </label>
+        <label className="text-sm text-slate-600">
+          Role
+          <select
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.role}
+            onChange={(event) => onChange({ ...form, role: event.target.value })}
+          >
+            <option value="staff">Staff</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+        <label className="text-sm text-slate-600">
+          Department
+          <select
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.department}
+            onChange={(event) => onChange({ ...form, department: event.target.value })}
+          >
+            <option value="">Unassigned</option>
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.slug}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm text-slate-600">
+          Phone number
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.phone_number}
+            onChange={(event) => onChange({ ...form, phone_number: event.target.value })}
+          />
+        </label>
+        <label className="text-sm text-slate-600">
+          Temporary password
+          <input
+            type="password"
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.password}
+            onChange={(event) => onChange({ ...form, password: event.target.value })}
+          />
+        </label>
+      </div>
+      <div className="flex justify-end">
+        <button
+          className="rounded-xl bg-indigo-600 px-4 py-2 text-white disabled:opacity-50"
+          onClick={onSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Inviting…" : "Invite Staff"}
+        </button>
+      </div>
+      {staff.length > 0 && (
+        <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100">
+          {staff.map((member) => (
+            <li key={member.id} className="p-3 text-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{member.display_name}</p>
+                  <p className="text-xs uppercase text-slate-500">{member.email}</p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs uppercase text-slate-600">
+                  {member.role}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }
 
@@ -177,114 +639,3 @@ function RuntimeConfigForm({ config, isLoading, isSaving, onSave }: RuntimeConfi
     otel_endpoint: "",
     otel_headers: "",
   });
-
-  useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      ...Object.entries(config).reduce<Record<string, string>>((acc, [key, value]) => {
-        if (value === undefined || value === null || key === "otel_enabled") return acc;
-        acc[key] = String(value);
-        return acc;
-      }, {}),
-      otel_enabled: Boolean(config["otel_enabled"]),
-    }));
-  }, [config]);
-
-  const updateField = (key: string, value: string | boolean) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const buildPayload = () => ({
-    google_maps_api_key: form.google_maps_api_key || null,
-    developer_report_email: form.developer_report_email || null,
-    vertex_ai_project: form.vertex_ai_project || null,
-    vertex_ai_location: form.vertex_ai_location || null,
-    vertex_ai_model: form.vertex_ai_model || null,
-    rate_limit_resident_per_minute: form.rate_limit_resident_per_minute
-      ? Number(form.rate_limit_resident_per_minute)
-      : null,
-    rate_limit_public_per_minute: form.rate_limit_public_per_minute
-      ? Number(form.rate_limit_public_per_minute)
-      : null,
-    otel_enabled: form.otel_enabled,
-    otel_endpoint: form.otel_endpoint || null,
-    otel_headers: form.otel_headers || null,
-  });
-
-  return (
-    <div className="space-y-4">
-      {isLoading && <p className="text-sm text-slate-500">Loading current settings…</p>}
-      <div className="grid gap-3 md:grid-cols-2">
-        <input
-          className="rounded-xl border border-slate-300 p-2"
-          placeholder="Google Maps API Key"
-          value={form.google_maps_api_key}
-          onChange={(event) => updateField("google_maps_api_key", event.target.value)}
-        />
-        <input
-          className="rounded-xl border border-slate-300 p-2"
-          placeholder="Developer Report Email"
-          value={form.developer_report_email}
-          onChange={(event) => updateField("developer_report_email", event.target.value)}
-        />
-        <input
-          className="rounded-xl border border-slate-300 p-2"
-          placeholder="Vertex AI Project"
-          value={form.vertex_ai_project}
-          onChange={(event) => updateField("vertex_ai_project", event.target.value)}
-        />
-        <input
-          className="rounded-xl border border-slate-300 p-2"
-          placeholder="Vertex AI Location"
-          value={form.vertex_ai_location}
-          onChange={(event) => updateField("vertex_ai_location", event.target.value)}
-        />
-        <input
-          className="rounded-xl border border-slate-300 p-2"
-          placeholder="Vertex AI Model"
-          value={form.vertex_ai_model}
-          onChange={(event) => updateField("vertex_ai_model", event.target.value)}
-        />
-        <input
-          className="rounded-xl border border-slate-300 p-2"
-          placeholder="Resident Rate Limit / min"
-          value={form.rate_limit_resident_per_minute}
-          onChange={(event) => updateField("rate_limit_resident_per_minute", event.target.value)}
-        />
-        <input
-          className="rounded-xl border border-slate-300 p-2"
-          placeholder="Public Rate Limit / min"
-          value={form.rate_limit_public_per_minute}
-          onChange={(event) => updateField("rate_limit_public_per_minute", event.target.value)}
-        />
-        <input
-          className="rounded-xl border border-slate-300 p-2"
-          placeholder="OTEL Endpoint"
-          value={form.otel_endpoint}
-          onChange={(event) => updateField("otel_endpoint", event.target.value)}
-        />
-        <input
-          className="rounded-xl border border-slate-300 p-2"
-          placeholder="OTEL Headers"
-          value={form.otel_headers}
-          onChange={(event) => updateField("otel_headers", event.target.value)}
-        />
-      </div>
-      <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-        <input
-          type="checkbox"
-          checked={Boolean(form.otel_enabled)}
-          onChange={(event) => updateField("otel_enabled", event.target.checked)}
-        />
-        Enable OpenTelemetry
-      </label>
-      <button
-        className="rounded-xl bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
-        disabled={isSaving}
-        onClick={() => onSave(buildPayload())}
-      >
-        {isSaving ? "Saving..." : "Save Runtime Config"}
-      </button>
-    </div>
-  );
-}

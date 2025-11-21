@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_db, require_roles
 from app.models.issue import RequestAttachment, ServiceRequest, ServiceStatus
@@ -26,7 +27,13 @@ async def list_requests(
     session: AsyncSession = Depends(get_db),
     _: User = Depends(require_roles(UserRole.staff, UserRole.admin)),
 ) -> list[ServiceRequestRead]:
-    result = await session.execute(select(ServiceRequest).order_by(ServiceRequest.created_at.desc()).limit(200))
+    stmt = (
+        select(ServiceRequest)
+        .options(selectinload(ServiceRequest.attachments), selectinload(ServiceRequest.updates))
+        .order_by(ServiceRequest.created_at.desc())
+        .limit(200)
+    )
+    result = await session.execute(stmt)
     return [ServiceRequestRead.model_validate(req) for req in result.scalars().all()]
 
 
@@ -48,7 +55,7 @@ async def update_request(
     if "assigned_department" in payload:
         service_request.assigned_department = payload["assigned_department"]
     await session.commit()
-    await session.refresh(service_request)
+    await session.refresh(service_request, attribute_names=["attachments", "updates"])
     await broadcast_status_change(
         session, {"service_request_id": service_request.external_id, "status": service_request.status.value}
     )
@@ -82,7 +89,7 @@ async def close_request(
     session.add(attachment)
     service_request.status = ServiceStatus.closed
     await session.commit()
-    await session.refresh(service_request)
+    await session.refresh(service_request, attribute_names=["attachments", "updates"])
     await notify_resident(session, service_request, template_slug="request_closed")
     await log_event(
         session,

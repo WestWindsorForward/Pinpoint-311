@@ -14,6 +14,8 @@ export type IssueCategory = {
   name: string;
   description?: string | null;
   priority: string;
+  default_department_slug?: string | null;
+  department_name?: string | null;
 };
 
 export type ResidentConfig = {
@@ -23,6 +25,24 @@ export type ResidentConfig = {
     google_maps_api_key?: string | null;
   };
   categories: IssueCategory[];
+};
+
+export type RequestAttachment = {
+  id: number;
+  file_path: string;
+  content_type?: string | null;
+  is_completion_photo: boolean;
+  created_at: string;
+};
+
+export type RequestUpdate = {
+  id: number;
+  request_id: string;
+  notes: string;
+  public: boolean;
+  status_override?: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ServiceRequest = {
@@ -38,6 +58,8 @@ export type ServiceRequest = {
   ai_analysis?: Record<string, unknown> | null;
   jurisdiction_warning?: string | null;
   created_at: string;
+  attachments?: RequestAttachment[];
+  updates?: RequestUpdate[];
 };
 
 export type AuthUser = {
@@ -46,6 +68,38 @@ export type AuthUser = {
   display_name: string;
   role: UserRole;
   department?: string | null;
+};
+
+export type Department = {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  is_active: boolean;
+};
+
+export type GeoBoundary = {
+  id: number;
+  name: string;
+  kind: "primary" | "exclusion";
+  redirect_url?: string | null;
+  notes?: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type SecretSummary = {
+  id: string;
+  provider: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
+};
+
+export type StaffUser = AuthUser & {
+  phone_number?: string | null;
+  is_active: boolean;
 };
 
 export type TokenResponse = {

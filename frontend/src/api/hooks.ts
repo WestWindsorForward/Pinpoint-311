@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import client from "./client";
-import type { ResidentConfig, ServiceRequest } from "../types";
+import type {
+  Department,
+  GeoBoundary,
+  ResidentConfig,
+  SecretSummary,
+  ServiceRequest,
+  StaffUser,
+} from "../types";
 
 export const useResidentConfig = () =>
   useQuery({
@@ -48,3 +55,48 @@ export const useUpdateStaffRequest = () => {
     },
   });
 };
+
+export const useDepartments = () =>
+  useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const { data } = await client.get<Department[]>("/api/admin/departments");
+      return data;
+    },
+  });
+
+export const useBoundaries = () =>
+  useQuery({
+    queryKey: ["geo-boundaries"],
+    queryFn: async () => {
+      const { data } = await client.get<GeoBoundary[]>("/api/admin/geo-boundary");
+      return data;
+    },
+  });
+
+export const useStaffDirectory = () =>
+  useQuery({
+    queryKey: ["staff-directory"],
+    queryFn: async () => {
+      const { data } = await client.get<StaffUser[]>("/api/admin/staff");
+      return data;
+    },
+  });
+
+export const useSecrets = () =>
+  useQuery({
+    queryKey: ["secrets"],
+    queryFn: async () => {
+      const { data } = await client.get<SecretSummary[]>("/api/admin/secrets");
+      return data;
+    },
+  });
+
+export const useRecentRequests = (limit = 5) =>
+  useQuery({
+    queryKey: ["recent-requests", limit],
+    queryFn: async () => {
+      const { data } = await client.get<ServiceRequest[]>(`/api/resident/requests/recent?limit=${limit}`);
+      return data;
+    },
+  });

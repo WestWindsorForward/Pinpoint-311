@@ -1,7 +1,9 @@
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
 
+from app.models.settings import BoundaryKind
 
 class BrandingUpdate(BaseModel):
     town_name: str | None = None
@@ -20,6 +22,19 @@ class SecretsPayload(BaseModel):
 class GeoBoundaryUpload(BaseModel):
     name: str = "primary"
     geojson: dict[str, Any]
+    kind: BoundaryKind = BoundaryKind.primary
+    redirect_url: str | None = None
+    notes: str | None = None
+
+
+class GeoBoundaryRead(GeoBoundaryUpload):
+    id: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class RuntimeConfigUpdate(BaseModel):

@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     mailgun_api_key: str | None = None
     vertex_ai_project: str | None = None
     vertex_ai_location: str = "us-central1"
-    vertex_ai_model: str = "gemini-2.5-flash"
+    vertex_ai_model: str = "gemini-1.5-flash"
 
     vault_enabled: bool = False
     vault_addr: str | None = None

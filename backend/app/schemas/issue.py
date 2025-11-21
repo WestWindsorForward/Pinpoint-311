@@ -12,7 +12,7 @@ class IssueCategoryBase(BaseModel):
     name: str
     description: str | None = None
     default_priority: ServicePriority = ServicePriority.medium
-    default_department: str | None = None
+    default_department_slug: str | None = None
     is_active: bool = True
 
 
@@ -24,12 +24,13 @@ class IssueCategoryUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     default_priority: ServicePriority | None = None
-    default_department: str | None = None
+    default_department_slug: str | None = None
     is_active: bool | None = None
 
 
 class IssueCategoryRead(IssueCategoryBase):
     id: int
+    department_name: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -52,6 +53,17 @@ class ServiceRequestCreate(ServiceRequestBase):
     media_urls: list[str] | None = None
 
 
+class RequestAttachmentRead(BaseModel):
+    id: int
+    file_path: str
+    content_type: str | None = None
+    is_completion_photo: bool = False
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ServiceRequestRead(ServiceRequestBase):
     id: uuid.UUID
     external_id: str
@@ -60,6 +72,8 @@ class ServiceRequestRead(ServiceRequestBase):
     ai_analysis: dict[str, Any] | None = None
     jurisdiction_warning: str | None = None
     category_id: int | None = None
+    attachments: list[RequestAttachmentRead] = []
+    updates: list["RequestUpdateRead"] = []
     created_at: datetime
     updated_at: datetime
 
@@ -76,5 +90,8 @@ class RequestUpdateRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
+      class Config:
         from_attributes = True
+
+
+ServiceRequestRead.model_rebuild()

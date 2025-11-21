@@ -35,7 +35,7 @@ class IssueCategory(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text)
     default_priority: Mapped[ServicePriority] = mapped_column(Enum(ServicePriority), default=ServicePriority.medium)
-    default_department: Mapped[str | None] = mapped_column(String(255))
+    default_department_slug: Mapped[str | None] = mapped_column("default_department", String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     requests = relationship("ServiceRequest", back_populates="category")

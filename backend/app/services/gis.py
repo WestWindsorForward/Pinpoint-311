@@ -7,30 +7,59 @@ from shapely.geometry import Point, shape
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.settings import GeoBoundary
+from app.models.settings import BoundaryKind, GeoBoundary
 
 logger = logging.getLogger(__name__)
 
 
-async def is_point_within_boundary(session: AsyncSession, latitude: float | None, longitude: float | None) -> bool:
+async def evaluate_location(
+    session: AsyncSession, latitude: float | None, longitude: float | None
+) -> tuple[bool, str | None]:
+    """Returns (allowed, warning)."""
     if latitude is None or longitude is None:
-        return True  # allow requests without coordinates
-    boundary = await _get_active_boundary(session)
-    if not boundary:
-        return True
-    polygon = shape(boundary.geojson)
-    return polygon.contains(Point(longitude, latitude))
+        return True, None
+    point = Point(longitude, latitude)
+
+    primaries = await _get_boundaries(session, BoundaryKind.primary)
+    if primaries:
+        inside_primary = any(_contains(boundary, point) for boundary in primaries)
+        if not inside_primary:
+            return False, None
+
+    exclusions = await _get_boundaries(session, BoundaryKind.exclusion)
+    for boundary in exclusions:
+        if _contains(boundary, point):
+            warning = boundary.notes or "Location belongs to another jurisdiction."
+            if boundary.redirect_url:
+                warning = f"{warning} See {boundary.redirect_url}."
+            return True, warning
+
+    return True, None
 
 
-async def _get_active_boundary(session: AsyncSession) -> Optional[GeoBoundary]:
-    result = await session.execute(select(GeoBoundary).where(GeoBoundary.is_active.is_(True)).order_by(GeoBoundary.updated_at.desc()))
-    return result.scalar_one_or_none()
+async def is_point_within_boundary(session: AsyncSession, latitude: float | None, longitude: float | None) -> bool:
+    allowed, _ = await evaluate_location(session, latitude, longitude)
+    return allowed
 
 
 async def jurisdiction_warning(session: AsyncSession, latitude: float | None, longitude: float | None) -> str | None:
-    if latitude is None or longitude is None:
-        return None
-    inside = await is_point_within_boundary(session, latitude, longitude)
-    if inside:
-        return None
-    return "Location appears to be outside of township jurisdiction. Please confirm responsible agency."
+    _, warning = await evaluate_location(session, latitude, longitude)
+    return warning
+
+
+async def _get_boundaries(session: AsyncSession, kind: BoundaryKind) -> list[GeoBoundary]:
+    result = await session.execute(
+        select(GeoBoundary)
+            .where(GeoBoundary.kind == kind, GeoBoundary.is_active.is_(True))
+            .order_by(GeoBoundary.updated_at.desc())
+    )
+    return result.scalars().all()
+
+
+def _contains(boundary: GeoBoundary, point: Point) -> bool:
+    try:
+        polygon = shape(boundary.geojson)
+        return polygon.contains(point)
+    except Exception as exc:  # pragma: no cover - log corrupt shapes
+        logger.warning("Failed to evaluate boundary %s: %s", boundary.id, exc)
+        return False

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi import Form as FastAPIForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_db, get_optional_user, rate_limit
 from app.core.config import settings
@@ -81,8 +82,8 @@ async def create_resident_request(
     if not category:
         raise HTTPException(status_code=404, detail="Unknown category")
 
-    boundary_ok = await gis.is_point_within_boundary(session, latitude, longitude)
-    if not boundary_ok:
+    allowed, warning = await gis.evaluate_location(session, latitude, longitude)
+    if not allowed:
         raise HTTPException(status_code=400, detail="Location outside township boundary")
 
     ai_result = await analyze_request(description)
@@ -104,6 +105,8 @@ async def create_resident_request(
         priority=category.default_priority,
         status=ServiceStatus.received,
         category_id=category.id,
+        assigned_department=category.default_department_slug,
+        jurisdiction_warning=warning,
         ai_analysis=ai_result,
         meta=metadata,
         resident_id=current_user.id if current_user else None,
@@ -125,6 +128,7 @@ async def create_resident_request(
     if resident_email:
         await notify_resident(session, request, template_slug="request_received")
 
+    await session.refresh(request, attribute_names=["attachments", "updates"])
     return ServiceRequestRead.model_validate(request)
 
 
@@ -135,7 +139,12 @@ async def list_my_requests(
 ) -> list[ServiceRequestRead]:
     if not current_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
-    stmt = select(ServiceRequest).where(ServiceRequest.resident_id == current_user.id).order_by(ServiceRequest.created_at.desc())
+    stmt = (
+        select(ServiceRequest)
+        .where(ServiceRequest.resident_id == current_user.id)
+        .options(selectinload(ServiceRequest.attachments), selectinload(ServiceRequest.updates))
+        .order_by(ServiceRequest.created_at.desc())
+    )
     result = await session.execute(stmt)
     return [ServiceRequestRead.model_validate(req) for req in result.scalars().all()]
 
@@ -146,11 +155,25 @@ async def get_resident_request(
     session: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ) -> ServiceRequestRead:
-    stmt = select(ServiceRequest).where(ServiceRequest.external_id == external_id)
+    stmt = (
+        select(ServiceRequest)
+        .where(ServiceRequest.external_id == external_id)
+        .options(selectinload(ServiceRequest.attachments), selectinload(ServiceRequest.updates))
+    )
     result = await session.execute(stmt)
     request = result.scalar_one_or_none()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
-    if current_user and current_user.role == UserRole.resident and request.resident_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this request")
     return ServiceRequestRead.model_validate(request)
+
+
+@router.get("/requests/recent", response_model=list[ServiceRequestRead])
+async def recent_requests(limit: int = 5, session: AsyncSession = Depends(get_db)) -> list[ServiceRequestRead]:
+    stmt = (
+        select(ServiceRequest)
+        .options(selectinload(ServiceRequest.attachments), selectinload(ServiceRequest.updates))
+        .order_by(ServiceRequest.created_at.desc())
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    return [ServiceRequestRead.model_validate(req) for req in result.scalars().all()]

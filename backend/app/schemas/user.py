@@ -24,6 +24,7 @@ class UserUpdate(BaseModel):
     department: str | None = None
     phone_number: str | None = None
     is_active: bool | None = None
+    password: str | None = None
 
 
 class UserRead(UserBase):
