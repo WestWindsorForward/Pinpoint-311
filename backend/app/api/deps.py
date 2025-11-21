@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_session
 from app.models.user import User, UserRole
-from app.services import rate_limit as rate_limit_service
+from app.services import rate_limit as rate_limit_service, runtime_config as runtime_config_service
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_prefix}/auth/login")
 optional_bearer = HTTPBearer(auto_error=False)
@@ -61,10 +61,18 @@ def require_roles(*roles: UserRole) -> Callable[[User], User]:
     return dependency
 
 
-def rate_limit(limit: int, scope: str):
+def rate_limit(limit: int, scope: str, override_key: str | None = None):
     async def dependency(request: Request) -> None:
+        current_limit = limit
+        if override_key:
+            override = await runtime_config_service.get_value(override_key)
+            if override is not None:
+                try:
+                    current_limit = int(override)
+                except ValueError:
+                    current_limit = limit
         client_ip = request.client.host if request.client else "anonymous"
         identifier = f"{scope}:{client_ip}"
-        await rate_limit_service.allow(identifier, limit)
+        await rate_limit_service.allow(identifier, current_limit)
 
     return dependency

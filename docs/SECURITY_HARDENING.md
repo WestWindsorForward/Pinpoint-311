@@ -25,3 +25,9 @@
 - Every privileged action (branding changes, secrets updates, category edits, staff status changes, closures) is persisted to the `audit_events` table.
 - Fields captured: actor ID/role, action, entity type/id, timestamp, IP, and optional metadata.
 - Use this table to power compliance exports or SIEM ingestion.
+
+## Runtime Config Overrides
+- Admins can edit Google Maps keys, Vertex AI settings, rate limits, OTEL endpoints, and developer report emails directly in the admin portal.
+- Values are stored in the database (`township_settings.runtime_config`) and override the corresponding environment variables without a redeploy.
+- Clearing a field restores the underlying environment value.
+- See `docs/RUNTIME_CONFIG.md` for the exact keys and behavior.

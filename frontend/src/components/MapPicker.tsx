@@ -1,6 +1,7 @@
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 
 interface MapPickerProps {
+  apiKey?: string | null;
   lat?: number | null;
   lng?: number | null;
   onChange: (coords: { lat: number; lng: number }) => void;
@@ -11,12 +12,11 @@ const containerStyle = {
   height: "320px",
 };
 
-export function MapPicker({ lat, lng, onChange }: MapPickerProps) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
+export function MapPicker({ apiKey, lat, lng, onChange }: MapPickerProps) {
   if (!apiKey) {
     return (
       <div className="rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
-        Provide `VITE_GOOGLE_MAPS_KEY` to enable the interactive map.
+        Municipal admin: add a Google Maps key in Township Settings → Runtime Config.
       </div>
     );
   }

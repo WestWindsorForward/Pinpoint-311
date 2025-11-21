@@ -6,6 +6,7 @@ import logging
 from typing import Any, TypedDict
 
 from app.core.config import settings
+from app.services import runtime_config
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +22,16 @@ class AIAnalysis(TypedDict, total=False):
 async def analyze_request(description: str, media_urls: list[str] | None = None) -> AIAnalysis:
     """Run an AI triage workflow; fall back to heuristic if Vertex AI unavailable."""
 
-    if settings.vertex_ai_project and settings.vertex_ai_model:
+    vertex_project = await runtime_config.get_value("vertex_ai_project", settings.vertex_ai_project)
+    vertex_model = await runtime_config.get_value("vertex_ai_model", settings.vertex_ai_model)
+    vertex_location = await runtime_config.get_value("vertex_ai_location", settings.vertex_ai_location)
+    if vertex_project and vertex_model:
         try:
             from google.cloud import aiplatform
 
             def _call_vertex() -> AIAnalysis:
-                aiplatform.init(project=settings.vertex_ai_project, location=settings.vertex_ai_location)
-                model = aiplatform.GenerativeModel(settings.vertex_ai_model)
+                aiplatform.init(project=vertex_project, location=vertex_location)
+                model = aiplatform.GenerativeModel(vertex_model)
                 prompt = (
                     "You are triaging civic service requests. "
                     "Return JSON with severity (1-10), recommended_category, dimensions (width_cm,height_cm,quantity), "

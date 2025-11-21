@@ -58,7 +58,8 @@ To serve the stack from `311.yourtown.gov` (with automatic HTTPS), set `APP_DOMA
 - **Rate limiting**: Redis-backed guardrails for Open311 and resident submissions (`RATE_LIMIT_*` settings).
 - **Attachment scanning**: All uploads are scanned by ClamAV (provided via the `clamav` service).
 - **Audit trails**: Admin/staff actions are persisted to `audit_events` for compliance reviews.
-- See `docs/SECURITY_HARDENING.md` for configuration details.
+- **Runtime overrides**: Admins can edit Google Maps keys, Vertex AI settings, rate limits, OTEL endpoints, etc., directly in the portal; env vars remain as defaults.
+- See `docs/SECURITY_HARDENING.md` and `docs/RUNTIME_CONFIG.md` for configuration details.
 
 ## Observability
 

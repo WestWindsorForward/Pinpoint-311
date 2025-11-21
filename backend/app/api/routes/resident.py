@@ -13,7 +13,7 @@ from app.models.issue import IssueCategory, RequestAttachment, ServiceRequest, S
 from app.models.settings import BrandingAsset, TownshipSetting
 from app.models.user import User, UserRole
 from app.schemas.issue import ServiceRequestRead
-from app.services import antivirus, gis
+from app.services import antivirus, gis, runtime_config as runtime_config_service
 from app.services.ai import analyze_request
 from app.services.notifications import notify_resident
 from app.utils.storage import save_upload
@@ -34,10 +34,15 @@ async def get_resident_config(session: AsyncSession = Depends(get_db)) -> dict:
 
     categories_stmt = select(IssueCategory).where(IssueCategory.is_active.is_(True))
     categories_result = await session.execute(categories_stmt)
+    runtime_cfg = await runtime_config_service.get_runtime_config(session)
+    maps_key = runtime_cfg.get("google_maps_api_key") or settings.google_maps_api_key
 
     return {
         "branding": branding.value if branding else {},
         "assets": assets,
+        "integrations": {
+            "google_maps_api_key": maps_key,
+        },
         "categories": [
             {
                 "slug": cat.slug,
@@ -53,7 +58,9 @@ async def get_resident_config(session: AsyncSession = Depends(get_db)) -> dict:
 @router.post(
     "/requests",
     response_model=ServiceRequestRead,
-    dependencies=[Depends(rate_limit(settings.rate_limit_resident_per_minute, "resident-create"))],
+    dependencies=[
+        Depends(rate_limit(settings.rate_limit_resident_per_minute, "resident-create", "rate_limit_resident_per_minute"))
+    ],
 )
 async def create_resident_request(
     service_code: Annotated[str, FastAPIForm(...)],

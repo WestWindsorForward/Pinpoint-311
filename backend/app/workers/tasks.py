@@ -9,6 +9,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.issue import IssueCategory, ServiceRequest
 from app.services import ai as ai_service
 from app.services import email as email_service
+from app.services import runtime_config as runtime_config_service
 from app.workers.celery_app import celery_app
 
 
@@ -42,6 +43,7 @@ async def _send_developer_report() -> None:
         )
         breakdown = {name: count for name, count in category_breakdown}
 
+        recipient = await runtime_config_service.get_value("developer_report_email", settings.developer_report_email)
         body = (
             "Township Request Management System Weekly Report\n\n"
             f"Total Requests: {total_requests or 0}\n"
@@ -51,7 +53,7 @@ async def _send_developer_report() -> None:
 
         await email_service.send_email(
             session,
-            to=settings.developer_report_email,
+            to=recipient,
             subject="Township Weekly Usage Report",
             body=body,
         )

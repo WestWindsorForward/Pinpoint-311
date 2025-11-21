@@ -16,7 +16,11 @@ from app.workers.tasks import ai_triage_task
 router = APIRouter(prefix="/open311/v2", tags=["Open311"])
 
 
-@router.get("/services.json", response_model=list[Open311Service], dependencies=[Depends(rate_limit(settings.rate_limit_public_per_minute, "open311-services"))])
+@router.get(
+    "/services.json",
+    response_model=list[Open311Service],
+    dependencies=[Depends(rate_limit(settings.rate_limit_public_per_minute, "open311-services", "rate_limit_public_per_minute"))],
+)
 async def list_services(session: AsyncSession = Depends(get_db)) -> list[Open311Service]:
     stmt = select(IssueCategory).where(IssueCategory.is_active.is_(True))
     result = await session.execute(stmt)
@@ -37,7 +41,9 @@ async def list_services(session: AsyncSession = Depends(get_db)) -> list[Open311
     "/requests.json",
     response_model=list[Open311Request],
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(rate_limit(settings.rate_limit_resident_per_minute, "open311-create"))],
+    dependencies=[
+        Depends(rate_limit(settings.rate_limit_resident_per_minute, "open311-create", "rate_limit_resident_per_minute"))
+    ],
 )
 async def create_request(payload: Open311RequestCreate, session: AsyncSession = Depends(get_db)) -> list[Open311Request]:
     stmt = select(IssueCategory).where(IssueCategory.slug == payload.service_code)

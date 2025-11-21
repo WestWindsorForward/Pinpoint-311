@@ -7,8 +7,8 @@ from app.models.issue import IssueCategory
 from app.models.settings import ApiCredential, BrandingAsset, GeoBoundary, NotificationTemplate, TownshipSetting
 from app.models.user import User, UserRole
 from app.schemas.issue import IssueCategoryCreate, IssueCategoryRead, IssueCategoryUpdate
-from app.schemas.settings import BrandingUpdate, GeoBoundaryUpload, SecretsPayload
-from app.services import gis
+from app.schemas.settings import BrandingUpdate, GeoBoundaryUpload, RuntimeConfigUpdate, SecretsPayload
+from app.services import gis, runtime_config as runtime_config_service
 from app.services.audit import log_event
 from app.utils.storage import save_file
 
@@ -278,3 +278,31 @@ async def upsert_template(
         metadata={"slug": slug},
     )
     return {"slug": slug}
+
+
+@router.get("/runtime-config", response_model=dict)
+async def get_runtime_config(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.admin)),
+) -> dict:
+    return await runtime_config_service.get_runtime_config(session)
+
+
+@router.put("/runtime-config", response_model=dict)
+async def update_runtime_config(
+    payload: RuntimeConfigUpdate,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> dict:
+    config = await runtime_config_service.update_runtime_config(session, payload.model_dump(exclude_unset=True))
+    await log_event(
+        session,
+        action="runtime_config.update",
+        actor=current_user,
+        entity_type="runtime_config",
+        entity_id="runtime_config",
+        request=request,
+        metadata=payload.model_dump(exclude_unset=True),
+    )
+    return config

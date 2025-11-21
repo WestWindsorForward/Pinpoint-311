@@ -8,6 +8,7 @@ import { MapPicker } from "./MapPicker";
 
 interface Props {
   categories: IssueCategory[];
+  mapsApiKey?: string | null;
 }
 
 interface FormValues {
@@ -19,7 +20,7 @@ interface FormValues {
   resident_phone?: string;
 }
 
-export function RequestForm({ categories }: Props) {
+export function RequestForm({ categories, mapsApiKey }: Props) {
   const { register, handleSubmit, reset } = useForm<FormValues>({
     defaultValues: { service_code: categories[0]?.slug ?? "" },
   });
@@ -83,26 +84,26 @@ export function RequestForm({ categories }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label className="text-sm font-medium text-slate-600">Phone</label>
-          <input {...register("resident_phone")} className="mt-1 w-full rounded-xl border border-slate-300 p-2" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="text-sm font-medium text-slate-600">Phone</label>
+            <input {...register("resident_phone")} className="mt-1 w-full rounded-xl border border-slate-300 p-2" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-600">Address</label>
+            <input {...register("address_string")} className="mt-1 w-full rounded-xl border border-slate-300 p-2" />
+          </div>
         </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600">Address</label>
-          <input {...register("address_string")} className="mt-1 w-full rounded-xl border border-slate-300 p-2" />
-        </div>
-      </div>
 
-      <div>
-        <label className="text-sm font-medium text-slate-600">Location</label>
-        <MapPicker lat={coords?.lat} lng={coords?.lng} onChange={setCoords} />
-        {coords && (
-          <p className="mt-1 text-xs text-slate-500">
-            {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-          </p>
-        )}
-      </div>
+        <div>
+          <label className="text-sm font-medium text-slate-600">Location</label>
+          <MapPicker apiKey={mapsApiKey} lat={coords?.lat} lng={coords?.lng} onChange={setCoords} />
+          {coords && (
+            <p className="mt-1 text-xs text-slate-500">
+              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+            </p>
+          )}
+        </div>
 
       <button
         type="submit"

@@ -20,3 +20,16 @@ class SecretsPayload(BaseModel):
 class GeoBoundaryUpload(BaseModel):
     name: str = "primary"
     geojson: dict[str, Any]
+
+
+class RuntimeConfigUpdate(BaseModel):
+    google_maps_api_key: str | None = None
+    vertex_ai_project: str | None = None
+    vertex_ai_location: str | None = None
+    vertex_ai_model: str | None = None
+    developer_report_email: str | None = None
+    rate_limit_resident_per_minute: int | None = None
+    rate_limit_public_per_minute: int | None = None
+    otel_enabled: bool | None = None
+    otel_endpoint: str | None = None
+    otel_headers: str | None = None

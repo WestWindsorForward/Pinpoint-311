@@ -19,6 +19,9 @@ export type IssueCategory = {
 export type ResidentConfig = {
   branding: Branding;
   assets: Record<string, string>;
+  integrations: {
+    google_maps_api_key?: string | null;
+  };
   categories: IssueCategory[];
 };
 

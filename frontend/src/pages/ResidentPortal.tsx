@@ -35,7 +35,10 @@ export function ResidentPortal() {
               ))}
             </div>
           </div>
-          <RequestForm categories={data.categories} />
+          <RequestForm
+            categories={data.categories}
+            mapsApiKey={data.integrations.google_maps_api_key ?? null}
+          />
         </section>
       </div>
     </BrandingProvider>
