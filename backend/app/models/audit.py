@@ -18,4 +18,4 @@ class AuditEvent(Base, TimestampMixin):
     entity_type: Mapped[str | None] = mapped_column(String(64))
     entity_id: Mapped[str | None] = mapped_column(String(64))
     ip_address: Mapped[str | None] = mapped_column(String(64))
-    metadata: Mapped[dict | None] = mapped_column(JSON)
+    meta: Mapped[dict | None] = mapped_column("metadata", JSON)

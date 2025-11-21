@@ -18,14 +18,15 @@ async def send_email(session: AsyncSession, *, to: str, subject: str, body: str)
         return
 
     msg = EmailMessage()
-    msg["From"] = cred.metadata.get("from_email") if cred.metadata else "noreply@township"
+    meta = cred.meta or {}
+    msg["From"] = meta.get("from_email", "noreply@township")
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
 
     try:
-        with smtplib.SMTP(cred.metadata.get("host", "localhost"), int(cred.metadata.get("port", 25))) as smtp:
-            if cred.metadata.get("use_tls"):
+        with smtplib.SMTP(meta.get("host", "localhost"), int(meta.get("port", 25))) as smtp:
+            if meta.get("use_tls"):
                 smtp.starttls()
             if cred.key:
                 smtp.login(cred.key, cred.secret)
@@ -39,5 +40,10 @@ async def _load_smtp_credentials(session: AsyncSession):
     if cred:
         return cred
     if settings.mailgun_api_key:
-        return ApiCredential(provider="smtp", key="api", secret=settings.mailgun_api_key, metadata={"host": "smtp.mailgun.org", "port": 587, "use_tls": True})
+        return ApiCredential(
+            provider="smtp",
+            key="api",
+            secret=settings.mailgun_api_key,
+            meta={"host": "smtp.mailgun.org", "port": 587, "use_tls": True},
+        )
     return None

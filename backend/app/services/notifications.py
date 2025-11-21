@@ -23,7 +23,7 @@ async def notify_resident(session: AsyncSession, request: ServiceRequest, *, tem
         description=request.description,
     )
 
-    if channel == "email" and request.metadata and request.metadata.get("resident_email"):
-        await email_service.send_email(session, to=request.metadata["resident_email"], subject=template.subject, body=body)
-    elif channel == "sms" and request.metadata and request.metadata.get("resident_phone"):
-        await sms_service.send_sms(session, to=request.metadata["resident_phone"], body=body)
+    if channel == "email" and request.meta and request.meta.get("resident_email"):
+        await email_service.send_email(session, to=request.meta["resident_email"], subject=template.subject, body=body)
+    elif channel == "sms" and request.meta and request.meta.get("resident_phone"):
+        await sms_service.send_sms(session, to=request.meta["resident_phone"], body=body)

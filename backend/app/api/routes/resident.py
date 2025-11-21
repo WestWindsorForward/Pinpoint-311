@@ -105,7 +105,7 @@ async def create_resident_request(
         status=ServiceStatus.received,
         category_id=category.id,
         ai_analysis=ai_result,
-        metadata=metadata,
+        meta=metadata,
         resident_id=current_user.id if current_user else None,
     )
 

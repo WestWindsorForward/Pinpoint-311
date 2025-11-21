@@ -28,7 +28,7 @@ async def log_event(
         entity_type=entity_type,
         entity_id=entity_id,
         ip_address=ip,
-        metadata=metadata,
+        meta=metadata,
     )
     session.add(event)
     await session.commit()

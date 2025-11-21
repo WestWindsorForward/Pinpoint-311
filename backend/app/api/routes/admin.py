@@ -166,7 +166,7 @@ async def store_secret(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.admin)),
 ) -> dict:
-    cred = ApiCredential(provider=payload.provider, key=payload.key, secret=payload.secret, metadata=payload.metadata or {})
+    cred = ApiCredential(provider=payload.provider, key=payload.key, secret=payload.secret, meta=payload.metadata or {})
     session.add(cred)
     await session.commit()
     await log_event(

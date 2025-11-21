@@ -40,7 +40,7 @@ class ApiCredential(Base, TimestampMixin):
     provider: Mapped[str] = mapped_column(String(128))
     key: Mapped[str] = mapped_column(String(128))
     secret: Mapped[str] = mapped_column(Text)
-    metadata: Mapped[dict | None] = mapped_column(JSON)
+    meta: Mapped[dict | None] = mapped_column("metadata", JSON)
 
 
 class NotificationTemplate(Base, TimestampMixin):
@@ -61,4 +61,4 @@ class OutboundWebhookEndpoint(Base, TimestampMixin):
     url: Mapped[str] = mapped_column(String(512))
     secret: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    metadata: Mapped[dict | None] = mapped_column(JSON)
+    meta: Mapped[dict | None] = mapped_column("metadata", JSON)

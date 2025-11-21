@@ -60,5 +60,5 @@ async def get_credentials(session: AsyncSession, provider: str) -> ApiCredential
         provider=provider,
         key=data.get("key", ""),
         secret=data.get("secret", ""),
-        metadata=metadata,
+        meta=metadata,
     )

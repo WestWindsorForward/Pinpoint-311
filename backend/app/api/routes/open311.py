@@ -73,7 +73,7 @@ async def create_request(payload: Open311RequestCreate, session: AsyncSession = 
         category_id=category.id,
         jurisdiction_warning=warning,
         ai_analysis=ai_result,
-        metadata={
+        meta={
             "resident_email": payload.email,
             "resident_phone": payload.phone,
             "resident_name": " ".join(filter(None, [payload.first_name, payload.last_name])) or None,
@@ -130,5 +130,5 @@ async def get_request(external_id: str, session: AsyncSession = Depends(get_db))
         service_address=request.address_string,
         lat=request.latitude,
         long=request.longitude,
-        media_url=request.metadata.get("media_url") if request.metadata else None,
+        media_url=request.meta.get("media_url") if request.meta else None,
     )

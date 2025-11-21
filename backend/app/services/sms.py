@@ -14,7 +14,7 @@ async def send_sms(session: AsyncSession, *, to: str, body: str) -> None:
         logger.warning("SMS credentials missing; skipping SMS to %s", to)
         return
 
-    url = cred.metadata.get("webhook_url") if cred.metadata else None
+    url = cred.meta.get("webhook_url") if cred.meta else None
     if not url:
         logger.error("SMS webhook URL missing in credentials metadata")
         return
