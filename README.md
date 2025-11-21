@@ -33,9 +33,26 @@ Set environment variables using `backend/.env.example`. (`ADMIN_API_KEY` remains
 - Protected APIs now require `Authorization: Bearer <access_token>`; refresh tokens can be rotated via `POST /api/auth/refresh`.
 - Admins can invite staff accounts through `POST /api/auth/invite` (requires admin role).
 
+## Zero-Dependency Docker Install
+
+Need the absolute simplest path? If the target host has only Docker and curl, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/WestWindsorForward/CURSOR-311Temp/main/scripts/docker_quickstart.sh | sudo bash
+```
+
+The script will:
+
+- Install any missing prerequisites (Docker, Compose plugin, git) via `apt-get`
+- Clone/update this repo under `/opt/township`
+- Prompt for admin email/password + hostname/public URL
+- Run `scripts/setup_township.sh` with those answers
+
+You can customize the behaviour with environment variables (`REPO_URL`, `REPO_BRANCH`, `INSTALL_DIR`) when running the command.
+
 ## One-Command Stack Setup
 
-For on-prem or VM installs, run the automated bootstrapper (requires Docker, Docker Compose, `python3`, `curl`, `openssl`, and `jq`; pass `--install-deps` to have the script apt-install them automatically):
+For managed on-prem installs, run the automated bootstrapper (requires Docker, Docker Compose, `python3`, `curl`, `openssl`, and `jq`; pass `--install-deps` to have the script apt-install them automatically):
 
 ```bash
 ./scripts/setup_township.sh \
