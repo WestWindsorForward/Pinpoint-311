@@ -97,7 +97,7 @@ set_env_var() {
   local file=$1
   local key=$2
   local value=$3
-  "${PYTHON_BIN:-python3}" - "$file" "$key" "$value" <<'PY'
+  python3 - "$file" "$key" "$value" <<'PY'
 import pathlib, sys
 path = pathlib.Path(sys.argv[1])
 key = sys.argv[2]
