@@ -42,6 +42,8 @@ services:
       - clamav
     ports:
       - "8000:8000"
+    volumes:
+      - storage_data:/app/storage
 
   celery-worker:
     build:
@@ -87,3 +89,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  storage_data:

@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import client from "../api/client";
 import { useBoundaries, useDepartments, useResidentConfig, useSecrets, useStaffDirectory } from "../api/hooks";
-import type { Department, IssueCategory, SecretSummary, StaffUser } from "../types";
+import type { Department, IssueCategory, ResidentConfig, SecretSummary, StaffUser } from "../types";
 
 type DepartmentFormState = {
   slug: string;
@@ -81,6 +81,13 @@ export function AdminPanel() {
     password: "",
   });
   const [secretForm, setSecretForm] = useState<SecretFormState>({ provider: "smtp", key: "", secret: "", notes: "" });
+  const brandingSuccess = useTransientSuccess();
+  const boundarySuccess = useTransientSuccess();
+  const departmentSuccess = useTransientSuccess();
+  const categorySuccess = useTransientSuccess();
+  const staffSuccess = useTransientSuccess();
+  const runtimeSuccess = useTransientSuccess();
+  const secretSuccess = useTransientSuccess();
 
   useEffect(() => {
     if (!residentConfig?.branding) return;
@@ -92,7 +99,7 @@ export function AdminPanel() {
     });
   }, [residentConfig]);
 
-  const runtimeConfigQuery = useQuery({
+    const runtimeConfigQuery = useQuery({
     queryKey: ["runtime-config"],
     queryFn: async () => {
       const { data } = await client.get<Record<string, unknown>>("/api/admin/runtime-config");
@@ -100,13 +107,16 @@ export function AdminPanel() {
     },
   });
 
-  const runtimeMutation = useMutation({
+    const runtimeMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) =>
       client.put("/api/admin/runtime-config", payload),
-    onSuccess: () => runtimeConfigQuery.refetch(),
+      onSuccess: () => {
+        runtimeConfigQuery.refetch();
+        runtimeSuccess.flash();
+      },
   });
 
-  const brandingMutation = useMutation({
+    const brandingMutation = useMutation({
     mutationFn: async () => {
       await client.put("/api/admin/branding", brandingForm);
       if (logoFile) {
@@ -116,25 +126,30 @@ export function AdminPanel() {
           headers: { "Content-Type": "multipart/form-data" },
         });
       }
-    },
-    onSuccess: () => refetch(),
+      },
+      onSuccess: () => {
+        refetch();
+        brandingSuccess.flash();
+      },
   });
 
   const departmentMutation = useMutation({
     mutationFn: async (payload: typeof newDepartment) =>
       client.post("/api/admin/departments", payload),
-    onSuccess: () => {
+      onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["departments"] });
       setNewDepartment({ slug: "", name: "", description: "", contact_email: "", contact_phone: "" });
+        departmentSuccess.flash();
     },
   });
 
   const categoryMutation = useMutation({
     mutationFn: async (payload: typeof newCategory) =>
       client.post("/api/admin/categories", { ...payload, default_priority: "medium" }),
-    onSuccess: () => {
+      onSuccess: () => {
       setNewCategory({ slug: "", name: "", description: "", default_department_slug: "" });
       refetch();
+        categorySuccess.flash();
     },
   });
 
@@ -148,17 +163,19 @@ export function AdminPanel() {
         notes: payload.notes || null,
         geojson: JSON.parse(payload.geojson),
       }),
-    onSuccess: () => {
+      onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["geo-boundaries"] });
       setNewBoundary({ name: "Primary Boundary", kind: "primary", jurisdiction: "", redirect_url: "", notes: "", geojson: "" });
+        boundarySuccess.flash();
     },
   });
 
   const staffMutation = useMutation({
     mutationFn: async (payload: typeof newStaff) => client.post("/api/admin/staff", payload),
-    onSuccess: () => {
+      onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff-directory"] });
       setNewStaff({ email: "", display_name: "", role: "staff", department: "", phone_number: "", password: "" });
+        staffSuccess.flash();
     },
   });
 
@@ -172,9 +189,10 @@ export function AdminPanel() {
         metadata,
       });
     },
-    onSuccess: () => {
+      onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["secrets"] });
       setSecretForm((prev) => ({ ...prev, key: "", secret: "", notes: "" }));
+        secretSuccess.flash();
     },
   });
 
@@ -187,7 +205,14 @@ export function AdminPanel() {
 
   return (
     <div className="space-y-8">
-      <Section title="Branding & Logo" description="Update live colors, hero copy, and upload a township seal or logo.">
+        <Section
+          title="Resident Portal Snapshot"
+          description="Verify what residents currently see on the public site."
+        >
+          <PortalPreview branding={residentConfig?.branding} categories={categories} />
+        </Section>
+
+        <Section title="Branding & Logo" description="Update live colors, hero copy, and upload a township seal or logo.">
         <div className="grid gap-4 md:grid-cols-2">
           {Object.entries(brandingForm).map(([key, value]) => (
             <label key={key} className="text-sm text-slate-600">
@@ -205,7 +230,7 @@ export function AdminPanel() {
             </label>
           ))}
         </div>
-        <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-end">
+          <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-end md:gap-4">
           <label className="text-sm text-slate-600">
             Township Logo
             <input
@@ -215,13 +240,16 @@ export function AdminPanel() {
               onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)}
             />
           </label>
-          <button
-            onClick={() => brandingMutation.mutate()}
-            className="rounded-xl bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
-            disabled={brandingMutation.isPending}
-          >
-            {brandingMutation.isPending ? "Saving..." : "Save Branding"}
-          </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => brandingMutation.mutate()}
+                className="rounded-xl bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
+                disabled={brandingMutation.isPending}
+              >
+                {brandingMutation.isPending ? "Saving..." : "Save Branding"}
+              </button>
+              <SaveBadge show={brandingSuccess.isVisible} label="Branding published" />
+            </div>
         </div>
       </Section>
 
@@ -290,14 +318,15 @@ export function AdminPanel() {
             onChange={(event) => setNewBoundary((prev) => ({ ...prev, geojson: event.target.value }))}
           />
         </label>
-        <div className="mt-3 flex justify-end">
-          <button
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
-            onClick={() => boundaryMutation.mutate(newBoundary)}
-            disabled={boundaryMutation.isPending}
-          >
-            {boundaryMutation.isPending ? "Uploading…" : "Save Boundary"}
-          </button>
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
+            <button
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
+              onClick={() => boundaryMutation.mutate(newBoundary)}
+              disabled={boundaryMutation.isPending}
+            >
+              {boundaryMutation.isPending ? "Uploading…" : "Save Boundary"}
+            </button>
+            <SaveBadge show={boundarySuccess.isVisible} label="Boundary saved" />
           </div>
           {boundaries.length > 0 && (
             <ul className="mt-4 space-y-2 text-sm">
@@ -328,23 +357,25 @@ export function AdminPanel() {
         title="Departments"
         description="Create departments and assign categories/staff to ensure the right team triages incoming issues."
       >
-        <DepartmentForm
+          <DepartmentForm
           form={newDepartment}
           departments={departments}
           onChange={setNewDepartment}
           onSubmit={() => departmentMutation.mutate(newDepartment)}
           isSubmitting={departmentMutation.isPending}
+            saveBadge={<SaveBadge show={departmentSuccess.isVisible} />}
         />
       </Section>
 
       <Section title="Categories" description="Link categories to departments so routing stays automated.">
-        <CategoryForm
+          <CategoryForm
           form={newCategory}
           categories={categories}
           departments={departments}
           onChange={setNewCategory}
           onSubmit={() => categoryMutation.mutate(newCategory)}
           isSubmitting={categoryMutation.isPending}
+            saveBadge={<SaveBadge show={categorySuccess.isVisible} />}
         />
       </Section>
 
@@ -352,13 +383,14 @@ export function AdminPanel() {
         title="Staff Directory"
         description="Invite staff or admins with department assignments. They’ll log in from the staff portal."
       >
-        <StaffManager
+          <StaffManager
           staff={staff}
           departments={departments}
           form={newStaff}
           onChange={setNewStaff}
           onSubmit={() => staffMutation.mutate(newStaff)}
           isSubmitting={staffMutation.isPending}
+            saveBadge={<SaveBadge show={staffSuccess.isVisible} label="Invite sent" />}
         />
       </Section>
 
@@ -366,11 +398,12 @@ export function AdminPanel() {
         title="Runtime Config"
         description="Runtime overrides for API keys, rate limits, and observability without redeploying."
       >
-        <RuntimeConfigForm
+          <RuntimeConfigForm
           config={runtimeConfigQuery.data ?? {}}
           isLoading={runtimeConfigQuery.isLoading}
           isSaving={runtimeMutation.isPending}
-          onSave={(payload) => runtimeMutation.mutate(payload)}
+            onSave={(payload) => runtimeMutation.mutate(payload)}
+            statusBadge={<SaveBadge show={runtimeSuccess.isVisible} label="Runtime updated" />}
         />
       </Section>
 
@@ -378,12 +411,13 @@ export function AdminPanel() {
         title="Secrets"
         description="Store provider secrets securely. Values are write-only and masked after submission."
       >
-        <SecretsForm
+          <SecretsForm
           form={secretForm}
           secrets={secrets}
           onChange={setSecretForm}
           onSubmit={() => secretMutation.mutate(secretForm)}
           isSubmitting={secretMutation.isPending}
+            statusBadge={<SaveBadge show={secretSuccess.isVisible} label="Secret stored" />}
         />
       </Section>
     </div>
@@ -416,12 +450,14 @@ function DepartmentForm({
   onSubmit,
   departments,
   isSubmitting,
+  saveBadge,
 }: {
   form: DepartmentFormState;
   onChange: (values: DepartmentFormState) => void;
   onSubmit: () => void;
   departments: Department[];
   isSubmitting: boolean;
+  saveBadge?: React.ReactNode;
 }) {
   const fields: Array<{ label: string; key: keyof typeof form; type?: string }> = [
     { label: "Name", key: "name" },
@@ -446,15 +482,16 @@ function DepartmentForm({
           </label>
         ))}
       </div>
-      <div className="flex justify-end">
-        <button
-          className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
-          onClick={onSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Saving…" : "Add Department"}
-        </button>
-      </div>
+        <div className="flex items-center justify-end gap-3">
+          <button
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
+            onClick={onSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Saving…" : "Add Department"}
+          </button>
+          {saveBadge}
+        </div>
       {departments.length > 0 && (
         <ul className="divide-y divide-slate-200 rounded-xl border border-slate-100">
           {departments.map((dept) => (
@@ -476,6 +513,7 @@ function CategoryForm({
   categories,
   departments,
   isSubmitting,
+  saveBadge,
 }: {
   form: CategoryFormState;
   onChange: (values: CategoryFormState) => void;
@@ -483,6 +521,7 @@ function CategoryForm({
   categories: IssueCategory[];
   departments: Department[];
   isSubmitting: boolean;
+  saveBadge?: React.ReactNode;
 }) {
   return (
     <>
@@ -527,15 +566,16 @@ function CategoryForm({
           </select>
         </label>
       </div>
-      <div className="flex justify-end">
-        <button
-          className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
-          onClick={onSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Saving…" : "Add Category"}
-        </button>
-      </div>
+        <div className="flex items-center justify-end gap-3">
+          <button
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
+            onClick={onSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Saving…" : "Add Category"}
+          </button>
+          {saveBadge}
+        </div>
       {categories.length > 0 && (
         <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100">
           {categories.map((category) => (
@@ -566,6 +606,7 @@ function StaffManager({
   onChange,
   onSubmit,
   isSubmitting,
+  saveBadge,
 }: {
   staff: StaffUser[];
   departments: Department[];
@@ -573,6 +614,7 @@ function StaffManager({
   onChange: (values: StaffFormState) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
+  saveBadge?: React.ReactNode;
 }) {
   return (
     <>
@@ -637,15 +679,16 @@ function StaffManager({
           />
         </label>
       </div>
-      <div className="flex justify-end">
-        <button
-          className="rounded-xl bg-indigo-600 px-4 py-2 text-white disabled:opacity-50"
-          onClick={onSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Inviting…" : "Invite Staff"}
-        </button>
-      </div>
+        <div className="flex items-center justify-end gap-3">
+          <button
+            className="rounded-xl bg-indigo-600 px-4 py-2 text-white disabled:opacity-50"
+            onClick={onSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Inviting…" : "Invite Staff"}
+          </button>
+          {saveBadge}
+        </div>
       {staff.length > 0 && (
         <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100">
           {staff.map((member) => (
@@ -672,9 +715,10 @@ interface RuntimeConfigFormProps {
   isLoading: boolean;
   isSaving: boolean;
   onSave: (payload: Record<string, unknown>) => void;
+  statusBadge?: React.ReactNode;
 }
 
-function RuntimeConfigForm({ config, isLoading, isSaving, onSave }: RuntimeConfigFormProps) {
+function RuntimeConfigForm({ config, isLoading, isSaving, onSave, statusBadge }: RuntimeConfigFormProps) {
   const [form, setForm] = useState({
     google_maps_api_key: "",
     developer_report_email: "",
@@ -863,7 +907,7 @@ function RuntimeConfigForm({ config, isLoading, isSaving, onSave }: RuntimeConfi
           </div>
         )}
       </div>
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <button
           className="rounded-xl bg-slate-900 px-6 py-2 font-semibold text-white disabled:opacity-50"
           onClick={handleSubmit}
@@ -871,6 +915,7 @@ function RuntimeConfigForm({ config, isLoading, isSaving, onSave }: RuntimeConfi
         >
           {isSaving ? "Saving…" : "Save overrides"}
         </button>
+        {statusBadge}
       </div>
     </div>
   );
@@ -882,9 +927,10 @@ interface SecretsFormProps {
   onChange: (values: SecretFormState) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
+  statusBadge?: React.ReactNode;
 }
 
-function SecretsForm({ form, secrets, onChange, onSubmit, isSubmitting }: SecretsFormProps) {
+function SecretsForm({ form, secrets, onChange, onSubmit, isSubmitting, statusBadge }: SecretsFormProps) {
   const canSubmit = form.provider.trim() && form.key.trim() && form.secret.trim();
 
   return (
@@ -939,7 +985,7 @@ function SecretsForm({ form, secrets, onChange, onSubmit, isSubmitting }: Secret
           />
         </label>
       </div>
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <button
           className="rounded-xl bg-slate-900 px-6 py-2 font-semibold text-white disabled:opacity-50"
           onClick={onSubmit}
@@ -947,6 +993,7 @@ function SecretsForm({ form, secrets, onChange, onSubmit, isSubmitting }: Secret
         >
           {isSubmitting ? "Storing…" : "Store secret"}
         </button>
+        {statusBadge}
       </div>
       <div className="rounded-xl border border-slate-200">
         {secrets.length === 0 ? (
@@ -975,5 +1022,117 @@ function SecretsForm({ form, secrets, onChange, onSubmit, isSubmitting }: Secret
         )}
       </div>
     </div>
+  );
+}
+
+function PortalPreview({
+  branding,
+  categories,
+}: {
+  branding?: ResidentConfig["branding"];
+  categories: IssueCategory[];
+}) {
+  const primary = branding?.primary_color ?? "#0f172a";
+  const secondary = branding?.secondary_color ?? "#38bdf8";
+  const topCategories = categories.slice(0, 4);
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="relative overflow-hidden rounded-2xl p-6 text-white shadow"
+        style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}
+      >
+        {branding?.logo_url && (
+          <img
+            src={branding.logo_url}
+            alt="Township logo"
+            className="absolute right-4 top-4 h-12 w-12 rounded-full border border-white/30 bg-white/20 object-cover shadow"
+          />
+        )}
+        <p className="text-xs uppercase tracking-[0.3em] text-white/70">
+          {branding?.town_name ?? "Your Township"}
+        </p>
+        <h3 className="mt-2 text-2xl font-semibold">
+          {branding?.hero_text ?? "We keep your town moving"}
+        </h3>
+        <div className="mt-4 flex gap-4 text-xs text-white/80">
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full" style={{ backgroundColor: primary }} />
+            Primary
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full" style={{ backgroundColor: secondary }} />
+            Secondary
+          </span>
+        </div>
+      </div>
+      <div className="rounded-2xl border border-slate-200 p-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-slate-700">Request categories</h4>
+          <span className="text-xs text-slate-500">{categories.length} published</span>
+        </div>
+        {categories.length === 0 ? (
+          <p className="mt-2 text-xs text-slate-500">Use the form below to create your first category.</p>
+        ) : (
+          <>
+            <ul className="mt-3 space-y-2 text-xs text-slate-600">
+              {topCategories.map((category) => (
+                <li key={category.slug} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">
+                  <div>
+                    <p className="font-medium text-slate-800">{category.name}</p>
+                    <p className="text-[11px] uppercase text-slate-400">{category.slug}</p>
+                  </div>
+                  {category.department_name && (
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                      {category.department_name}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {categories.length > 4 && (
+              <p className="mt-2 text-[11px] text-slate-500">
+                +{categories.length - 4} more categories visible on the portal
+              </p>
+            )}
+          </>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-slate-500">
+          Branding, categories, and secrets update instantly for residents.
+        </p>
+        <a
+          href="/"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center rounded-full border border-slate-300 px-4 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Open resident portal
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function useTransientSuccess(duration = 3200) {
+  const [isVisible, setIsVisible] = useState(false);
+  const flash = useCallback(() => setIsVisible(true), []);
+  useEffect(() => {
+    if (!isVisible) return;
+    const timer = setTimeout(() => setIsVisible(false), duration);
+    return () => clearTimeout(timer);
+  }, [isVisible, duration]);
+  return { isVisible, flash };
+}
+
+function SaveBadge({ show, label = "Saved" }: { show: boolean; label?: string }) {
+  if (!show) {
+    return null;
+  }
+  return (
+    <span role="status" className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+      {label}
+    </span>
   );
 }
