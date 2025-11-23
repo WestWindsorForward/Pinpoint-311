@@ -24,6 +24,12 @@ class RegisterRequest(BaseModel):
     phone_number: str | None = None
 
 
+class AdminBootstrapRequest(BaseModel):
+    email: EmailStr
+    password: str
+    display_name: str
+
+
 class UserReadWithRole(BaseModel):
     id: uuid.UUID
     email: EmailStr

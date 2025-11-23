@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import client from "../api/client";
 import { useBoundaries, useDepartments, useResidentConfig, useSecrets, useStaffDirectory } from "../api/hooks";
@@ -71,6 +71,7 @@ export function AdminPanel() {
     redirect_url: "",
     notes: "",
     geojson: "",
+    service_code_filters: [] as string[],
   });
   const [newStaff, setNewStaff] = useState<StaffFormState>({
     email: "",
@@ -88,6 +89,10 @@ export function AdminPanel() {
   const staffSuccess = useTransientSuccess();
   const runtimeSuccess = useTransientSuccess();
   const secretSuccess = useTransientSuccess();
+  const handleBoundaryCategoryChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = Array.from(event.target.selectedOptions).map((option) => option.value);
+    setNewBoundary((prev) => ({ ...prev, service_code_filters: selected }));
+  };
 
   useEffect(() => {
     if (!residentConfig?.branding) return;
@@ -162,10 +167,19 @@ export function AdminPanel() {
         redirect_url: payload.redirect_url || null,
         notes: payload.notes || null,
         geojson: JSON.parse(payload.geojson),
+        service_code_filters: payload.service_code_filters ?? [],
       }),
       onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["geo-boundaries"] });
-      setNewBoundary({ name: "Primary Boundary", kind: "primary", jurisdiction: "", redirect_url: "", notes: "", geojson: "" });
+      setNewBoundary({
+        name: "Primary Boundary",
+        kind: "primary",
+        jurisdiction: "",
+        redirect_url: "",
+        notes: "",
+        geojson: "",
+        service_code_filters: [],
+      });
         boundarySuccess.flash();
     },
   });
@@ -292,6 +306,25 @@ export function AdminPanel() {
             <option value="other">Other</option>
           </select>
         </label>
+          <label className="text-sm text-slate-600 md:col-span-2">
+            Route categories to this jurisdiction
+            <select
+              multiple
+              className="mt-1 h-32 w-full rounded-xl border border-slate-300 p-2"
+              value={newBoundary.service_code_filters}
+              onChange={handleBoundaryCategoryChange}
+            >
+              {categories.map((category) => (
+                <option key={category.slug} value={category.slug}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500">
+              Only the selected service codes will be redirected to this county/state jurisdiction. Leave empty to
+              re-route every request that falls within this GeoJSON.
+            </p>
+          </label>
           <label className="text-sm text-slate-600">
             Redirect URL (optional)
             <input
@@ -347,6 +380,13 @@ export function AdminPanel() {
                       Redirect link
                     </a>
                   )}
+                {boundary.service_code_filters && boundary.service_code_filters.length > 0 ? (
+                  <p className="text-[11px] text-slate-500">
+                    Routes: {boundary.service_code_filters.join(", ")}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500">Routes: all categories</p>
+                )}
                 </li>
               ))}
             </ul>
@@ -431,7 +471,7 @@ function Section({
 }: {
   title: string;
   description?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="rounded-2xl bg-white p-6 shadow">
@@ -457,7 +497,7 @@ function DepartmentForm({
   onSubmit: () => void;
   departments: Department[];
   isSubmitting: boolean;
-  saveBadge?: React.ReactNode;
+  saveBadge?: ReactNode;
 }) {
   const fields: Array<{ label: string; key: keyof typeof form; type?: string }> = [
     { label: "Name", key: "name" },
@@ -521,7 +561,7 @@ function CategoryForm({
   categories: IssueCategory[];
   departments: Department[];
   isSubmitting: boolean;
-  saveBadge?: React.ReactNode;
+  saveBadge?: ReactNode;
 }) {
   return (
     <>
@@ -614,7 +654,7 @@ function StaffManager({
   onChange: (values: StaffFormState) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
-  saveBadge?: React.ReactNode;
+  saveBadge?: ReactNode;
 }) {
   return (
     <>
@@ -715,7 +755,7 @@ interface RuntimeConfigFormProps {
   isLoading: boolean;
   isSaving: boolean;
   onSave: (payload: Record<string, unknown>) => void;
-  statusBadge?: React.ReactNode;
+  statusBadge?: ReactNode;
 }
 
 function RuntimeConfigForm({ config, isLoading, isSaving, onSave, statusBadge }: RuntimeConfigFormProps) {
@@ -927,7 +967,7 @@ interface SecretsFormProps {
   onChange: (values: SecretFormState) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
-  statusBadge?: React.ReactNode;
+  statusBadge?: ReactNode;
 }
 
 function SecretsForm({ form, secrets, onChange, onSubmit, isSubmitting, statusBadge }: SecretsFormProps) {

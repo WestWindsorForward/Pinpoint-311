@@ -506,6 +506,7 @@ async def upload_boundary(
         redirect_url=payload.redirect_url,
         notes=payload.notes,
         is_active=True,
+        service_code_filters=payload.service_code_filters,
     )
     session.add(boundary)
     await session.commit()

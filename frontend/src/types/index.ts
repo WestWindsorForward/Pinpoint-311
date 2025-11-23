@@ -87,6 +87,7 @@ export type GeoBoundary = {
   jurisdiction?: "township" | "county" | "state" | "federal" | "other" | null;
   redirect_url?: string | null;
   notes?: string | null;
+  service_code_filters?: string[] | null;
   is_active: boolean;
   created_at: string;
 };

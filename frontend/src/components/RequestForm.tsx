@@ -27,6 +27,7 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
   const createRequest = useCreateResidentRequest();
+  const hasCategories = categories.length > 0;
 
   const onSubmit = handleSubmit((values) => {
     const formData = new FormData();
@@ -56,6 +57,23 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, idx) => idx !== index));
   };
+
+  if (!hasCategories) {
+    return (
+      <motion.div layout className="space-y-4 rounded-2xl bg-white/80 p-6 text-sm text-slate-600 shadow-xl">
+        <h3 className="text-lg font-semibold text-slate-900">Publish categories to open the resident portal</h3>
+        <p>
+          Residents can’t submit requests until at least one service category is active. Head to{" "}
+          <strong>Admin → Categories</strong> to create categories and assign them to a department. Refresh this page once
+          you’re done.
+        </p>
+        <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-xs text-slate-500">
+          Tip: Publish a “Road maintenance” category so county/state roads can be routed correctly using the new
+          jurisdiction filters.
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.form

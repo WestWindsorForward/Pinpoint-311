@@ -16,7 +16,13 @@ from app.core.security import (
 )
 from app.models.auth import RefreshToken
 from app.models.user import User, UserRole
-from app.schemas.auth import RefreshRequest, RegisterRequest, TokenResponse, UserReadWithRole
+from app.schemas.auth import (
+    AdminBootstrapRequest,
+    RefreshRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserReadWithRole,
+)
 from app.schemas.user import UserCreate, UserRead
 
 router = APIRouter(prefix=f"{settings.api_v1_prefix}/auth", tags=["Auth"])
@@ -67,6 +73,38 @@ async def register_user(payload: RegisterRequest, session: AsyncSession = Depend
     await session.commit()
     await session.refresh(user)
     return UserRead.model_validate(user)
+
+
+@router.post("/bootstrap-admin", response_model=UserReadWithRole)
+async def bootstrap_admin(
+    payload: AdminBootstrapRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> UserReadWithRole:
+    api_key = request.headers.get("X-Admin-Key")
+    if api_key != settings.admin_api_key:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid bootstrap key")
+    email = payload.email.lower()
+    stmt = select(User).where(User.email == email)
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
+    if user:
+        user.password_hash = get_password_hash(payload.password)
+        user.display_name = payload.display_name
+        user.role = UserRole.admin
+        user.is_active = True
+    else:
+        user = User(
+            email=email,
+            password_hash=get_password_hash(payload.password),
+            display_name=payload.display_name,
+            role=UserRole.admin,
+            is_active=True,
+        )
+        session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return UserReadWithRole.model_validate(user)
 
 
 @router.post("/login", response_model=TokenResponse)

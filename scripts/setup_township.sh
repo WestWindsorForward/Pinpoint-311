@@ -141,6 +141,20 @@ path.write_text("\n".join(lines) + "\n")
 PY
 }
 
+get_env_var() {
+  local file=$1
+  local key=$2
+  python3 - "$file" "$key" <<'PY'
+import pathlib, sys
+path = pathlib.Path(sys.argv[1])
+key = sys.argv[2]
+for line in path.read_text().splitlines():
+    if line.startswith(f"{key}="):
+        print(line.split("=", 1)[1])
+        break
+PY
+}
+
 ensure_backend_env() {
   if [[ ! -f "$BACKEND_ENV" ]]; then
     cp "$PROJECT_ROOT/backend/.env.example" "$BACKEND_ENV"
@@ -203,9 +217,24 @@ create_or_verify_admin() {
   local email=$1
   local password=$2
   local name=$3
-  local payload response status body
+  local payload response status body admin_key
   payload=$(jq -cn --arg email "$email" --arg password "$password" --arg display "$name" \
     '{email:$email,password:$password,display_name:$display}')
+
+  admin_key=$(get_env_var "$BACKEND_ENV" "ADMIN_API_KEY")
+  admin_key=${admin_key:-"dev-admin-key"}
+  response=$(curl -sS -w "\n%{http_code}" -H "Content-Type: application/json" \
+    -H "X-Admin-Key: $admin_key" -d "$payload" \
+    http://localhost:8000/api/auth/bootstrap-admin || true)
+  status=$(echo "$response" | tail -n1)
+  body=$(echo "$response" | sed '$d')
+
+  if [[ "$status" == "200" ]]; then
+    echo "Admin user bootstrapped."
+    return 0
+  fi
+
+  echo "Bootstrap endpoint responded with HTTP $status; falling back to /api/auth/register..."
   response=$(curl -sS -w "\n%{http_code}" -H "Content-Type: application/json" -d "$payload" \
     http://localhost:8000/api/auth/register || true)
   status=$(echo "$response" | tail -n1)

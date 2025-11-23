@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.settings import BoundaryKind, JurisdictionLevel
 
@@ -26,6 +26,7 @@ class GeoBoundaryUpload(BaseModel):
     jurisdiction: JurisdictionLevel | None = None
     redirect_url: str | None = None
     notes: str | None = None
+    service_code_filters: list[str] = Field(default_factory=list)
 
 
 class GeoBoundaryRead(GeoBoundaryUpload):

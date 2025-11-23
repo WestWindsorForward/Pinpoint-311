@@ -94,7 +94,7 @@ async def create_resident_request(
     if not category:
         raise HTTPException(status_code=404, detail="Unknown category")
 
-    allowed, warning = await gis.evaluate_location(session, latitude, longitude)
+    allowed, warning = await gis.evaluate_location(session, latitude, longitude, service_code=service_code)
     if not allowed:
         raise HTTPException(status_code=400, detail=warning or "Location outside township boundary")
 
