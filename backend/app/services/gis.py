@@ -24,15 +24,12 @@ async def evaluate_location(
     if primaries:
         inside_primary = any(_contains(boundary, point) for boundary in primaries)
         if not inside_primary:
-            return False, None
+            return False, "Location is outside the township service boundary."
 
     exclusions = await _get_boundaries(session, BoundaryKind.exclusion)
     for boundary in exclusions:
         if _contains(boundary, point):
-            warning = boundary.notes or "Location belongs to another jurisdiction."
-            if boundary.redirect_url:
-                warning = f"{warning} See {boundary.redirect_url}."
-            return True, warning
+            return False, _build_exclusion_message(boundary)
 
     return True, None
 
@@ -63,3 +60,12 @@ def _contains(boundary: GeoBoundary, point: Point) -> bool:
     except Exception as exc:  # pragma: no cover - log corrupt shapes
         logger.warning("Failed to evaluate boundary %s: %s", boundary.id, exc)
         return False
+
+
+def _build_exclusion_message(boundary: GeoBoundary) -> str:
+    scope = boundary.jurisdiction.value if getattr(boundary, "jurisdiction", None) else "another jurisdiction"
+    name = boundary.name or scope
+    base = boundary.notes or f"This location is handled by {name} ({scope})."
+    if boundary.redirect_url:
+        base = f"{base} Visit {boundary.redirect_url} for the correct reporting portal."
+    return base

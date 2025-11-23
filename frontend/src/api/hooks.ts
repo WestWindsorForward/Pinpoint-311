@@ -39,6 +39,7 @@ export const useCreateResidentRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-requests"], exact: false });
     },
   });
 };

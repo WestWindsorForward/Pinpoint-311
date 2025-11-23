@@ -29,6 +29,13 @@ type StaffFormState = {
   password: string;
 };
 
+type SecretFormState = {
+  provider: string;
+  key: string;
+  secret: string;
+  notes: string;
+};
+
 export function AdminPanel() {
   const queryClient = useQueryClient();
   const { data: residentConfig, refetch } = useResidentConfig();
@@ -60,6 +67,7 @@ export function AdminPanel() {
   const [newBoundary, setNewBoundary] = useState({
     name: "Primary Boundary",
     kind: "primary",
+    jurisdiction: "",
     redirect_url: "",
     notes: "",
     geojson: "",
@@ -72,7 +80,7 @@ export function AdminPanel() {
     phone_number: "",
     password: "",
   });
-  const [secretForm, setSecretForm] = useState({ provider: "smtp", key: "", secret: "" });
+  const [secretForm, setSecretForm] = useState<SecretFormState>({ provider: "smtp", key: "", secret: "", notes: "" });
 
   useEffect(() => {
     if (!residentConfig?.branding) return;
@@ -133,12 +141,16 @@ export function AdminPanel() {
   const boundaryMutation = useMutation({
     mutationFn: async (payload: typeof newBoundary) =>
       client.post("/api/admin/geo-boundary", {
-        ...payload,
+        name: payload.name,
+        kind: payload.kind,
+        jurisdiction: payload.jurisdiction || null,
+        redirect_url: payload.redirect_url || null,
+        notes: payload.notes || null,
         geojson: JSON.parse(payload.geojson),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["geo-boundaries"] });
-      setNewBoundary({ name: "Primary Boundary", kind: "primary", redirect_url: "", notes: "", geojson: "" });
+      setNewBoundary({ name: "Primary Boundary", kind: "primary", jurisdiction: "", redirect_url: "", notes: "", geojson: "" });
     },
   });
 
@@ -151,10 +163,18 @@ export function AdminPanel() {
   });
 
   const secretMutation = useMutation({
-    mutationFn: async (payload: typeof secretForm) => client.post("/api/admin/secrets", payload),
+    mutationFn: async (payload: SecretFormState) => {
+      const metadata = payload.notes.trim() ? { notes: payload.notes.trim() } : undefined;
+      await client.post("/api/admin/secrets", {
+        provider: payload.provider.trim(),
+        key: payload.key.trim(),
+        secret: payload.secret.trim(),
+        metadata,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["secrets"] });
-      setSecretForm({ provider: secretForm.provider, key: "", secret: "" });
+      setSecretForm((prev) => ({ ...prev, key: "", secret: "", notes: "" }));
     },
   });
 
@@ -229,6 +249,21 @@ export function AdminPanel() {
               <option value="exclusion">Excluded jurisdiction</option>
             </select>
           </label>
+        <label className="text-sm text-slate-600">
+          Jurisdiction Level
+          <select
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={newBoundary.jurisdiction}
+            onChange={(event) => setNewBoundary((prev) => ({ ...prev, jurisdiction: event.target.value }))}
+          >
+            <option value="">Not specified</option>
+            <option value="township">Township</option>
+            <option value="county">County</option>
+            <option value="state">State</option>
+            <option value="federal">Federal</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
           <label className="text-sm text-slate-600">
             Redirect URL (optional)
             <input
@@ -263,17 +298,30 @@ export function AdminPanel() {
           >
             {boundaryMutation.isPending ? "Uploading…" : "Save Boundary"}
           </button>
-        </div>
-        {boundaries.length > 0 && (
-          <ul className="mt-4 space-y-2 text-sm">
-            {boundaries.map((boundary) => (
-              <li key={boundary.id} className="rounded-xl border border-slate-200 p-3">
-                <p className="font-medium">{boundary.name}</p>
-                <p className="text-xs uppercase text-slate-500">{boundary.kind}</p>
-              </li>
-            ))}
-          </ul>
-        )}
+          </div>
+          {boundaries.length > 0 && (
+            <ul className="mt-4 space-y-2 text-sm">
+              {boundaries.map((boundary) => (
+                <li key={boundary.id} className="rounded-xl border border-slate-200 p-3">
+                  <p className="font-medium">{boundary.name}</p>
+                  <p className="text-xs uppercase text-slate-500">{boundary.kind}</p>
+                  {boundary.jurisdiction && (
+                    <p className="text-xs text-slate-500">Jurisdiction: {boundary.jurisdiction}</p>
+                  )}
+                  {boundary.redirect_url && (
+                    <a
+                      href={boundary.redirect_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold text-slate-600 underline"
+                    >
+                      Redirect link
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
       </Section>
 
       <Section
@@ -639,3 +687,293 @@ function RuntimeConfigForm({ config, isLoading, isSaving, onSave }: RuntimeConfi
     otel_endpoint: "",
     otel_headers: "",
   });
+
+  useEffect(() => {
+    const residentLimitValue = config.rate_limit_resident_per_minute;
+    const publicLimitValue = config.rate_limit_public_per_minute;
+    setForm({
+      google_maps_api_key: (config.google_maps_api_key as string) ?? "",
+      developer_report_email: (config.developer_report_email as string) ?? "",
+      vertex_ai_project: (config.vertex_ai_project as string) ?? "",
+      vertex_ai_location: (config.vertex_ai_location as string) ?? "",
+      vertex_ai_model: (config.vertex_ai_model as string) ?? "",
+      rate_limit_resident_per_minute:
+        typeof residentLimitValue === "number" || typeof residentLimitValue === "string"
+          ? String(residentLimitValue)
+          : "",
+      rate_limit_public_per_minute:
+        typeof publicLimitValue === "number" || typeof publicLimitValue === "string"
+          ? String(publicLimitValue)
+          : "",
+      otel_enabled: typeof config.otel_enabled === "boolean" ? (config.otel_enabled as boolean) : false,
+      otel_endpoint: (config.otel_endpoint as string) ?? "",
+      otel_headers: (config.otel_headers as string) ?? "",
+    });
+  }, [config]);
+
+  const handleChange = (key: keyof typeof form, value: string | boolean) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  if (isLoading) {
+    return <div className="h-32 animate-pulse rounded-xl bg-slate-100" />;
+  }
+
+  const handleSubmit = () => {
+    const numericKeys = ["rate_limit_resident_per_minute", "rate_limit_public_per_minute"];
+    const payload: Record<string, unknown> = {};
+    (Object.keys(form) as Array<keyof typeof form>).forEach((key) => {
+      const value = form[key];
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) {
+          payload[key] = null;
+          return;
+        }
+        if (numericKeys.includes(key)) {
+          const parsed = Number(trimmed);
+          payload[key] = Number.isFinite(parsed) ? parsed : null;
+        } else {
+          payload[key] = trimmed;
+        }
+      } else {
+        payload[key] = value;
+      }
+    });
+    onSave(payload);
+  };
+
+  const disabled =
+    isSaving ||
+    Object.entries(form).every(([key, value]) =>
+      typeof value === "string" ? value.trim() === "" : key === "otel_enabled" && value === false,
+    );
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-slate-500">
+        Runtime overrides live in Postgres so you can rotate API keys or AI models without redeploying. Leave a field
+        blank to fall back to the .env defaults.
+      </p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="text-sm text-slate-600">
+          Google Maps API key
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            placeholder="AIza..."
+            value={form.google_maps_api_key}
+            onChange={(event) => handleChange("google_maps_api_key", event.target.value)}
+          />
+          <span className="text-xs text-slate-400">Used by the resident map picker.</span>
+        </label>
+        <label className="text-sm text-slate-600">
+          Developer report email
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            placeholder="ops@township.gov"
+            value={form.developer_report_email}
+            onChange={(event) => handleChange("developer_report_email", event.target.value)}
+          />
+          <span className="text-xs text-slate-400">Daily digest + heartbeat notifications.</span>
+        </label>
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <label className="text-sm text-slate-600">
+          Vertex AI project
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            placeholder="my-gcp-project"
+            value={form.vertex_ai_project}
+            onChange={(event) => handleChange("vertex_ai_project", event.target.value)}
+          />
+          <span className="text-xs text-slate-400">Must match your IAM policy.</span>
+        </label>
+        <label className="text-sm text-slate-600">
+          Vertex AI region
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            placeholder="us-central1"
+            value={form.vertex_ai_location}
+            onChange={(event) => handleChange("vertex_ai_location", event.target.value)}
+          />
+        </label>
+        <label className="text-sm text-slate-600">
+          Gemini model id
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            placeholder="gemini-1.5-flash-002"
+            value={form.vertex_ai_model}
+            onChange={(event) => handleChange("vertex_ai_model", event.target.value)}
+          />
+          <span className="text-xs text-slate-400">Serverless Gemini model served by Vertex AI.</span>
+        </label>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="text-sm text-slate-600">
+          Resident rate limit (per minute)
+          <input
+            type="number"
+            min={1}
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.rate_limit_resident_per_minute}
+            onChange={(event) => handleChange("rate_limit_resident_per_minute", event.target.value)}
+          />
+        </label>
+        <label className="text-sm text-slate-600">
+          Public rate limit (per minute)
+          <input
+            type="number"
+            min={1}
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            value={form.rate_limit_public_per_minute}
+            onChange={(event) => handleChange("rate_limit_public_per_minute", event.target.value)}
+          />
+        </label>
+      </div>
+      <div className="rounded-xl border border-slate-200 p-4">
+        <label className="flex items-center gap-3 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={form.otel_enabled}
+            onChange={(event) => handleChange("otel_enabled", event.target.checked)}
+          />
+          Enable OpenTelemetry exporter
+        </label>
+        {form.otel_enabled && (
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            <label className="text-sm text-slate-600">
+              OTLP endpoint
+              <input
+                className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+                placeholder="https://tempo.example.com:4318"
+                value={form.otel_endpoint}
+                onChange={(event) => handleChange("otel_endpoint", event.target.value)}
+              />
+            </label>
+            <label className="text-sm text-slate-600">
+              OTLP headers
+              <input
+                className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+                placeholder="Authorization=Bearer ..."
+                value={form.otel_headers}
+                onChange={(event) => handleChange("otel_headers", event.target.value)}
+              />
+              <span className="text-xs text-slate-400">Comma-separated key=value list.</span>
+            </label>
+          </div>
+        )}
+      </div>
+      <div className="flex justify-end">
+        <button
+          className="rounded-xl bg-slate-900 px-6 py-2 font-semibold text-white disabled:opacity-50"
+          onClick={handleSubmit}
+          disabled={disabled}
+        >
+          {isSaving ? "Saving…" : "Save overrides"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface SecretsFormProps {
+  form: SecretFormState;
+  secrets: SecretSummary[];
+  onChange: (values: SecretFormState) => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+}
+
+function SecretsForm({ form, secrets, onChange, onSubmit, isSubmitting }: SecretsFormProps) {
+  const canSubmit = form.provider.trim() && form.key.trim() && form.secret.trim();
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-slate-500">
+        Secrets are encrypted and write-only. Paste credentials, click store, and we only keep the provider metadata for future reference.
+      </p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="text-sm text-slate-600">
+          Provider
+          <input
+            list="secret-providers"
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            placeholder="vertex-ai"
+            value={form.provider}
+            onChange={(event) => onChange({ ...form, provider: event.target.value })}
+          />
+          <datalist id="secret-providers">
+            <option value="vertex-ai" />
+            <option value="smtp" />
+            <option value="twilio" />
+            <option value="mailgun" />
+          </datalist>
+        </label>
+        <label className="text-sm text-slate-600">
+          Key / identifier
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            placeholder="service-account@project.iam.gserviceaccount.com"
+            value={form.key}
+            onChange={(event) => onChange({ ...form, key: event.target.value })}
+          />
+        </label>
+        <label className="text-sm text-slate-600">
+          Secret value
+          <input
+            type="password"
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            placeholder="Paste API key or JSON"
+            value={form.secret}
+            onChange={(event) => onChange({ ...form, secret: event.target.value })}
+          />
+          <span className="text-xs text-slate-400">We never display this again after saving.</span>
+        </label>
+        <label className="text-sm text-slate-600">
+          Notes (optional)
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+            placeholder="Used for outbound email"
+            value={form.notes}
+            onChange={(event) => onChange({ ...form, notes: event.target.value })}
+          />
+        </label>
+      </div>
+      <div className="flex justify-end">
+        <button
+          className="rounded-xl bg-slate-900 px-6 py-2 font-semibold text-white disabled:opacity-50"
+          onClick={onSubmit}
+          disabled={isSubmitting || !canSubmit}
+        >
+          {isSubmitting ? "Storing…" : "Store secret"}
+        </button>
+      </div>
+      <div className="rounded-xl border border-slate-200">
+        {secrets.length === 0 ? (
+          <p className="p-4 text-sm text-slate-500">No secrets stored yet.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {secrets.map((secret) => {
+              const notes =
+                secret.metadata && typeof secret.metadata["notes"] === "string"
+                  ? (secret.metadata["notes"] as string)
+                  : undefined;
+              return (
+                <li key={secret.id} className="flex items-center justify-between gap-4 p-4 text-sm">
+                  <div>
+                    <p className="font-semibold text-slate-700">{secret.provider}</p>
+                    <p className="text-xs text-slate-500">
+                      Stored {new Date(secret.created_at).toLocaleString()}
+                      {notes ? ` · ${notes}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">••••••</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}

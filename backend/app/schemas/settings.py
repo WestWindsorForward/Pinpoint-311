@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from app.models.settings import BoundaryKind
+from app.models.settings import BoundaryKind, JurisdictionLevel
 
 class BrandingUpdate(BaseModel):
     town_name: str | None = None
@@ -23,6 +23,7 @@ class GeoBoundaryUpload(BaseModel):
     name: str = "primary"
     geojson: dict[str, Any]
     kind: BoundaryKind = BoundaryKind.primary
+    jurisdiction: JurisdictionLevel | None = None
     redirect_url: str | None = None
     notes: str | None = None
 

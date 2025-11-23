@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from typing import BinaryIO
 
+from fastapi import Request
+
 from app.core.config import settings
 
 
@@ -27,3 +29,13 @@ def save_upload(upload: BinaryIO, filename: str) -> str:
 def delete_file(path: str) -> None:
     if os.path.exists(path):
         os.remove(path)
+
+
+def public_storage_url(request: Request, file_path: str) -> str:
+    absolute = Path(file_path).resolve()
+    storage_root = Path(settings.storage_dir).resolve()
+    try:
+        relative = absolute.relative_to(storage_root)
+    except ValueError:
+        relative = Path(file_path).name
+    return request.url_for("storage", path=relative.as_posix())

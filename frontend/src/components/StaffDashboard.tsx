@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import client from "../api/client";
 import { useStaffRequests, useUpdateStaffRequest } from "../api/hooks";
@@ -101,12 +101,38 @@ function StaffRequestDetails({
   const publicUpdates = (request.updates ?? []).filter((update: RequestUpdate) => update.public);
   const staffUpdates = (request.updates ?? []).filter((update: RequestUpdate) => !update.public);
   const attachments = request.attachments ?? [];
+  const [shareCopied, setShareCopied] = useState(false);
+
+  useEffect(() => {
+    if (!shareCopied) return;
+    const timeout = window.setTimeout(() => setShareCopied(false), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [shareCopied]);
+
+  const shareOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  const shareUrl = shareOrigin ? `${shareOrigin}/?request=${request.external_id}` : request.external_id;
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+    } catch (error) {
+      console.error("Failed to copy share link", error);
+    }
+  };
 
   return (
     <div className="mt-4 space-y-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600" onClick={(event) => event.stopPropagation()}>
       <div className="grid gap-2 md:grid-cols-2">
         <div>
           <h4 className="text-xs font-semibold uppercase text-slate-500">Attachments</h4>
+          <button
+            type="button"
+            className="mt-1 text-[11px] font-semibold uppercase text-slate-600 underline"
+            onClick={copyShareLink}
+          >
+            {shareCopied ? "Resident link copied" : "Copy resident link"}
+          </button>
           {attachments.length === 0 ? (
             <p className="text-xs text-slate-500">No files uploaded.</p>
           ) : (

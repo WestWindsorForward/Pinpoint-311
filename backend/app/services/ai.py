@@ -48,28 +48,39 @@ async def analyze_request(
         try:
             def _call_vertex() -> AIAnalysis:
                 kwargs: dict[str, Any] = {"project": vertex_project, "location": vertex_location}
-                if service_account_info:
-                    from google.oauth2 import service_account
-
-                    credentials = service_account.Credentials.from_service_account_info(service_account_info)
+                credentials = _build_vertex_credentials(service_account_info)
+                if credentials:
                     kwargs["credentials"] = credentials
                 vertexai_init(**kwargs)
-                model = generative_models.GenerativeModel(vertex_model)
+                model = generative_models.GenerativeModel(
+                    vertex_model,
+                    system_instruction=(
+                        "You are an operations analyst helping township staff triage 311 style service requests. "
+                        "Return structured JSON so downstream systems can route work without any free text."
+                    ),
+                )
+                media_context = ""
+                if media_urls:
+                    joined = ", ".join(media_urls)
+                    media_context = f"\nResident supplied media URLs: {joined}"
                 prompt = (
-                    "You are triaging civic service requests. "
-                    "Respond with JSON containing keys: severity (1-10), recommended_category, "
-                    "dimensions (width_cm,height_cm,quantity), and confidence (0-1)."
+                    "Respond strictly with JSON including keys: "
+                    "severity (1-10), recommended_category (slug), dimensions (object), and confidence (0-1)."
+                    f"\nResident description:\n{description}{media_context}"
                 )
                 response = model.generate_content(
                     [
                         generative_models.Content(
                             parts=[
                                 generative_models.Part.from_text(prompt),
-                                generative_models.Part.from_text(description),
                             ]
                         )
                     ],
-                    generation_config=generative_models.GenerationConfig(response_mime_type="application/json"),
+                    generation_config=generative_models.GenerationConfig(
+                        temperature=0.2,
+                        top_p=0.95,
+                        response_mime_type="application/json",
+                    ),
                 )
                 text = "{}"
                 if response.candidates:
@@ -103,3 +114,20 @@ def heuristic_triage(description: str) -> AIAnalysis:
         recommended_category = "flooding"
 
     return AIAnalysis(severity=severity, recommended_category=recommended_category, dimensions={}, confidence=0.4)
+
+
+def _build_vertex_credentials(service_account_info: dict[str, Any] | None):
+    if service_account_info:
+        from google.oauth2 import service_account
+
+        return service_account.Credentials.from_service_account_info(
+            service_account_info,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        )
+    try:  # pragma: no cover - requires GCP environment
+        import google.auth
+
+        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        return credentials
+    except Exception:
+        return None

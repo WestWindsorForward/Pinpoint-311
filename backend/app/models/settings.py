@@ -30,6 +30,14 @@ class BoundaryKind(str, enum.Enum):
     exclusion = "exclusion"
 
 
+class JurisdictionLevel(str, enum.Enum):
+    township = "township"
+    county = "county"
+    state = "state"
+    federal = "federal"
+    other = "other"
+
+
 class GeoBoundary(Base, TimestampMixin):
     __tablename__ = "geo_boundaries"
 
@@ -38,6 +46,7 @@ class GeoBoundary(Base, TimestampMixin):
     geojson: Mapped[dict] = mapped_column(JSON)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     kind: Mapped[BoundaryKind] = mapped_column(Enum(BoundaryKind), default=BoundaryKind.primary)
+    jurisdiction: Mapped[JurisdictionLevel | None] = mapped_column(Enum(JurisdictionLevel), nullable=True)
     redirect_url: Mapped[str | None] = mapped_column(String(512))
     notes: Mapped[str | None] = mapped_column(Text)
 

@@ -2,12 +2,14 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { logoutSession } from "./api/auth";
 import { useAuthStore } from "./store/auth";
+import { useBrandingStore } from "./store/branding";
 
 export default function App() {
   const user = useAuthStore((state) => state.user);
   const tokens = useAuthStore((state) => state.tokens);
   const clearSession = useAuthStore((state) => state.clearSession);
   const navigate = useNavigate();
+  const branding = useBrandingStore((state) => state.branding);
 
   const navItems =
     !user || user.role === "resident"
@@ -36,9 +38,23 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-white pb-16">
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Township 311</p>
-            <h1 className="text-xl font-semibold text-slate-900">Request Management</h1>
+          <div className="flex items-center gap-3">
+            {branding.logo_url && (
+              <img
+                src={branding.logo_url}
+                alt={`${branding.town_name ?? "Township"} logo`}
+                className="h-10 w-10 rounded-full border border-slate-200 object-cover"
+              />
+            )}
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                {branding.town_name ?? "Township 311"}
+              </p>
+              <h1 className="text-xl font-semibold text-slate-900">Request Management</h1>
+              {branding.hero_text && (
+                <p className="text-xs text-slate-500">{branding.hero_text}</p>
+              )}
+            </div>
           </div>
           <div className="flex flex-1 items-center justify-end gap-4">
             {navItems.length > 0 && (

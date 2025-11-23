@@ -84,6 +84,7 @@ export type GeoBoundary = {
   id: number;
   name: string;
   kind: "primary" | "exclusion";
+  jurisdiction?: "township" | "county" | "state" | "federal" | "other" | null;
   redirect_url?: string | null;
   notes?: string | null;
   is_active: boolean;

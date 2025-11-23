@@ -28,7 +28,7 @@ from app.schemas.settings import (
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services import gis, runtime_config as runtime_config_service
 from app.services.audit import log_event
-from app.utils.storage import save_file
+from app.utils.storage import public_storage_url, save_file
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -122,7 +122,11 @@ async def upload_asset(
         entity_id=asset_key,
         request=request,
     )
-    return {"key": asset_key, "file_path": path}
+    return {
+        "key": asset_key,
+        "file_path": path,
+        "url": public_storage_url(request, path),
+    }
 
 
 @router.get("/departments", response_model=list[DepartmentRead])
@@ -498,6 +502,7 @@ async def upload_boundary(
         name=payload.name,
         geojson=payload.geojson,
         kind=payload.kind,
+        jurisdiction=payload.jurisdiction,
         redirect_url=payload.redirect_url,
         notes=payload.notes,
         is_active=True,
