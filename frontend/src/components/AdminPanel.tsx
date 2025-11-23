@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import client from "../api/client";
 import { useBoundaries, useDepartments, useResidentConfig, useSecrets, useStaffDirectory } from "../api/hooks";
-import type { Department, GeoBoundary, IssueCategory, SecretSummary, StaffUser } from "../types";
+import type { Department, IssueCategory, SecretSummary, StaffUser } from "../types";
 
 type DepartmentFormState = {
   slug: string;
