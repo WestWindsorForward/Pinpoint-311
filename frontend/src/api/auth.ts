@@ -29,3 +29,7 @@ export const fetchCurrentUser = async () => {
 export const logoutSession = async (refreshToken: string) => {
   await client.post("/api/auth/logout", { refresh_token: refreshToken });
 };
+
+export const changePassword = async (payload: { current_password: string; new_password: string }) => {
+  await client.post("/api/auth/change-password", payload);
+};

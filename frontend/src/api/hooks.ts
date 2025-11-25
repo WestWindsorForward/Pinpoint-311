@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import client from "./client";
 import type {
+  AdminCategory,
   Department,
   GeoBoundary,
   ResidentConfig,
@@ -39,6 +40,7 @@ export const useCreateResidentRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-requests"], exact: false });
     },
   });
 };
@@ -70,6 +72,15 @@ export const useBoundaries = () =>
     queryKey: ["geo-boundaries"],
     queryFn: async () => {
       const { data } = await client.get<GeoBoundary[]>("/api/admin/geo-boundary");
+      return data;
+    },
+  });
+
+export const useAdminCategories = () =>
+  useQuery({
+    queryKey: ["admin-categories"],
+    queryFn: async () => {
+      const { data } = await client.get<AdminCategory[]>("/api/admin/categories");
       return data;
     },
   });

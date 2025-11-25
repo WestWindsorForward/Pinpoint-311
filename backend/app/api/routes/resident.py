@@ -1,9 +1,9 @@
 import secrets
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Request, status
 from fastapi import Form as FastAPIForm
 from fastapi.responses import FileResponse
 from sqlalchemy import select
@@ -20,29 +20,43 @@ from app.services import antivirus, gis, runtime_config as runtime_config_servic
 from app.services.ai import analyze_request
 from app.services.notifications import notify_resident
 from app.services.pdf import generate_case_pdf
-from app.utils.storage import save_upload
+from app.utils.storage import public_storage_url, save_upload
 from app.workers.tasks import ai_triage_task
 
 router = APIRouter(prefix="/resident", tags=["Resident Portal"])
 
 
 @router.get("/config", response_model=dict)
-async def get_resident_config(session: AsyncSession = Depends(get_db)) -> dict:
+async def get_resident_config(request: Request, session: AsyncSession = Depends(get_db)) -> dict:
     branding_stmt = select(TownshipSetting).where(TownshipSetting.key == "branding")
     branding_result = await session.execute(branding_stmt)
     branding = branding_result.scalar_one_or_none()
 
     assets_stmt = select(BrandingAsset)
     assets_result = await session.execute(assets_stmt)
-    assets = {asset.key: asset.file_path for asset in assets_result.scalars().all()}
+    assets = {
+        asset.key: public_storage_url(request, asset.file_path)
+        for asset in assets_result.scalars().all()
+    }
 
     categories_stmt = select(IssueCategory).where(IssueCategory.is_active.is_(True))
     categories_result = await session.execute(categories_stmt)
     runtime_cfg = await runtime_config_service.get_runtime_config(session)
     maps_key = runtime_cfg.get("google_maps_api_key") or settings.google_maps_api_key
 
+    defaults = settings.branding.model_dump()
+    branding_payload: dict[str, Any] = dict(defaults)
+    if branding:
+        branding_payload.update(branding.value)
+    if assets.get("logo"):
+        branding_payload["logo_url"] = assets["logo"]
+    if assets.get("seal"):
+        branding_payload["seal_url"] = assets["seal"]
+    if assets.get("favicon"):
+        branding_payload["favicon_url"] = assets["favicon"]
+
     return {
-        "branding": branding.value if branding else {},
+        "branding": branding_payload,
         "assets": assets,
         "integrations": {
             "google_maps_api_key": maps_key,
@@ -75,7 +89,7 @@ async def create_resident_request(
     resident_name: Annotated[str | None, FastAPIForm()] = None,
     resident_email: Annotated[str | None, FastAPIForm()] = None,
     resident_phone: Annotated[str | None, FastAPIForm()] = None,
-    media: UploadFile | None = File(None),
+    media: list[UploadFile] | None = File(None),
     session: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ) -> ServiceRequestRead:
@@ -85,9 +99,9 @@ async def create_resident_request(
     if not category:
         raise HTTPException(status_code=404, detail="Unknown category")
 
-    allowed, warning = await gis.evaluate_location(session, latitude, longitude)
+    allowed, warning = await gis.evaluate_location(session, latitude, longitude, service_code=service_code)
     if not allowed:
-        raise HTTPException(status_code=400, detail="Location outside township boundary")
+        raise HTTPException(status_code=400, detail=warning or "Location outside township boundary")
 
     ai_result = await analyze_request(description, session=session)
 
@@ -120,11 +134,23 @@ async def create_resident_request(
     await session.refresh(request)
 
     if media:
-        await antivirus.scan_file(media.file)
-        file_path = save_upload(media.file, f"resident-{request.external_id}-{media.filename}")
-        attachment = RequestAttachment(request_id=request.id, file_path=file_path, content_type=media.content_type)
-        session.add(attachment)
-        await session.commit()
+        attachments: list[RequestAttachment] = []
+        for upload in media:
+            if not upload:
+                continue
+            await antivirus.scan_file(upload.file)
+            file_path = save_upload(upload.file, f"resident-{request.external_id}-{upload.filename}")
+            attachments.append(
+                RequestAttachment(
+                    request_id=request.id,
+                    file_path=file_path,
+                    content_type=upload.content_type,
+                    uploaded_by_id=current_user.id if current_user else None,
+                )
+            )
+        if attachments:
+            session.add_all(attachments)
+            await session.commit()
 
     ai_triage_task.delay(str(request.id))
 
@@ -208,10 +234,16 @@ async def download_public_attachment(
 
 @router.get("/requests/{external_id}/pdf")
 async def download_public_pdf(external_id: str, session: AsyncSession = Depends(get_db)) -> FileResponse:
-    stmt = select(ServiceRequest).where(ServiceRequest.external_id == external_id)
+    stmt = (
+        select(ServiceRequest)
+        .where(ServiceRequest.external_id == external_id)
+        .options(selectinload(ServiceRequest.category))
+    )
     result = await session.execute(stmt)
     request = result.scalar_one_or_none()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
-    path = generate_case_pdf(request, Path("storage/pdfs"))
+    path = generate_case_pdf(request, Path(settings.storage_dir) / "pdfs")
     return FileResponse(path)
+
+

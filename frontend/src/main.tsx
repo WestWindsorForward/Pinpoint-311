@@ -11,6 +11,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { AdminConsole } from "./pages/AdminConsole";
 import { ResidentPortal } from "./pages/ResidentPortal";
 import { StaffCommandCenter } from "./pages/StaffCommandCenter";
+import { ChangePasswordPage } from "./pages/ChangePassword";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,14 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <ResidentPortal /> },
       { path: "login", element: <LoginPage /> },
+      {
+        path: "change-password",
+        element: (
+          <RequireRole roles={["resident", "staff", "admin"]}>
+            <ChangePasswordPage />
+          </RequireRole>
+        ),
+      },
       {
         path: "admin",
         element: (

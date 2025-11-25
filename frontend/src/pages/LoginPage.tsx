@@ -26,6 +26,10 @@ export function LoginPage() {
       try {
         const profile = await fetchCurrentUser();
         setUser(profile);
+        if (profile.must_reset_password) {
+          navigate("/change-password", { replace: true, state: { from } });
+          return;
+        }
         navigate(from?.pathname ?? "/", { replace: true });
       } catch (error) {
         console.error(error);

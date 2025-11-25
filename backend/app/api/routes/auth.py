@@ -16,8 +16,16 @@ from app.core.security import (
 )
 from app.models.auth import RefreshToken
 from app.models.user import User, UserRole
-from app.schemas.auth import RefreshRequest, RegisterRequest, TokenResponse, UserReadWithRole
+from app.schemas.auth import (
+    AdminBootstrapRequest,
+    PasswordChangeRequest,
+    RefreshRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserReadWithRole,
+)
 from app.schemas.user import UserCreate, UserRead
+from app.services.staff_accounts import sync_staff_departments
 
 router = APIRouter(prefix=f"{settings.api_v1_prefix}/auth", tags=["Auth"])
 
@@ -69,6 +77,38 @@ async def register_user(payload: RegisterRequest, session: AsyncSession = Depend
     return UserRead.model_validate(user)
 
 
+@router.post("/bootstrap-admin", response_model=UserReadWithRole)
+async def bootstrap_admin(
+    payload: AdminBootstrapRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> UserReadWithRole:
+    api_key = request.headers.get("X-Admin-Key")
+    if api_key != settings.admin_api_key:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid bootstrap key")
+    email = payload.email.lower()
+    stmt = select(User).where(User.email == email)
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
+    if user:
+        user.password_hash = get_password_hash(payload.password)
+        user.display_name = payload.display_name
+        user.role = UserRole.admin
+        user.is_active = True
+    else:
+        user = User(
+            email=email,
+            password_hash=get_password_hash(payload.password),
+            display_name=payload.display_name,
+            role=UserRole.admin,
+            is_active=True,
+        )
+        session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return UserReadWithRole.model_validate(user)
+
+
 @router.post("/login", response_model=TokenResponse)
 async def login(
     request: Request,
@@ -94,15 +134,21 @@ async def login(
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(payload: RefreshRequest, session: AsyncSession = Depends(get_db)) -> TokenResponse:
     token_hash_value = hash_token(payload.refresh_token)
-    stmt = select(RefreshToken).where(RefreshToken.token_hash == token_hash_value, RefreshToken.revoked.is_(False))
+    stmt = (
+        select(RefreshToken, User)
+        .join(User, RefreshToken.user_id == User.id)
+        .where(RefreshToken.token_hash == token_hash_value, RefreshToken.revoked.is_(False))
+    )
     result = await session.execute(stmt)
-    record = result.scalar_one_or_none()
-    if not record or record.expires_at < datetime.now(timezone.utc):
+    row = result.one_or_none()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    record, user = row
+    if record.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
     record.revoked = True
     await session.flush()
-    user = record.user
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer active")
 
@@ -131,6 +177,20 @@ async def logout_all(current_user: User = Depends(get_current_user), session: As
     return {"status": "ok"}
 
 
+@router.post("/change-password")
+async def change_password(
+    payload: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    current_user.password_hash = get_password_hash(payload.new_password)
+    current_user.must_reset_password = False
+    await session.commit()
+    return {"status": "updated"}
+
+
 @router.get("/me", response_model=UserReadWithRole)
 async def me(current_user: User = Depends(get_current_user)) -> UserReadWithRole:
     return UserReadWithRole.model_validate(current_user)
@@ -146,16 +206,21 @@ async def invite_user(
     result = await session.execute(stmt)
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already exists")
+    target_slugs = payload.department_slugs or ([payload.department] if payload.department else [])
     user = User(
         email=payload.email.lower(),
         password_hash=get_password_hash(payload.password),
         display_name=payload.display_name,
         role=payload.role,
-        department=payload.department,
         phone_number=payload.phone_number,
         is_active=True,
+        must_reset_password=True,
     )
     session.add(user)
+    try:
+        await sync_staff_departments(session, user, target_slugs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     await session.commit()
     await session.refresh(user)
     return UserReadWithRole.model_validate(user)

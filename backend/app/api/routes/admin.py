@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
@@ -6,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, require_roles
 from app.core.security import get_password_hash
-from app.models.issue import IssueCategory
+from app.models.issue import IssueCategory, ServiceRequest
 from app.models.settings import (
     ApiCredential,
     BrandingAsset,
@@ -20,15 +21,17 @@ from app.schemas.department import DepartmentCreate, DepartmentRead, DepartmentU
 from app.schemas.issue import IssueCategoryCreate, IssueCategoryRead, IssueCategoryUpdate
 from app.schemas.settings import (
     BrandingUpdate,
+    GeoBoundaryGoogleImport,
     GeoBoundaryRead,
     GeoBoundaryUpload,
     RuntimeConfigUpdate,
     SecretsPayload,
 )
 from app.schemas.user import UserCreate, UserRead, UserUpdate
-from app.services import gis, runtime_config as runtime_config_service
+from app.services import gis, google_maps, runtime_config as runtime_config_service, settings_snapshot
+from app.services.staff_accounts import sync_staff_departments
 from app.services.audit import log_event
-from app.utils.storage import save_file
+from app.utils.storage import public_storage_url, save_file
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -92,6 +95,7 @@ async def update_branding(
         record = TownshipSetting(key="branding", value=data)
         session.add(record)
     await session.commit()
+    settings_snapshot.save_snapshot("branding", data)
     await log_event(session, action="branding.update", actor=current_user, request=request, metadata=data)
     return data
 
@@ -122,7 +126,11 @@ async def upload_asset(
         entity_id=asset_key,
         request=request,
     )
-    return {"key": asset_key, "file_path": path}
+    return {
+        "key": asset_key,
+        "file_path": path,
+        "url": public_storage_url(request, path),
+    }
 
 
 @router.get("/departments", response_model=list[DepartmentRead])
@@ -391,20 +399,24 @@ async def create_staff(
 ) -> UserRead:
     if payload.role == UserRole.resident:
         raise HTTPException(status_code=400, detail="Staff role must be staff or admin")
-    await _ensure_department_slug(session, payload.department)
     existing = await session.execute(select(User).where(User.email == payload.email.lower()))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already exists")
+    target_slugs = payload.department_slugs or ([payload.department] if payload.department else [])
     user = User(
         email=payload.email.lower(),
         display_name=payload.display_name,
         password_hash=get_password_hash(payload.password),
         role=payload.role,
-        department=payload.department,
         phone_number=payload.phone_number,
         is_active=True,
+        must_reset_password=True,
     )
     session.add(user)
+    try:
+        await sync_staff_departments(session, user, target_slugs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     await session.commit()
     await log_event(
         session,
@@ -431,11 +443,19 @@ async def update_staff(
     if payload.role == UserRole.resident:
         raise HTTPException(status_code=400, detail="Invalid role")
     update_data = payload.model_dump(exclude_unset=True)
+    department_slugs = update_data.pop("department_slugs", None)
     await _ensure_department_slug(session, update_data.get("department"))
     if "password" in update_data:
         user.password_hash = get_password_hash(update_data.pop("password"))  # type: ignore[arg-type]
     for key, value in update_data.items():
         setattr(user, key, value)
+    if department_slugs is None and "department" in update_data:
+        fallback = update_data["department"]
+        department_slugs = [fallback] if fallback else []
+    try:
+        await sync_staff_departments(session, user, department_slugs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     await session.commit()
     await session.refresh(user)
     await log_event(
@@ -472,6 +492,53 @@ async def delete_staff(
     return {"status": "deleted"}
 
 
+@router.post("/staff/{user_id}/reset-password")
+async def reset_staff_password(
+    user_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> dict:
+    user = await session.get(User, user_id)
+    if not user or user.role == UserRole.resident:
+        raise HTTPException(status_code=404, detail="Staff member not found")
+    temp_password = secrets.token_urlsafe(12)
+    user.password_hash = get_password_hash(temp_password)
+    user.must_reset_password = True
+    await session.commit()
+    await log_event(
+        session,
+        action="staff.reset_password",
+        actor=current_user,
+        entity_type="user",
+        entity_id=str(user.id),
+        request=None,
+        metadata={"forced_reset": True},
+    )
+    return {"temporary_password": temp_password}
+
+
+@router.delete("/requests/{request_id}")
+async def delete_service_request(
+    request_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> dict:
+    service_request = await session.get(ServiceRequest, request_id)
+    if not service_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    await session.delete(service_request)
+    await session.commit()
+    await log_event(
+        session,
+        action="service_request.delete",
+        actor=current_user,
+        entity_type="service_request",
+        entity_id=str(request_id),
+        request=None,
+    )
+    return {"status": "deleted"}
+
+
 @router.get("/geo-boundary", response_model=list[GeoBoundaryRead])
 async def list_boundaries(
     session: AsyncSession = Depends(get_db),
@@ -498,9 +565,11 @@ async def upload_boundary(
         name=payload.name,
         geojson=payload.geojson,
         kind=payload.kind,
+        jurisdiction=payload.jurisdiction,
         redirect_url=payload.redirect_url,
         notes=payload.notes,
         is_active=True,
+        service_code_filters=payload.service_code_filters,
     )
     session.add(boundary)
     await session.commit()
@@ -513,6 +582,50 @@ async def upload_boundary(
         entity_id=str(boundary.id),
         request=request,
         metadata={"name": payload.name, "kind": payload.kind.value},
+    )
+    return GeoBoundaryRead.model_validate(boundary)
+
+
+@router.post("/geo-boundary/google", response_model=GeoBoundaryRead)
+async def import_boundary_from_google(
+    payload: GeoBoundaryGoogleImport,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> GeoBoundaryRead:
+    try:
+        suggested_name, geojson = await google_maps.fetch_boundary_from_google(
+            query=payload.query,
+            place_id=payload.place_id,
+        )
+    except google_maps.GoogleMapsError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    boundary = GeoBoundary(
+        name=payload.name or suggested_name,
+        geojson=geojson,
+        kind=payload.kind,
+        jurisdiction=payload.jurisdiction,
+        redirect_url=payload.redirect_url,
+        notes=payload.notes,
+        is_active=True,
+        service_code_filters=payload.service_code_filters or [],
+    )
+    session.add(boundary)
+    await session.commit()
+    await session.refresh(boundary)
+    await log_event(
+        session,
+        action="geo_boundary.import_google",
+        actor=current_user,
+        entity_type="geo_boundary",
+        entity_id=str(boundary.id),
+        request=request,
+        metadata={
+            "query": payload.query,
+            "place_id": payload.place_id,
+            "kind": payload.kind.value,
+        },
     )
     return GeoBoundaryRead.model_validate(boundary)
 
@@ -611,6 +724,7 @@ async def update_runtime_config(
     current_user: User = Depends(require_roles(UserRole.admin)),
 ) -> dict:
     config = await runtime_config_service.update_runtime_config(session, payload.model_dump(exclude_unset=True))
+    settings_snapshot.save_snapshot("runtime_config", config)
     await log_event(
         session,
         action="runtime_config.update",

@@ -2,11 +2,13 @@ export type UserRole = "resident" | "staff" | "admin";
 
 export type Branding = {
   town_name?: string;
+  site_title?: string;
   hero_text?: string;
   primary_color?: string;
   secondary_color?: string;
   logo_url?: string;
   seal_url?: string;
+  favicon_url?: string;
 };
 
 export type IssueCategory = {
@@ -16,6 +18,13 @@ export type IssueCategory = {
   priority: string;
   default_department_slug?: string | null;
   department_name?: string | null;
+};
+
+export type AdminCategory = IssueCategory & {
+  id: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ResidentConfig = {
@@ -68,6 +77,8 @@ export type AuthUser = {
   display_name: string;
   role: UserRole;
   department?: string | null;
+  department_slugs?: string[];
+  must_reset_password?: boolean;
 };
 
 export type Department = {
@@ -84,8 +95,10 @@ export type GeoBoundary = {
   id: number;
   name: string;
   kind: "primary" | "exclusion";
+  jurisdiction?: "township" | "county" | "state" | "federal" | "other" | null;
   redirect_url?: string | null;
   notes?: string | null;
+  service_code_filters?: string[] | null;
   is_active: boolean;
   created_at: string;
 };

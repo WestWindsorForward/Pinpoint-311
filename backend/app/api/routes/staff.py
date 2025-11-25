@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_db, require_roles
+from app.core.config import settings
 from app.models.issue import RequestAttachment, RequestUpdate, ServiceRequest, ServiceStatus
 from app.models.user import User, UserRole
 from app.schemas.issue import RequestUpdateCreate, RequestUpdateRead, ServiceRequestRead
@@ -104,10 +105,16 @@ async def close_request(
 
 @router.get("/requests/{request_id}/pdf")
 async def export_pdf(request_id: uuid.UUID, session: AsyncSession = Depends(get_db)) -> FileResponse:
-    request = await session.get(ServiceRequest, request_id)
-    if not request:
+    stmt = (
+        select(ServiceRequest)
+        .where(ServiceRequest.id == request_id)
+        .options(selectinload(ServiceRequest.category))
+    )
+    result = await session.execute(stmt)
+    service_request = result.scalar_one_or_none()
+    if not service_request:
         raise HTTPException(status_code=404, detail="Request not found")
-    path = generate_case_pdf(request, Path("storage/pdfs"))
+    path = generate_case_pdf(service_request, Path(settings.storage_dir) / "pdfs")
     return FileResponse(path)
 
 

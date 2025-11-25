@@ -8,6 +8,8 @@ interface Props {
   children: React.ReactNode;
 }
 
+const DEFAULT_FAVICON = "/vite.svg";
+
 export function BrandingProvider({ branding, children }: Props) {
   const { setBranding } = useBrandingStore();
 
@@ -28,6 +30,12 @@ export function BrandingProvider({ branding, children }: Props) {
     }
   }, [branding, setBranding]);
 
+  useEffect(() => {
+    const title = branding?.site_title ?? branding?.town_name ?? "Township Request Portal";
+    document.title = title;
+    updateFavicon(branding?.favicon_url);
+  }, [branding]);
+
   return <>{children}</>;
 }
 
@@ -38,4 +46,12 @@ function hexToRgb(hex: string): string {
   const g = (bigint >> 8) & 255;
   const b = bigint & 255;
   return `${r} ${g} ${b}`;
+}
+
+function updateFavicon(url?: string | null) {
+  const link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+  if (!link) {
+    return;
+  }
+  link.href = url || DEFAULT_FAVICON;
 }

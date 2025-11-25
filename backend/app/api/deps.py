@@ -4,7 +4,9 @@ from typing import Callable
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
 from jose import JWTError, jwt
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.db.session import get_session
@@ -28,7 +30,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
     if not sub:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
-    user = await session.get(User, uuid.UUID(sub))
+    stmt = (
+        select(User)
+        .options(selectinload(User.departments))
+        .where(User.id == uuid.UUID(sub))
+    )
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive or missing user")
     return user
@@ -47,7 +55,13 @@ async def get_optional_user(
         return None
     if not sub:
         return None
-    return await session.get(User, uuid.UUID(sub))
+    stmt = (
+        select(User)
+        .options(selectinload(User.departments))
+        .where(User.id == uuid.UUID(sub))
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 def require_roles(*roles: UserRole) -> Callable[[User], User]:

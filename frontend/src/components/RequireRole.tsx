@@ -16,6 +16,10 @@ export function RequireRole({ roles, children }: Props) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  if (user.must_reset_password && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" state={{ from: location }} replace />;
+  }
+
   if (roles.length > 0 && !roles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }

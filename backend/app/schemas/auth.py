@@ -24,13 +24,26 @@ class RegisterRequest(BaseModel):
     phone_number: str | None = None
 
 
+class AdminBootstrapRequest(BaseModel):
+    email: EmailStr
+    password: str
+    display_name: str
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class UserReadWithRole(BaseModel):
     id: uuid.UUID
     email: EmailStr
     display_name: str
     role: UserRole
     department: str | None = None
+    department_slugs: list[str] = []
     is_active: bool
+    must_reset_password: bool
     created_at: datetime
     updated_at: datetime
 

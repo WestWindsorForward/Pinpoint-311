@@ -25,8 +25,9 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
     defaultValues: { service_code: categories[0]?.slug ?? "" },
   });
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
   const createRequest = useCreateResidentRequest();
+  const hasCategories = categories.length > 0;
 
   const onSubmit = handleSubmit((values) => {
     const formData = new FormData();
@@ -37,17 +38,42 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
       formData.append("latitude", coords.lat.toString());
       formData.append("longitude", coords.lng.toString());
     }
-    if (attachment) {
-      formData.append("media", attachment);
-    }
+    attachments.forEach((file) => formData.append("media", file));
     createRequest.mutate(formData, {
       onSuccess: () => {
         reset();
         setCoords(null);
-        setAttachment(null);
+        setAttachments([]);
       },
     });
   });
+
+  const handleFilesChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    const limited = files.slice(0, 5);
+    setAttachments(limited);
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  if (!hasCategories) {
+    return (
+      <motion.div layout className="space-y-4 rounded-2xl bg-white/80 p-6 text-sm text-slate-600 shadow-xl">
+        <h3 className="text-lg font-semibold text-slate-900">Publish categories to open the resident portal</h3>
+        <p>
+          Residents can’t submit requests until at least one service category is active. Head to{" "}
+          <strong>Admin → Categories</strong> to create categories and assign them to a department. Refresh this page once
+          you’re done.
+        </p>
+        <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-xs text-slate-500">
+          Tip: Publish a “Road maintenance” category so county/state roads can be routed correctly using the new
+          jurisdiction filters.
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.form
@@ -117,25 +143,47 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
         </div>
       </div>
 
-      <div>
-        <label className="text-sm font-medium text-slate-600">Location</label>
-        <MapPicker apiKey={mapsApiKey} lat={coords?.lat} lng={coords?.lng} onChange={setCoords} />
-        {coords && (
+        <div>
+          <label className="text-sm font-medium text-slate-600">Location</label>
+          <MapPicker apiKey={mapsApiKey} lat={coords?.lat} lng={coords?.lng} onChange={setCoords} />
           <p className="mt-1 text-xs text-slate-500">
-            {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+            Drop the pin inside township limits. We’ll block requests outside the allowed boundary or inside excluded
+            county/state zones.
           </p>
-        )}
-      </div>
+          {coords && (
+            <p className="mt-1 text-xs text-slate-500">
+              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+            </p>
+          )}
+        </div>
 
-        <label className="text-sm font-medium text-slate-600">
-          Photo (optional)
+        <div>
+          <label className="text-sm font-medium text-slate-600">Photos & evidence</label>
           <input
             type="file"
             accept="image/*"
+            multiple
             className="mt-1 w-full rounded-xl border border-dashed border-slate-300 p-2"
-            onChange={(event) => setAttachment(event.target.files?.[0] ?? null)}
+            onChange={handleFilesChanged}
           />
-        </label>
+          <p className="mt-1 text-xs text-slate-500">Attach up to five photos or screenshots to help staff verify.</p>
+          {attachments.length > 0 && (
+            <ul className="mt-2 space-y-1 text-xs text-slate-600">
+              {attachments.map((file, index) => (
+                <li key={`${file.name}-${index}`} className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-1">
+                  <span className="truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    className="text-[11px] font-semibold uppercase text-rose-500"
+                    onClick={() => removeAttachment(index)}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
       <button
         type="submit"
