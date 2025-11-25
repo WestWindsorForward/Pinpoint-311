@@ -13,10 +13,18 @@ const containerStyle = {
 };
 
 export function MapPicker({ apiKey, lat, lng, onChange }: MapPickerProps) {
-  if (!apiKey) {
+  if (!apiKey || apiKey.trim() === '') {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
-        Municipal admin: add a Google Maps key in Township Settings → Runtime Config.
+      <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50 p-6">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">⚠️</span>
+          <div>
+            <p className="font-medium text-amber-900">Google Maps Not Configured</p>
+            <p className="mt-1 text-sm text-amber-700">
+              Location selection is disabled. Contact your administrator to add a Google Maps API key in Runtime Config.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -32,7 +40,13 @@ export function MapPicker({ apiKey, lat, lng, onChange }: MapPickerProps) {
   };
 
   return (
-    <LoadScript googleMapsApiKey={apiKey} libraries={["places"]}>
+    <LoadScript 
+      googleMapsApiKey={apiKey} 
+      libraries={["places"]}
+      onError={() => {
+        console.error('Failed to load Google Maps. Check API key and billing.');
+      }}
+    >
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={center}
