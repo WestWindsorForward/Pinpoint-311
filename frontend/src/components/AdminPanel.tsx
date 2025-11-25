@@ -172,8 +172,12 @@ export function AdminPanel() {
 
   const runtimeMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => client.put("/api/admin/runtime-config", payload),
-    onSuccess: () => {
-      runtimeConfigQuery.refetch();
+    onSuccess: async () => {
+      // Invalidate both runtime config and resident config since they're related
+      await queryClient.invalidateQueries({ queryKey: ["runtime-config"] });
+      await queryClient.invalidateQueries({ queryKey: ["resident-config"] });
+      await runtimeConfigQuery.refetch();
+      await refetch(); // Refetch resident config to update integrations (like Google Maps API key)
       runtimeSuccess.flash();
     },
   });
@@ -192,8 +196,10 @@ export function AdminPanel() {
         await client.post("/api/admin/branding/assets/favicon", formData);
       }
     },
-    onSuccess: () => {
-      refetch();
+    onSuccess: async () => {
+      // Invalidate and refetch to ensure logo and branding updates are visible
+      await queryClient.invalidateQueries({ queryKey: ["resident-config"] });
+      await refetch();
       setLogoFile(null);
       setFaviconFile(null);
       setBrandingError(null);
