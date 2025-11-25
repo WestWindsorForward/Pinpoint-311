@@ -80,6 +80,8 @@ services:
       - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     environment:
       APP_DOMAIN: ${APP_DOMAIN:-:80}
       TLS_EMAIL: ${TLS_EMAIL:-}
@@ -91,3 +93,5 @@ volumes:
   postgres_data:
   redis_data:
   storage_data:
+  caddy_data:
+  caddy_config:
