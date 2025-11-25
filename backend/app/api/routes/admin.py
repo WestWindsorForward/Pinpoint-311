@@ -87,27 +87,52 @@ async def update_branding(
 ) -> dict:
     import logging
     logger = logging.getLogger(__name__)
-    logger.info(f"Updating branding: {payload.model_dump(exclude_unset=True)}")
     
-    stmt = select(TownshipSetting).where(TownshipSetting.key == "branding")
-    result = await session.execute(stmt)
-    record = result.scalar_one_or_none()
-    data = record.value if record else {}
-    data.update(payload.model_dump(exclude_unset=True))
-    
-    if record:
-        record.value = data
-    else:
-        record = TownshipSetting(key="branding", value=data)
-        session.add(record)
-    
-    await session.commit()
-    await session.refresh(record) if record else None
-    
-    logger.info(f"Branding saved successfully: {data}")
-    settings_snapshot.save_snapshot("branding", data)
-    await log_event(session, action="branding.update", actor=current_user, request=request, metadata=data)
-    return data
+    try:
+        payload_dict = payload.model_dump(exclude_unset=True)
+        logger.info(f"[BRANDING] Updating branding: {payload_dict}")
+        
+        # Get or create branding record
+        stmt = select(TownshipSetting).where(TownshipSetting.key == "branding")
+        result = await session.execute(stmt)
+        record = result.scalar_one_or_none()
+        
+        if record:
+            logger.info(f"[BRANDING] Found existing record with value: {record.value}")
+            data = record.value if isinstance(record.value, dict) else {}
+            data.update(payload_dict)
+            record.value = data
+        else:
+            logger.info("[BRANDING] Creating new branding record")
+            data = payload_dict
+            record = TownshipSetting(key="branding", value=data)
+            session.add(record)
+        
+        # Commit and flush to database
+        await session.flush()
+        await session.commit()
+        
+        # Verify it was saved
+        verify_stmt = select(TownshipSetting).where(TownshipSetting.key == "branding")
+        verify_result = await session.execute(verify_stmt)
+        verify_record = verify_result.scalar_one_or_none()
+        
+        if verify_record:
+            logger.info(f"[BRANDING] ✅ VERIFIED - Data in database: {verify_record.value}")
+            final_data = verify_record.value
+        else:
+            logger.error("[BRANDING] ❌ VERIFICATION FAILED - Data not in database!")
+            raise HTTPException(status_code=500, detail="Branding saved but verification failed")
+        
+        settings_snapshot.save_snapshot("branding", final_data)
+        await log_event(session, action="branding.update", actor=current_user, request=request, metadata=final_data)
+        
+        return final_data
+        
+    except Exception as e:
+        logger.error(f"[BRANDING] ❌ ERROR: {str(e)}", exc_info=True)
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save branding: {str(e)}")
 
 
 @router.post("/branding/assets/{asset_key}", response_model=dict)
@@ -736,24 +761,35 @@ async def update_runtime_config(
     import logging
     logger = logging.getLogger(__name__)
     
-    payload_dict = payload.model_dump(exclude_unset=True)
-    logger.info(f"Updating runtime config: {payload_dict}")
-    
-    config = await runtime_config_service.update_runtime_config(session, payload_dict)
-    
-    logger.info(f"Runtime config saved successfully: {config}")
-    settings_snapshot.save_snapshot("runtime_config", config)
-    
-    await log_event(
-        session,
-        action="runtime_config.update",
-        actor=current_user,
-        entity_type="runtime_config",
-        entity_id="runtime_config",
-        request=request,
-        metadata=payload_dict,
-    )
-    return config
+    try:
+        payload_dict = payload.model_dump(exclude_unset=True)
+        logger.info(f"[RUNTIME] Updating runtime config: {payload_dict}")
+        
+        # Update config
+        config = await runtime_config_service.update_runtime_config(session, payload_dict)
+        
+        # Verify it was saved
+        verify_config = await runtime_config_service.get_runtime_config(session)
+        logger.info(f"[RUNTIME] ✅ VERIFIED - Config in database: {verify_config}")
+        
+        settings_snapshot.save_snapshot("runtime_config", verify_config)
+        
+        await log_event(
+            session,
+            action="runtime_config.update",
+            actor=current_user,
+            entity_type="runtime_config",
+            entity_id="runtime_config",
+            request=request,
+            metadata=payload_dict,
+        )
+        
+        return verify_config
+        
+    except Exception as e:
+        logger.error(f"[RUNTIME] ❌ ERROR: {str(e)}", exc_info=True)
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save runtime config: {str(e)}")
 
 
 @router.post("/system/update", response_model=dict)
@@ -764,33 +800,58 @@ async def trigger_system_update(
 ) -> dict:
     """Trigger a system update by creating a flag file for the host watcher script."""
     import logging
+    import os
     logger = logging.getLogger(__name__)
     
-    flags_dir = Path("/app/flags")
-    flags_dir.mkdir(parents=True, exist_ok=True)
-    flag_file = flags_dir / "update_requested"
-    
-    logger.info(f"System update triggered by {current_user.email}")
-    logger.info(f"Creating flag file at: {flag_file}")
-    
-    flag_file.touch()
-    
-    if flag_file.exists():
-        logger.info(f"Flag file created successfully at {flag_file}")
-    else:
-        logger.error(f"Failed to create flag file at {flag_file}")
-    
-    await log_event(
-        session,
-        action="system.update_triggered",
-        actor=current_user,
-        entity_type="system",
-        entity_id="update",
-        request=request,
-    )
-    
-    return {
-        "status": "update_initiated",
-        "message": "Update started. Server will restart shortly.",
-        "flag_path": str(flag_file),
-    }
+    try:
+        flags_dir = Path("/app/flags")
+        logger.info(f"[UPDATE] Checking flags directory: {flags_dir}")
+        
+        # Check if directory exists and is writable
+        if not flags_dir.exists():
+            logger.info(f"[UPDATE] Creating flags directory: {flags_dir}")
+            flags_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Check write permissions
+        if not os.access(flags_dir, os.W_OK):
+            logger.error(f"[UPDATE] ❌ No write permission to {flags_dir}")
+            raise HTTPException(status_code=500, detail="Cannot write to flags directory")
+        
+        flag_file = flags_dir / "update_requested"
+        logger.info(f"[UPDATE] System update triggered by {current_user.email}")
+        logger.info(f"[UPDATE] Creating flag file at: {flag_file}")
+        
+        # Create the flag file
+        flag_file.write_text(f"Update requested by {current_user.email} at {request.client.host if request.client else 'unknown'}")
+        
+        # Verify file was created
+        if flag_file.exists():
+            logger.info(f"[UPDATE] ✅ Flag file created successfully")
+            logger.info(f"[UPDATE] File size: {flag_file.stat().st_size} bytes")
+        else:
+            logger.error(f"[UPDATE] ❌ Failed to create flag file")
+            raise HTTPException(status_code=500, detail="Failed to create update flag file")
+        
+        # Log the event
+        await log_event(
+            session,
+            action="system.update_triggered",
+            actor=current_user,
+            entity_type="system",
+            entity_id="update",
+            request=request,
+        )
+        await session.commit()
+        
+        return {
+            "status": "update_initiated",
+            "message": "Update flag created successfully. The watcher will process it shortly.",
+            "flag_path": str(flag_file),
+            "watcher_check_interval": "5 seconds",
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[UPDATE] ❌ ERROR: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to trigger update: {str(e)}")
