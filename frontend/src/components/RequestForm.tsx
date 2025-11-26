@@ -21,13 +21,22 @@ interface FormValues {
 }
 
 export function RequestForm({ categories, mapsApiKey }: Props) {
-  const { register, handleSubmit, reset } = useForm<FormValues>({
+  const { register, handleSubmit, reset, setValue } = useForm<FormValues>({
     defaultValues: { service_code: categories[0]?.slug ?? "" },
   });
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<string>("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const createRequest = useCreateResidentRequest();
   const hasCategories = categories.length > 0;
+
+  const handleLocationChange = (newCoords: { lat: number; lng: number }, address?: string) => {
+    setCoords(newCoords);
+    if (address) {
+      setSelectedAddress(address);
+      setValue("address_string", address);
+    }
+  };
 
   const onSubmit = handleSubmit((values) => {
     const formData = new FormData();
@@ -43,6 +52,7 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
       onSuccess: () => {
         reset();
         setCoords(null);
+        setSelectedAddress("");
         setAttachments([]);
       },
     });
@@ -145,19 +155,24 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
 
         <div>
           <label className="text-sm font-medium text-slate-600">Location</label>
-          <MapPicker apiKey={mapsApiKey} lat={coords?.lat} lng={coords?.lng} onChange={setCoords} />
+          <MapPicker apiKey={mapsApiKey} lat={coords?.lat} lng={coords?.lng} onChange={handleLocationChange} />
           <p className="mt-1 text-xs text-slate-500">
             Drop the pin inside township limits. We’ll block requests outside the allowed boundary or inside excluded
             county/state zones.
           </p>
-          {coords && (
-            <p className="mt-1 text-xs text-slate-500">
-              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+          {selectedAddress && (
+            <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-700">
+              📍 <span className="font-medium">{selectedAddress}</span>
+            </p>
+          )}
+          {coords && !selectedAddress && (
+            <p className="mt-2 text-xs text-slate-500">
+              Coordinates: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
             </p>
           )}
         </div>
 
-        <div>
+      <div>
           <label className="text-sm font-medium text-slate-600">Photos & evidence</label>
           <input
             type="file"
