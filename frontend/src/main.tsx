@@ -24,6 +24,7 @@ const StaffCommandCenter = lazy(() => import("./pages/StaffCommandCenter").then(
 import { ChangePasswordPage } from "./pages/ChangePassword";
 import { ForgotPasswordRequestPage } from "./pages/ForgotPasswordRequest";
 import { ResetPasswordPage } from "./pages/ResetPassword";
+import { RequestDetailsPage } from "./pages/RequestDetailsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,6 +77,7 @@ const router = createBrowserRouter([
           { path: "system", element: <Suspense fallback={<div className="h-24 animate-pulse rounded-xl bg-slate-100" />}> <SystemPage /> </Suspense> },
         ],
       },
+      { path: "requests/:externalId", element: <RequestDetailsPage /> },
       {
         path: "staff",
         element: (

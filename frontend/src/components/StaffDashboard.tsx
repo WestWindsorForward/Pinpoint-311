@@ -64,6 +64,9 @@ export function StaffDashboard() {
               </div>
             </div>
             <p className="mt-2 text-slate-600">{request.description}</p>
+            <div className="mt-2 text-right">
+              <a className="text-xs font-semibold text-slate-900 underline" href={`/requests/${request.external_id}`}>Open details</a>
+            </div>
             {aiAnalysis?.severity && (
               <div className="mt-4 rounded-xl bg-slate-100 p-3 text-sm">
                 AI Severity: {aiAnalysis.severity} · Suggested: {aiAnalysis.recommended_category ?? "n/a"}

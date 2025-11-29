@@ -49,7 +49,7 @@ export function ResidentPortal() {
 }
 
 function RecentRequestsPanel({ onShareRequest }: { onShareRequest: (externalId: string) => void }) {
-  const { data, isLoading } = useRecentRequests();
+  const { data, isLoading } = useRecentRequests(50);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
@@ -83,6 +83,9 @@ function RecentRequestsPanel({ onShareRequest }: { onShareRequest: (externalId: 
                   onCopyLink={(externalId) => onShareRequest(externalId)}
                 />
               )}
+              <div className="mt-2 text-right">
+                <a className="text-xs font-semibold text-slate-900 underline" href={`/requests/${request.external_id}`}>Open details</a>
+              </div>
             </motion.div>
           ))}
         </div>

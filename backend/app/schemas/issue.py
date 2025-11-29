@@ -69,6 +69,7 @@ class RequestAttachmentRead(BaseModel):
 class RequestUpdateRead(BaseModel):
     id: int
     request_id: uuid.UUID
+    author_id: uuid.UUID | None = None
     notes: str
     public: bool
     status_override: ServiceStatus | None = None
@@ -93,6 +94,8 @@ class ServiceRequestRead(ServiceRequestBase):
     ai_analysis: dict[str, Any] | None = None
     jurisdiction_warning: str | None = None
     category_id: int | None = None
+    assigned_department: str | None = None
+    meta: dict[str, Any] | None = None
     attachments: list[RequestAttachmentRead] = []
     updates: list[RequestUpdateRead] = []
     created_at: datetime

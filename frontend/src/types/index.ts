@@ -47,6 +47,7 @@ export type RequestAttachment = {
 export type RequestUpdate = {
   id: number;
   request_id: string;
+  author_id?: string | null;
   notes: string;
   public: boolean;
   status_override?: string | null;
@@ -66,6 +67,8 @@ export type ServiceRequest = {
   address_string?: string | null;
   ai_analysis?: Record<string, unknown> | null;
   jurisdiction_warning?: string | null;
+  assigned_department?: string | null;
+  meta?: Record<string, unknown> | null;
   created_at: string;
   attachments?: RequestAttachment[];
   updates?: RequestUpdate[];
