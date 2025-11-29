@@ -38,4 +38,4 @@ def public_storage_url(request: Request, file_path: str) -> str:
         relative = absolute.relative_to(storage_root)
     except ValueError:
         relative = Path(file_path).name
-    return str(request.url_for("storage", path=relative.as_posix()))
+    return f"/storage/{relative.as_posix()}"

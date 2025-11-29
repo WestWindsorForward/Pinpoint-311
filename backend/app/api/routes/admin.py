@@ -145,6 +145,9 @@ async def upload_asset(
     current_user: User = Depends(require_roles(UserRole.admin)),
 ) -> dict:
     path = save_file(f"branding-{asset_key}-{file.filename}", await file.read())
+    # Sanitize filename to avoid spaces/unsupported characters in URLs
+    clean = _clean_filename(file.filename)
+    path = save_file(f"branding-{asset_key}-{clean}", await file.read())
     stmt = select(BrandingAsset).where(BrandingAsset.key == asset_key)
     result = await session.execute(stmt)
     record = result.scalar_one_or_none()
@@ -874,3 +877,7 @@ async def trigger_system_update(
     except Exception as e:
         logger.error(f"[UPDATE] ❌ ERROR: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to trigger update: {str(e)}")
+def _clean_filename(name: str) -> str:
+    value = name.strip().lower().replace(" ", "-")
+    allowed = set("abcdefghijklmnopqrstuvwxyz0123456789-_.")
+    return "".join(c for c in value if c in allowed) or "file"
