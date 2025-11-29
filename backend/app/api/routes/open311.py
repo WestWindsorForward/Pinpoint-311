@@ -58,7 +58,11 @@ async def create_request(payload: Open311RequestCreate, session: AsyncSession = 
 
     warning = None
 
-    ai_result = await analyze_request(payload.description, payload.media_url, session=session)
+    ai_result = None
+    try:
+        ai_result = await analyze_request(payload.description, payload.media_url, session=session)
+    except Exception:
+        ai_result = None
 
     external_id = f"SR-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.token_hex(3)}"
     request = ServiceRequest(

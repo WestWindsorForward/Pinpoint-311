@@ -103,7 +103,11 @@ async def create_resident_request(
 
     warning = None
 
-    ai_result = await analyze_request(description, session=session)
+    ai_result = None
+    try:
+        ai_result = await analyze_request(description, session=session)
+    except Exception:
+        ai_result = None
 
     metadata = {
         "resident_email": resident_email,
