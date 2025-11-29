@@ -79,13 +79,16 @@ export function RequestDetailsPage() {
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-slate-700">Location</h2>
           {mapsKey ? (
-            <LoadScript googleMapsApiKey={mapsKey}>
+            <LoadScript googleMapsApiKey={mapsKey} onError={() => {
+              const el = document.getElementById("map-error");
+              if (el) el.textContent = "Maps failed to load. Check API key and billing.";
+            }}>
               <GoogleMap mapContainerStyle={{ width: "100%", height: "280px" }} center={center} zoom={15} options={{ mapTypeId: "hybrid" }}>
                 <Marker position={center} />
               </GoogleMap>
             </LoadScript>
           ) : (
-            <div className="rounded-xl border border-slate-200 p-3 text-xs text-slate-600">Maps not configured</div>
+            <div id="map-error" className="rounded-xl border border-slate-200 p-3 text-xs text-slate-600">Maps not configured</div>
           )}
           {request.address_string && <p className="text-xs text-slate-500">{request.address_string}</p>}
         </div>
