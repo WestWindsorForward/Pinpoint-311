@@ -26,6 +26,9 @@ export function RuntimeConfigPage() {
     otel_enabled: Boolean((config as any).otel_enabled ?? false),
     otel_endpoint: (config as any).otel_endpoint ?? "",
     otel_headers: (config as any).otel_headers ?? "",
+    email_enabled: Boolean((config as any).email_enabled ?? false),
+    sms_enabled: Boolean((config as any).sms_enabled ?? false),
+    ai_enabled: Boolean((config as any).ai_enabled ?? false),
   };
   if (isLoading) return <div className="h-32 animate-pulse rounded-xl bg-slate-100" />;
   return (
@@ -84,6 +87,14 @@ function RuntimeConfigForm({ defaults, onSave, isSaving }: { defaults: Record<st
             <label className="text-sm text-slate-600">OTLP headers<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" placeholder="Authorization=Bearer ..." value={form.otel_headers} onChange={(e) => handleChange("otel_headers", e.target.value)} /><span className="text-xs text-slate-400">Comma-separated key=value list.</span></label>
           </div>
         )}
+      </div>
+      <div className="rounded-xl border border-slate-200 p-4">
+        <p className="text-sm font-semibold text-slate-700">Feature Modules</p>
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          <label className="flex items-center gap-3 text-sm text-slate-600"><input type="checkbox" checked={form.email_enabled} onChange={(e) => handleChange("email_enabled", e.target.checked)} />Email Notifications</label>
+          <label className="flex items-center gap-3 text-sm text-slate-600"><input type="checkbox" checked={form.sms_enabled} onChange={(e) => handleChange("sms_enabled", e.target.checked)} />SMS Alerts</label>
+          <label className="flex items-center gap-3 text-sm text-slate-600"><input type="checkbox" checked={form.ai_enabled} onChange={(e) => handleChange("ai_enabled", e.target.checked)} />AI Assistance</label>
+        </div>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-3"><button className="rounded-xl bg-slate-900 px-6 py-2 font-semibold text-white disabled:opacity-50" onClick={handleSubmit} disabled={disabled}>{isSaving ? "Saving…" : "Save overrides"}</button></div>
     </div>

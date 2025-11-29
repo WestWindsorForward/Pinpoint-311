@@ -28,6 +28,7 @@ class GeoBoundaryUpload(BaseModel):
     redirect_url: str | None = None
     notes: str | None = None
     service_code_filters: list[str] = Field(default_factory=list)
+    road_name_filters: list[str] = Field(default_factory=list)
 
 
 class GeoBoundaryRead(GeoBoundaryUpload):
@@ -62,9 +63,22 @@ class GeoBoundaryGoogleImport(BaseModel):
     redirect_url: str | None = None
     notes: str | None = None
     service_code_filters: list[str] | None = None
+    road_name_filters: list[str] | None = None
 
     @model_validator(mode="after")
     def _ensure_source(self) -> "GeoBoundaryGoogleImport":
         if not self.place_id and not self.query:
             raise ValueError("Provide either place_id or query")
         return self
+
+
+class ArcGISLayerImport(BaseModel):
+    layer_url: str
+    where: str | None = None
+    name: str | None = None
+    kind: BoundaryKind = BoundaryKind.primary
+    jurisdiction: JurisdictionLevel | None = None
+    redirect_url: str | None = None
+    notes: str | None = None
+    service_code_filters: list[str] | None = None
+    road_name_filters: list[str] | None = None

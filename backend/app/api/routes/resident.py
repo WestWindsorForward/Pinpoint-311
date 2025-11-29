@@ -102,6 +102,10 @@ async def create_resident_request(
     allowed, warning = await gis.evaluate_location(session, latitude, longitude, service_code=service_code)
     if not allowed:
         raise HTTPException(status_code=400, detail=warning or "Location outside township boundary")
+    road_allowed, road_warning = await gis.evaluate_road_filters(session, address_string=address_string, service_code=service_code)
+    if not road_allowed:
+        raise HTTPException(status_code=400, detail=road_warning or "Location excluded by road filter")
+    warning = warning or road_warning
 
     ai_result = await analyze_request(description, session=session)
 
@@ -245,5 +249,4 @@ async def download_public_pdf(external_id: str, session: AsyncSession = Depends(
         raise HTTPException(status_code=404, detail="Request not found")
     path = generate_case_pdf(request, Path(settings.storage_dir) / "pdfs")
     return FileResponse(path)
-
 

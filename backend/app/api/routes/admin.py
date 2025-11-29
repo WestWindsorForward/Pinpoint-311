@@ -28,11 +28,13 @@ from app.schemas.settings import (
     GeoBoundaryRead,
     GeoBoundaryUpload,
     GeoBoundaryUpload as GeoBoundaryUpdatePayload,
+    ArcGISLayerImport,
     RuntimeConfigUpdate,
     SecretsPayload,
 )
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services import gis, google_maps, runtime_config as runtime_config_service, settings_snapshot
+from app.services.arcgis import fetch_layer_geojson
 from app.services.staff_accounts import sync_staff_departments
 from app.services.audit import log_event
 from app.utils.storage import public_storage_url, save_file
@@ -704,6 +706,40 @@ async def import_boundary_from_google(
             "place_id": payload.place_id,
             "kind": payload.kind.value,
         },
+    )
+    return GeoBoundaryRead.model_validate(boundary)
+
+
+@router.post("/geo-boundary/arcgis", response_model=GeoBoundaryRead)
+async def import_boundary_from_arcgis(
+    payload: ArcGISLayerImport,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> GeoBoundaryRead:
+    geojson = fetch_layer_geojson(payload.layer_url, where=payload.where)
+    boundary = GeoBoundary(
+        name=payload.name or "ArcGIS Layer",
+        geojson=geojson,
+        kind=payload.kind,
+        jurisdiction=payload.jurisdiction,
+        redirect_url=payload.redirect_url,
+        notes=payload.notes,
+        is_active=True,
+        service_code_filters=payload.service_code_filters or [],
+        road_name_filters=payload.road_name_filters or [],
+    )
+    session.add(boundary)
+    await session.commit()
+    await session.refresh(boundary)
+    await log_event(
+        session,
+        action="geo_boundary.import_arcgis",
+        actor=current_user,
+        entity_type="geo_boundary",
+        entity_id=str(boundary.id),
+        request=request,
+        metadata={"layer_url": payload.layer_url},
     )
     return GeoBoundaryRead.model_validate(boundary)
 

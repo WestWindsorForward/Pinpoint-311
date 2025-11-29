@@ -3,6 +3,7 @@ import client from "../../api/client";
 import { useSecrets } from "../../api/hooks";
 import type { SecretSummary } from "../../types";
 import { useState } from "react";
+import InfoBox from "../../components/InfoBox";
 
 type SecretFormState = { provider: string; key: string; secret: string; notes: string };
 
@@ -32,6 +33,14 @@ export function SecretsPage() {
         <h1 className="text-2xl font-semibold">Secrets</h1>
         <p className="text-sm text-slate-500">Store provider secrets securely. Values are write-only and masked after submission.</p>
       </div>
+      <InfoBox title="Required Providers">
+        <ul className="list-disc pl-5">
+          <li>Google Maps API key (Maps/Places) for boundary import</li>
+          <li>Email SMTP/API credentials for outbound notifications</li>
+          <li>SMS provider API key (e.g., Twilio) for text alerts</li>
+          <li>AI provider credentials (e.g., Vertex AI) if AI features enabled</li>
+        </ul>
+      </InfoBox>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="text-sm text-slate-600">Provider<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" placeholder="vertex-ai" value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value })} /></label>
         <label className="text-sm text-slate-600">Key / identifier<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" placeholder="service-account@project.iam.gserviceaccount.com" value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} /></label>
@@ -65,4 +74,3 @@ export function SecretsPage() {
     </div>
   );
 }
-

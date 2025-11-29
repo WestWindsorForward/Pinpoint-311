@@ -99,6 +99,7 @@ export type GeoBoundary = {
   redirect_url?: string | null;
   notes?: string | null;
   service_code_filters?: string[] | null;
+  road_name_filters?: string[] | null;
   is_active: boolean;
   created_at: string;
 };

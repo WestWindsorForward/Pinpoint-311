@@ -50,6 +50,7 @@ class GeoBoundary(Base, TimestampMixin):
     redirect_url: Mapped[str | None] = mapped_column(String(512))
     notes: Mapped[str | None] = mapped_column(Text)
     service_code_filters: Mapped[list[str]] = mapped_column(JSON, default=list)
+    road_name_filters: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
 class ApiCredential(Base, TimestampMixin):

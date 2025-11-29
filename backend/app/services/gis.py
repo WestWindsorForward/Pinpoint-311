@@ -39,6 +39,35 @@ async def evaluate_location(
     return True, None
 
 
+async def evaluate_road_filters(
+    session: AsyncSession,
+    *,
+    address_string: str | None,
+    service_code: str | None = None,
+) -> tuple[bool, str | None]:
+    """Evaluate boundary exclusions based on road name filters.
+    If an exclusion boundary has `road_name_filters` matching the address string,
+    apply exclusion (or warning when filters don't apply)."""
+    if not address_string:
+        return True, None
+    text = address_string.lower()
+    result = await session.execute(select(GeoBoundary).where(GeoBoundary.is_active.is_(True)))
+    boundaries = result.scalars().all()
+    for boundary in boundaries:
+        names = getattr(boundary, "road_name_filters", None) or []
+        if not names:
+            continue
+        match = any(name.lower() in text for name in names)
+        if not match:
+            continue
+        if boundary.kind == BoundaryKind.exclusion:
+            if _exclusion_applies(boundary, service_code):
+                return False, _build_exclusion_message(boundary)
+            warning = _build_exclusion_message(boundary)
+            return True, warning
+    return True, None
+
+
 async def is_point_within_boundary(
     session: AsyncSession,
     latitude: float | None,
