@@ -1,13 +1,15 @@
-import { AdminPanel } from "../components/AdminPanel";
+import { NavLink } from "react-router-dom";
 
 export function AdminConsole() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold">Township Settings</h1>
-        <p className="text-slate-500">Live branding, categories, and secrets configuration.</p>
+        <h1 className="text-3xl font-semibold">Legacy Admin Console</h1>
+        <p className="text-slate-500">A redesigned admin is now available.</p>
       </div>
-      <AdminPanel />
+      <NavLink to="/admin/overview" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+        Open new Admin Portal
+      </NavLink>
     </div>
   );
 }
