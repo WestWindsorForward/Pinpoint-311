@@ -129,7 +129,7 @@ export const useRecentRequests = (limit = 5) =>
   useQuery({
     queryKey: ["recent-requests", limit],
     queryFn: async () => {
-      const { data } = await client.get<ServiceRequest[]>(`/api/resident/requests/recent?limit=${limit}`);
+      const { data } = await client.get<ServiceRequest[]>(`/api/resident/requests/public?limit=${limit}`);
       return data;
     },
   });

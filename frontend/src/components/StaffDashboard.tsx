@@ -20,7 +20,13 @@ export function StaffDashboard() {
   }
 
   const priorityOrder: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
-  const sorted = (data ?? []).slice().sort((a, b) => {
+  const departments = Array.from(new Set((data ?? []).map(r => r.assigned_department).filter(Boolean))) as string[];
+  const [deptFilter, setDeptFilter] = useState<Set<string>>(new Set());
+  const isDeptVisible = (slug: string | null | undefined) => {
+    if (!deptFilter || deptFilter.size === 0) return true;
+    return slug ? deptFilter.has(slug) : deptFilter.has("");
+  };
+  const sorted = (data ?? []).filter(r => isDeptVisible(r.assigned_department)).slice().sort((a, b) => {
     if (sortMode === "priority") {
       return (priorityOrder[b.priority?.toLowerCase?.() || "medium"] ?? 2) - (priorityOrder[a.priority?.toLowerCase?.() || "medium"] ?? 2);
     }
@@ -57,12 +63,26 @@ export function StaffDashboard() {
           <h2 className="text-sm font-semibold text-slate-700">Unified Command Center</h2>
           <p className="text-xs text-slate-500">Sort by triaged priority or department. Click a card to open full details.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <label className="text-xs text-slate-600">Sort</label>
           <select className="rounded-lg border border-slate-300 p-2 text-sm" value={sortMode} onChange={(e) => setSortMode(e.target.value as any)}>
             <option value="priority">Priority (triaged)</option>
             <option value="department">Department</option>
           </select>
+          {departments.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {departments.map(d => (
+                <button key={d} type="button" className={`rounded-full px-2 py-1 text-xs ${deptFilter.has(d) ? "bg-slate-900 text-white" : "border border-slate-300"}`} onClick={() => {
+                  setDeptFilter(prev => {
+                    const next = new Set(prev);
+                    if (next.has(d)) next.delete(d); else next.add(d);
+                    return next;
+                  });
+                }}>{d}</button>
+              ))}
+              <button type="button" className="rounded-full border border-slate-300 px-2 py-1 text-xs" onClick={() => setDeptFilter(new Set())}>All</button>
+            </div>
+          )}
         </div>
       </div>
       {sorted.map((request) => {
@@ -87,12 +107,13 @@ export function StaffDashboard() {
                   className="rounded-xl border border-slate-200 px-3 py-1"
                   value={request.status}
                   onClick={(event) => event.stopPropagation()}
-                  onChange={(event) =>
-                    updateRequest.mutate({ id: request.id, payload: { status: event.target.value } })
-                  }
+                  onChange={(event) => {
+                    event.stopPropagation();
+                    updateRequest.mutate({ id: request.id, payload: { status: event.target.value } });
+                  }}
                 >
                   {statusOptions.map((status) => (
-                    <option key={status}>{status}</option>
+                    <option key={status} value={status}>{String(status).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</option>
                   ))}
                 </select>
                 <span className={`rounded-full px-2 py-1 text-xs ${statusColor(request.status)}`}>{request.status}</span>

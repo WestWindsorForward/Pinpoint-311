@@ -31,9 +31,9 @@ export function RequestDetailsPage() {
   });
 
   const addComment = useMutation({
-    mutationFn: async (notes: string) => {
+    mutationFn: async ({ notes, isPublic, statusOverride }: { notes: string; isPublic: boolean; statusOverride?: string | null }) => {
       if (!request) return;
-      await client.post(`/api/staff/requests/${request.id}/comments`, { notes, public: false });
+      await client.post(`/api/staff/requests/${request.id}/comments`, { notes, public: isPublic, status_override: statusOverride || undefined });
     },
     onSuccess: () => {
       if (externalId) queryClient.invalidateQueries({ queryKey: ["request", externalId] });
@@ -133,18 +133,40 @@ export function RequestDetailsPage() {
               {upd.author_id && staffById.get(upd.author_id)?.display_name && (
                 <p className="text-xs text-slate-500">by {staffById.get(upd.author_id)!.display_name}</p>
               )}
+              {upd.status_override && (
+                <p className="text-xs text-slate-500">status: {String(upd.status_override).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</p>
+              )}
             </li>
           ))}
         </ul>
-        <div className="flex gap-2">
-          <input className="flex-1 rounded-lg border border-slate-300 p-2 text-sm" placeholder="Add internal comment" id="new-comment" />
-          <button className="rounded-lg bg-slate-900 px-3 py-2 text-sm text-white" onClick={() => {
-            const el = document.getElementById("new-comment") as HTMLInputElement | null;
-            if (el && el.value.trim()) {
-              addComment.mutate(el.value.trim());
-              el.value = "";
-            }
-          }}>Post</button>
+        <div className="space-y-2 rounded-lg bg-white p-3">
+          <div className="grid gap-2 md:grid-cols-2">
+            <input className="rounded-lg border border-slate-300 p-2 text-sm" placeholder="Add comment" id="new-comment" />
+            <div className="flex items-center justify-between gap-2">
+              <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+                <input type="checkbox" id="is-public" /> Visible to resident
+              </label>
+              <select className="rounded-lg border border-slate-300 p-2 text-sm" id="status-override">
+                <option value="">No status change</option>
+                {(["received","triaging","assigned","in_progress","waiting_external","resolved","closed"] as const).map(s => (
+                  <option key={s} value={s}>{String(s).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="text-right">
+            <button className="rounded-lg bg-slate-900 px-3 py-2 text-sm text-white" onClick={() => {
+              const el = document.getElementById("new-comment") as HTMLInputElement | null;
+              const pubEl = document.getElementById("is-public") as HTMLInputElement | null;
+              const statusEl = document.getElementById("status-override") as HTMLSelectElement | null;
+              if (el && el.value.trim()) {
+                addComment.mutate({ notes: el.value.trim(), isPublic: !!(pubEl && pubEl.checked), statusOverride: statusEl?.value || undefined });
+                el.value = "";
+                if (pubEl) pubEl.checked = false;
+                if (statusEl) statusEl.value = "";
+              }
+            }}>Post</button>
+          </div>
         </div>
       </section>
     </div>

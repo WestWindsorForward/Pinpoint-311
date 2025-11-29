@@ -212,6 +212,19 @@ async def recent_requests(limit: int = 5, session: AsyncSession = Depends(get_db
     return [ServiceRequestRead.model_validate(req) for req in result.scalars().all()]
 
 
+@router.get("/requests/public", response_model=list[ServiceRequestRead])
+async def public_requests(limit: int = 200, offset: int = 0, session: AsyncSession = Depends(get_db)) -> list[ServiceRequestRead]:
+    stmt = (
+        select(ServiceRequest)
+        .options(selectinload(ServiceRequest.attachments), selectinload(ServiceRequest.updates))
+        .order_by(ServiceRequest.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    return [ServiceRequestRead.model_validate(req) for req in result.scalars().all()]
+
+
 @router.get("/requests/{external_id}/attachments/{attachment_id}")
 async def download_public_attachment(
     external_id: str,
