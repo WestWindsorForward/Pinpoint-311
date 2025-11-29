@@ -10,9 +10,11 @@ interface Props {
 
 export function RequireRole({ roles, children }: Props) {
   const user = useAuthStore((state) => state.user);
+  const tokens = useAuthStore((state) => state.tokens);
   const location = useLocation();
 
-  if (!user) {
+  const tokenValid = Boolean(tokens && tokens.expiresAt && tokens.expiresAt > Date.now());
+  if (!user || !tokenValid) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

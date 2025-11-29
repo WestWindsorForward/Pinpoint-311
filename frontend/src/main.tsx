@@ -22,6 +22,8 @@ import { SystemPage } from "./pages/admin/System";
 import { ResidentPortal } from "./pages/ResidentPortal";
 import { StaffCommandCenter } from "./pages/StaffCommandCenter";
 import { ChangePasswordPage } from "./pages/ChangePassword";
+import { ForgotPasswordRequestPage } from "./pages/ForgotPasswordRequest";
+import { ResetPasswordPage } from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +34,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <ResidentPortal /> },
       { path: "login", element: <LoginPage /> },
+      { path: "forgot", element: <ForgotPasswordRequestPage /> },
+      { path: "reset", element: <ResetPasswordPage /> },
       {
         path: "change-password",
         element: (

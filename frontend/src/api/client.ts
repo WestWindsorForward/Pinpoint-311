@@ -60,6 +60,9 @@ client.interceptors.response.use(
         return client.request(originalRequest);
       }
     }
+    if (status === 401 || status === 403) {
+      useAuthStore.getState().clearSession();
+    }
     return Promise.reject(error);
   },
 );

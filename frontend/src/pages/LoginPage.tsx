@@ -80,6 +80,9 @@ export function LoginPage() {
         >
           {mutation.isPending ? "Signing in..." : "Sign in"}
         </button>
+        <div className="text-right">
+          <a href="/reset" className="text-xs font-semibold text-slate-600 underline">Forgot password?</a>
+        </div>
       </form>
     </div>
   );

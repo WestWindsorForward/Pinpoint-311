@@ -35,6 +35,9 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
     if (address) {
       setSelectedAddress(address);
       setValue("address_string", address);
+    } else {
+      setSelectedAddress("");
+      setValue("address_string", "");
     }
   };
 

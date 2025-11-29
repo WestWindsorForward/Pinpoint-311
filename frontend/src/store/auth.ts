@@ -50,6 +50,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   tokens: undefined,
   hydrate: () => {
     const persisted = readStorage();
+    if (!persisted.tokens || !persisted.tokens.expiresAt || persisted.tokens.expiresAt < Date.now()) {
+      set({ user: undefined, tokens: undefined });
+      writeStorage({});
+      return;
+    }
     if (persisted.user || persisted.tokens) {
       set(persisted);
     }
