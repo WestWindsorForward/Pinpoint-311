@@ -59,7 +59,16 @@ export function BoundariesPage() {
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Jurisdiction Boundaries</h1>
-        <p className="text-sm text-slate-500">Upload GeoJSON or import from Google.</p>
+        <p className="text-sm text-slate-500">Control where requests are allowed and when to show helpful redirects.</p>
+        <InfoBox title="How boundaries work">
+          <ul className="list-disc pl-5">
+            <li><strong>Primary</strong>: the allowed area (inside polygon). Outside → disallowed.</li>
+            <li><strong>Exclusion</strong>: specific areas or roads to exclude. Outside primary still allowed, but matches here are blocked or warned.</li>
+            <li><strong>Route filters</strong>: apply an exclusion only to selected categories (e.g., street lights).</li>
+            <li><strong>Redirect URL</strong>: link users to the proper jurisdiction webpage when excluded.</li>
+            <li>Use tabs below to add boundaries by GeoJSON, Google Maps, or specific road names.</li>
+          </ul>
+        </InfoBox>
       </div>
       <div className="rounded-2xl border border-slate-200 p-4">
         <div className="mb-3 flex gap-2">

@@ -21,6 +21,26 @@ export function SecretsPage() {
       setForm({ provider: "", key: "", secret: "", notes: "" });
     },
   });
+  const smtpMutation = useMutation({
+    mutationFn: async (smtp: { host: string; port: string; username: string; password: string; from_email: string; ssl: boolean }) => {
+      const metadata = { host: smtp.host.trim(), port: Number(smtp.port) || 587, username: smtp.username.trim(), from_email: smtp.from_email.trim(), ssl: Boolean(smtp.ssl) };
+      await client.post("/api/admin/secrets", { provider: "smtp", key: smtp.host.trim(), secret: smtp.password, metadata });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["secrets"] }),
+  });
+  const twilioMutation = useMutation({
+    mutationFn: async (twilio: { account_sid: string; auth_token: string; messaging_service_sid: string }) => {
+      const metadata = { account_sid: twilio.account_sid.trim(), messaging_service_sid: twilio.messaging_service_sid.trim() };
+      await client.post("/api/admin/secrets", { provider: "twilio", key: twilio.account_sid.trim(), secret: twilio.auth_token, metadata });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["secrets"] }),
+  });
+  const vertexMutation = useMutation({
+    mutationFn: async (vertex: { service_account_json: string }) => {
+      await client.post("/api/admin/secrets", { provider: "vertex-ai", key: "service-account", secret: vertex.service_account_json, metadata: {} });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["secrets"] }),
+  });
   const deleteMutation = useMutation({
     mutationFn: async (secretId: string) => client.delete(`/api/admin/secrets/${secretId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["secrets"] }),
@@ -35,12 +55,59 @@ export function SecretsPage() {
       </div>
       <InfoBox title="Required Providers">
         <ul className="list-disc pl-5">
-          <li>Google Maps API key (Maps/Places) for boundary import</li>
-          <li>Email SMTP/API credentials for outbound notifications</li>
-          <li>SMS provider API key (e.g., Twilio) for text alerts</li>
-          <li>AI provider credentials (e.g., Vertex AI) if AI features enabled</li>
+          <li>Email: SMTP credentials (host, port, username, password, from). Save below.</li>
+          <li>SMS: Twilio Account SID/Auth Token/Messaging Service SID. Save below.</li>
+          <li>AI: Vertex AI service account JSON. Save below; set project/region/model in Runtime Config.</li>
+          <li>Maps: Google Maps API key is configured under Runtime Config (not stored as a secret).</li>
         </ul>
       </InfoBox>
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 p-4">
+          <p className="text-sm font-semibold text-slate-700">Email (SMTP)</p>
+          <label className="text-sm text-slate-600">SMTP host<input className="mt-1 w-full rounded-md border p-2" id="smtp_host" /></label>
+          <label className="text-sm text-slate-600">Port<input className="mt-1 w-full rounded-md border p-2" id="smtp_port" defaultValue="587" /></label>
+          <label className="text-sm text-slate-600">Username<input className="mt-1 w-full rounded-md border p-2" id="smtp_username" /></label>
+          <label className="text-sm text-slate-600">Password<input type="password" className="mt-1 w-full rounded-md border p-2" id="smtp_password" /></label>
+          <label className="text-sm text-slate-600">From email<input className="mt-1 w-full rounded-md border p-2" id="smtp_from" placeholder="311@yourtown.gov" /></label>
+          <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" id="smtp_ssl" />Use SSL/TLS</label>
+          <div className="mt-2 text-right">
+            <button className="rounded-md bg-slate-900 px-3 py-1 text-xs font-semibold text-white" onClick={() => {
+              const host = (document.getElementById("smtp_host") as HTMLInputElement).value;
+              const port = (document.getElementById("smtp_port") as HTMLInputElement).value;
+              const username = (document.getElementById("smtp_username") as HTMLInputElement).value;
+              const password = (document.getElementById("smtp_password") as HTMLInputElement).value;
+              const from_email = (document.getElementById("smtp_from") as HTMLInputElement).value;
+              const ssl = (document.getElementById("smtp_ssl") as HTMLInputElement).checked;
+              smtpMutation.mutate({ host, port, username, password, from_email, ssl });
+            }}>Save SMTP</button>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 p-4">
+          <p className="text-sm font-semibold text-slate-700">SMS (Twilio)</p>
+          <label className="text-sm text-slate-600">Account SID<input className="mt-1 w-full rounded-md border p-2" id="twilio_sid" /></label>
+          <label className="text-sm text-slate-600">Auth Token<input type="password" className="mt-1 w-full rounded-md border p-2" id="twilio_token" /></label>
+          <label className="text-sm text-slate-600">Messaging Service SID<input className="mt-1 w-full rounded-md border p-2" id="twilio_msid" /></label>
+          <div className="mt-2 text-right">
+            <button className="rounded-md bg-slate-900 px-3 py-1 text-xs font-semibold text-white" onClick={() => {
+              const account_sid = (document.getElementById("twilio_sid") as HTMLInputElement).value;
+              const auth_token = (document.getElementById("twilio_token") as HTMLInputElement).value;
+              const messaging_service_sid = (document.getElementById("twilio_msid") as HTMLInputElement).value;
+              twilioMutation.mutate({ account_sid, auth_token, messaging_service_sid });
+            }}>Save Twilio</button>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 p-4">
+          <p className="text-sm font-semibold text-slate-700">AI (Vertex AI)</p>
+          <label className="text-sm text-slate-600">Service account JSON<textarea className="mt-1 h-24 w-full rounded-md border p-2 font-mono text-xs" id="vertex_json" placeholder='{"type":"service_account","project_id":"..."}' /></label>
+          <InfoBox><p>Set project, region, and model under Runtime Config. The JSON here is stored securely and not displayed after saving.</p></InfoBox>
+          <div className="mt-2 text-right">
+            <button className="rounded-md bg-slate-900 px-3 py-1 text-xs font-semibold text-white" onClick={() => {
+              const service_account_json = (document.getElementById("vertex_json") as HTMLTextAreaElement).value;
+              vertexMutation.mutate({ service_account_json });
+            }}>Save Vertex AI</button>
+          </div>
+        </div>
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="text-sm text-slate-600">Provider<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" placeholder="vertex-ai" value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value })} /></label>
         <label className="text-sm text-slate-600">Key / identifier<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" placeholder="service-account@project.iam.gserviceaccount.com" value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} /></label>
