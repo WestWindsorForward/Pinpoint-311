@@ -57,6 +57,11 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
         setCoords(null);
         setSelectedAddress("");
         setAttachments([]);
+        alert("Request submitted successfully");
+      },
+      onError: (err: any) => {
+        const detail = err?.response?.data?.detail || err?.message || "Unknown error";
+        alert("Submission failed: " + detail);
       },
     });
   });

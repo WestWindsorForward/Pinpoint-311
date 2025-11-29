@@ -10,7 +10,8 @@ export function BoundariesPage() {
   const boundariesQuery = useBoundaries();
   const adminCategoriesQuery = useAdminCategories();
   const { data: residentConfig } = useResidentConfig();
-  const [activeTab, setActiveTab] = useState<"geojson" | "google" | "roads">("geojson");
+  const [activeTab, setActiveTab] = useState<"primary" | "exclusions">("primary");
+  const [primaryMode, setPrimaryMode] = useState<"google" | "geojson" | "arcgis">("google");
   const [upload, setUpload] = useState({ name: "Primary Boundary", kind: "primary", jurisdiction: "", redirect_url: "", notes: "", geojson: "", service_code_filters: [] as string[], road_name_filters: [] as string[] });
   const [google, setGoogle] = useState({ query: "", place_id: "", name: "", kind: "primary", jurisdiction: "", redirect_url: "", notes: "", service_code_filters: [] as string[], road_name_filters: [] as string[] });
   const [arcgis, setArcgis] = useState({ layer_url: "", where: "", name: "ArcGIS Layer", kind: "primary", jurisdiction: "", redirect_url: "", notes: "", service_code_filters: [] as string[], road_name_filters: [] as string[] });
@@ -79,11 +80,20 @@ export function BoundariesPage() {
       </div>
       <div className="rounded-2xl border border-slate-200 p-4">
         <div className="mb-3 flex gap-2">
-          {(["geojson","google","roads"] as const).map(t => (
-            <button key={t} className={`rounded-full px-3 py-1 text-xs ${activeTab===t?"bg-slate-900 text-white":"border border-slate-200"}`} onClick={() => setActiveTab(t)}>{t === "geojson" ? "GeoJSON" : t === "google" ? "Google Maps" : "Road Names"}</button>
+          {(["primary","exclusions"] as const).map(t => (
+            <button key={t} className={`rounded-full px-3 py-1 text-xs ${activeTab===t?"bg-slate-900 text-white":"border border-slate-200"}`} onClick={() => setActiveTab(t)}>{t === "primary" ? "Primary" : "Exclusions"}</button>
           ))}
         </div>
-        {activeTab === "geojson" && (
+        {activeTab === "primary" && (
+          <>
+            <div className="mb-3 flex gap-2">
+              {(["google","geojson","arcgis"] as const).map(m => (
+                <button key={m} className={`rounded-full px-3 py-1 text-xs ${primaryMode===m?"bg-slate-900 text-white":"border border-slate-200"}`} onClick={() => setPrimaryMode(m)}>
+                  {m === "google" ? "Google Maps (easy)" : m === "geojson" ? "GeoJSON (intermediate)" : "ArcGIS (advanced)"}
+                </button>
+              ))}
+            </div>
+            {primaryMode === "geojson" && (
         <div className="grid gap-3 md:grid-cols-2">
           <label className="text-sm text-slate-600">Boundary Name<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={upload.name} onChange={(e) => setUpload((p) => ({ ...p, name: e.target.value }))} /></label>
           <label className="text-sm text-slate-600">Boundary Type<select className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={upload.kind} onChange={(e) => setUpload((p) => ({ ...p, kind: e.target.value }))}><option value="primary">Primary (allowed)</option><option value="exclusion">Excluded jurisdiction</option></select></label>
@@ -95,13 +105,8 @@ export function BoundariesPage() {
           <label className="text-sm text-slate-600 md:col-span-2">GeoJSON<textarea className="mt-1 h-32 w-full rounded-xl border border-slate-300 p-2 font-mono text-xs" placeholder='{"type":"Polygon","coordinates":[...]}' value={upload.geojson} onChange={(e) => setUpload((p) => ({ ...p, geojson: e.target.value }))} /></label>
           <div className="md:col-span-2 flex justify-end"><button className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50" onClick={() => uploadMutation.mutate()} disabled={uploadMutation.isPending}>{uploadMutation.isPending ? "Uploading…" : "Save Boundary"}</button></div>
         </div>
-        )}
-      </div>
-      {activeTab === "google" && (
-      <div className="rounded-2xl border border-slate-200 p-4">
-        <InfoBox title="Google Maps import"><p>Search a jurisdiction or paste a Place ID to import its polygon. Requires Google Maps API key in Runtime Config.</p></InfoBox>
-        <div className="flex items-center justify-between"><div><h4 className="text-sm font-semibold text-slate-700">Import from Google Maps</h4><p className="text-xs text-slate-500">Requires a Google Maps API key in Runtime Config.</p></div></div>
-        {!mapsApiKey && (<p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">Add a Google Maps API key under Runtime Config to enable this importer.</p>)}
+            )}
+            {primaryMode === "google" && (
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <label className="text-sm text-slate-600">Search phrase<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={google.query} onChange={(e) => setGoogle((p) => ({ ...p, query: e.target.value }))} /></label>
           <label className="text-sm text-slate-600">Place ID<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={google.place_id} onChange={(e) => setGoogle((p) => ({ ...p, place_id: e.target.value }))} /></label>
@@ -113,8 +118,17 @@ export function BoundariesPage() {
           <label className="text-sm text-slate-600">Notes<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={google.notes} onChange={(e) => setGoogle((p) => ({ ...p, notes: e.target.value }))} /></label>
           <div className="md:col-span-2 flex justify-end"><button type="button" className="rounded-xl bg-slate-900 px-4 py-2 text-white disabled:opacity-50" onClick={() => googleMutation.mutate()} disabled={googleMutation.isPending || !mapsApiKey}>{googleMutation.isPending ? "Importing…" : "Import from Google"}</button></div>
         </div>
+            )}
+            {primaryMode === "arcgis" && (
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <label className="text-sm text-slate-600">Layer URL<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={arcgis.layer_url} onChange={(e) => setArcgis((p) => ({ ...p, layer_url: e.target.value }))} /></label>
+          <label className="text-sm text-slate-600">Where (optional)<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={arcgis.where} onChange={(e) => setArcgis((p) => ({ ...p, where: e.target.value }))} /></label>
+          <div className="md:col-span-2 flex justify-end"><button className="rounded-xl bg-slate-900 px-4 py-2 text-white disabled:opacity-50" onClick={() => arcgisMutation.mutate()} disabled={arcgisMutation.isPending || !arcgis.layer_url}>{arcgisMutation.isPending ? "Importing…" : "Import ArcGIS Layer"}</button></div>
+        </div>
+            )}
+          </>
+        )}
       </div>
-      )}
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 p-4">
           <h4 className="text-sm font-semibold text-slate-700">Active Primary Boundary</h4>
@@ -137,7 +151,7 @@ export function BoundariesPage() {
           )}
         </div>
       </div>
-      {activeTab === "roads" && (
+      {activeTab === "exclusions" && (
       <div className="rounded-2xl border border-slate-200 p-4">
         <h4 className="text-sm font-semibold text-slate-700">Create Road Name Filters</h4>
         <InfoBox><p>List specific road names to include/exclude. If type is <strong>Exclusion</strong>, matching requests will be excluded (or warned if the category is not in filters).</p></InfoBox>

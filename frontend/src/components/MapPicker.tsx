@@ -41,11 +41,21 @@ export function MapPicker({ apiKey, lat, lng, onChange }: MapPickerProps) {
     );
   }
 
-  const handleMapClick = (event: google.maps.MapMouseEvent) => {
+  const handleMapClick = async (event: google.maps.MapMouseEvent) => {
     if (!event.latLng) return;
     const newPos = { lat: event.latLng.lat(), lng: event.latLng.lng() };
     setMarkerPosition(newPos);
-    onChange(newPos);
+    let address: string | undefined = undefined;
+    try {
+      const geocoder = new google.maps.Geocoder();
+      const result = await geocoder.geocode({ location: newPos });
+      if (result.results && result.results.length > 0) {
+        address = result.results[0].formatted_address;
+      }
+    } catch (e) {
+      console.warn("Reverse geocode failed", e);
+    }
+    onChange(newPos, address);
   };
 
   const handlePlaceSelect = useCallback(() => {
@@ -121,6 +131,7 @@ export function MapPicker({ apiKey, lat, lng, onChange }: MapPickerProps) {
           options={{ 
             disableDefaultUI: true,
             zoomControl: true,
+            mapTypeId: google.maps.MapTypeId.HYBRID,
           }}
         >
           <Marker position={markerPosition} />
