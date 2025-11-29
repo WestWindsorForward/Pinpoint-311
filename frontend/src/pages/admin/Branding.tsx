@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import client from "../../api/client";
 import { useResidentConfig } from "../../api/hooks";
+import { useState } from "react";
 
 type BrandingForm = {
   town_name: string;
@@ -15,6 +16,8 @@ export function BrandingPage() {
   const queryClient = useQueryClient();
   const { data, refetch } = useResidentConfig();
   const defaults = data?.branding ?? {};
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const { register, handleSubmit, reset } = useForm<BrandingForm>({
     defaultValues: {
       town_name: defaults.town_name ?? "",
@@ -26,10 +29,24 @@ export function BrandingPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (payload: BrandingForm) => client.put("/api/admin/branding", payload),
+    mutationFn: async (payload: BrandingForm) => {
+      await client.put("/api/admin/branding", payload);
+      if (logoFile) {
+        const fd = new FormData();
+        fd.append("file", logoFile);
+        await client.post("/api/admin/branding/assets/logo", fd);
+      }
+      if (faviconFile) {
+        const fd = new FormData();
+        fd.append("file", faviconFile);
+        await client.post("/api/admin/branding/assets/favicon", fd);
+      }
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["resident-config"] });
       await refetch();
+      setLogoFile(null);
+      setFaviconFile(null);
     },
   });
 
@@ -65,6 +82,26 @@ export function BrandingPage() {
           Secondary color
           <input className="mt-1 w-full rounded-xl border border-slate-300 p-2" {...register("secondary_color")} />
         </label>
+        <label className="text-sm text-slate-600">
+          Township logo
+          <input
+            type="file"
+            accept="image/*"
+            className="mt-1 w-full rounded-xl border border-dashed border-slate-300 p-2"
+            onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+          />
+          <p className="text-xs text-slate-500">Appears in the site header and resident portal preview.</p>
+        </label>
+        <label className="text-sm text-slate-600">
+          Browser favicon
+          <input
+            type="file"
+            accept="image/png,image/x-icon,image/svg+xml"
+            className="mt-1 w-full rounded-xl border border-dashed border-slate-300 p-2"
+            onChange={(e) => setFaviconFile(e.target.files?.[0] ?? null)}
+          />
+          <p className="text-xs text-slate-500">Use a square image (64px+) to update the tab icon.</p>
+        </label>
         <div className="md:col-span-2 flex items-center justify-end gap-3">
           <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-white disabled:opacity-50" disabled={mutation.isPending}>
             {mutation.isPending ? "Saving…" : "Save"}
@@ -74,4 +111,3 @@ export function BrandingPage() {
     </div>
   );
 }
-
