@@ -93,24 +93,24 @@ async def update_branding(
         payload_dict = payload.model_dump(exclude_unset=True)
         logger.info(f"[BRANDING] Updating branding: {payload_dict}")
         
-        # Get or create branding record
+        # Get or create branding record and persist atomically
         stmt = select(TownshipSetting).where(TownshipSetting.key == "branding")
         result = await session.execute(stmt)
         record = result.scalar_one_or_none()
-        
+
         if record:
             logger.info(f"[BRANDING] Found existing record with value: {record.value}")
-            data = record.value if isinstance(record.value, dict) else {}
-            data.update(payload_dict)
+            base = record.value if isinstance(record.value, dict) else {}
+            data = {**base, **payload_dict}
             record.value = data
+            await session.flush()
         else:
             logger.info("[BRANDING] Creating new branding record")
             data = payload_dict
             record = TownshipSetting(key="branding", value=data)
             session.add(record)
-        
-        # Commit and flush to database
-        await session.flush()
+            await session.flush()
+
         await session.commit()
         
         # Verify it was saved
