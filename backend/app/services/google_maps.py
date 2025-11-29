@@ -35,6 +35,20 @@ async def fetch_boundary_from_google(*, query: str | None, place_id: str | None,
         raise GoogleMapsError("Unable to resolve Google Maps boundary for the provided query.")
 
 
+async def reverse_geocode(lat: float, lng: float, *, api_key_override: str | None = None) -> str | None:
+    api_key = api_key_override or settings.google_maps_api_key
+    if not api_key:
+        return None
+    params = {"latlng": f"{lat},{lng}", "key": api_key}
+    async with httpx.AsyncClient(timeout=20) as client:
+        resp = await client.get(GOOGLE_GEOCODE_URL, params=params)
+        data = resp.json()
+        results = data.get("results") or []
+        if results:
+            return results[0].get("formatted_address")
+    return None
+
+
 async def _lookup_place_id(client: httpx.AsyncClient, query: str, api_key: str) -> str | None:
     params = {
         "key": api_key,

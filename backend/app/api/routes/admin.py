@@ -17,6 +17,8 @@ from app.models.settings import (
     GeoBoundary,
     NotificationTemplate,
     TownshipSetting,
+    CategoryExclusion,
+    RoadExclusion,
 )
 from app.models.settings import BoundaryKind
 from app.models.user import Department, User, UserRole, StaffDepartmentLink
@@ -31,6 +33,12 @@ from app.schemas.settings import (
     ArcGISLayerImport,
     RuntimeConfigUpdate,
     SecretsPayload,
+    CategoryExclusionCreate,
+    CategoryExclusionUpdate,
+    CategoryExclusionRead,
+    RoadExclusionCreate,
+    RoadExclusionUpdate,
+    RoadExclusionRead,
 )
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services import gis, google_maps, runtime_config as runtime_config_service, settings_snapshot
@@ -968,3 +976,181 @@ async def update_boundary(
         metadata=data,
     )
     return GeoBoundaryRead.model_validate(boundary)
+
+
+@router.get("/exclusions/categories", response_model=list[CategoryExclusionRead])
+async def list_category_exclusions(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.admin)),
+) -> list[CategoryExclusionRead]:
+    result = await session.execute(select(CategoryExclusion).order_by(CategoryExclusion.updated_at.desc()))
+    return [CategoryExclusionRead.model_validate(row) for row in result.scalars().all()]
+
+
+@router.post("/exclusions/categories", response_model=CategoryExclusionRead)
+async def create_category_exclusion(
+    payload: CategoryExclusionCreate,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> CategoryExclusionRead:
+    record = CategoryExclusion(
+        category_slug=payload.category_slug,
+        redirect_name=payload.redirect_name,
+        redirect_url=payload.redirect_url,
+        redirect_message=payload.redirect_message,
+        is_active=payload.is_active,
+    )
+    session.add(record)
+    await session.commit()
+    await session.refresh(record)
+    await log_event(
+        session,
+        action="exclusion.category.create",
+        actor=current_user,
+        entity_type="category_exclusion",
+        entity_id=str(record.id),
+        request=request,
+        metadata=payload.model_dump(),
+    )
+    return CategoryExclusionRead.model_validate(record)
+
+
+@router.put("/exclusions/categories/{exclusion_id}", response_model=CategoryExclusionRead)
+async def update_category_exclusion(
+    exclusion_id: int,
+    payload: CategoryExclusionUpdate,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> CategoryExclusionRead:
+    record = await session.get(CategoryExclusion, exclusion_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Exclusion not found")
+    data = payload.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(record, k, v)
+    await session.commit()
+    await session.refresh(record)
+    await log_event(
+        session,
+        action="exclusion.category.update",
+        actor=current_user,
+        entity_type="category_exclusion",
+        entity_id=str(record.id),
+        request=request,
+        metadata=data,
+    )
+    return CategoryExclusionRead.model_validate(record)
+
+
+@router.delete("/exclusions/categories/{exclusion_id}")
+async def delete_category_exclusion(
+    exclusion_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> dict:
+    record = await session.get(CategoryExclusion, exclusion_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Exclusion not found")
+    await session.delete(record)
+    await session.commit()
+    await log_event(
+        session,
+        action="exclusion.category.delete",
+        actor=current_user,
+        entity_type="category_exclusion",
+        entity_id=str(exclusion_id),
+        request=request,
+    )
+    return {"status": "deleted"}
+
+
+@router.get("/exclusions/roads", response_model=list[RoadExclusionRead])
+async def list_road_exclusions(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles(UserRole.admin)),
+) -> list[RoadExclusionRead]:
+    result = await session.execute(select(RoadExclusion).order_by(RoadExclusion.updated_at.desc()))
+    return [RoadExclusionRead.model_validate(row) for row in result.scalars().all()]
+
+
+@router.post("/exclusions/roads", response_model=RoadExclusionRead)
+async def create_road_exclusion(
+    payload: RoadExclusionCreate,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> RoadExclusionRead:
+    record = RoadExclusion(
+        road_name=payload.road_name,
+        redirect_name=payload.redirect_name,
+        redirect_url=payload.redirect_url,
+        redirect_message=payload.redirect_message,
+        is_active=payload.is_active,
+    )
+    session.add(record)
+    await session.commit()
+    await session.refresh(record)
+    await log_event(
+        session,
+        action="exclusion.road.create",
+        actor=current_user,
+        entity_type="road_exclusion",
+        entity_id=str(record.id),
+        request=request,
+        metadata=payload.model_dump(),
+    )
+    return RoadExclusionRead.model_validate(record)
+
+
+@router.put("/exclusions/roads/{exclusion_id}", response_model=RoadExclusionRead)
+async def update_road_exclusion(
+    exclusion_id: int,
+    payload: RoadExclusionUpdate,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> RoadExclusionRead:
+    record = await session.get(RoadExclusion, exclusion_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Exclusion not found")
+    data = payload.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(record, k, v)
+    await session.commit()
+    await session.refresh(record)
+    await log_event(
+        session,
+        action="exclusion.road.update",
+        actor=current_user,
+        entity_type="road_exclusion",
+        entity_id=str(record.id),
+        request=request,
+        metadata=data,
+    )
+    return RoadExclusionRead.model_validate(record)
+
+
+@router.delete("/exclusions/roads/{exclusion_id}")
+async def delete_road_exclusion(
+    exclusion_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.admin)),
+) -> dict:
+    record = await session.get(RoadExclusion, exclusion_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Exclusion not found")
+    await session.delete(record)
+    await session.commit()
+    await log_event(
+        session,
+        action="exclusion.road.delete",
+        actor=current_user,
+        entity_type="road_exclusion",
+        entity_id=str(exclusion_id),
+        request=request,
+    )
+    return {"status": "deleted"}

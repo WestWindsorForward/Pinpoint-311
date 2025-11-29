@@ -99,10 +99,18 @@ async def create_resident_request(
     if not category:
         raise HTTPException(status_code=404, detail="Unknown category")
 
+    cat_allowed, cat_msg = await gis.evaluate_category_exclusions(session, service_code=service_code)
+    if not cat_allowed:
+        raise HTTPException(status_code=400, detail=cat_msg or "Category excluded")
+
     allowed, warning = await gis.evaluate_location(session, latitude, longitude, service_code=service_code)
     if not allowed:
         raise HTTPException(status_code=400, detail=warning or "Location outside township boundary")
     road_allowed, road_warning = await gis.evaluate_road_filters(session, address_string=address_string, service_code=service_code)
+    if road_allowed:
+        ra_allowed, ra_msg = await gis.evaluate_road_exclusions(session, address_string=address_string)
+        if not ra_allowed:
+            raise HTTPException(status_code=400, detail=ra_msg or "Road excluded")
     if not road_allowed:
         raise HTTPException(status_code=400, detail=road_warning or "Location excluded by road filter")
     warning = warning or road_warning
@@ -249,4 +257,3 @@ async def download_public_pdf(external_id: str, session: AsyncSession = Depends(
         raise HTTPException(status_code=404, detail="Request not found")
     path = generate_case_pdf(request, Path(settings.storage_dir) / "pdfs")
     return FileResponse(path)
-

@@ -52,9 +52,16 @@ async def create_request(payload: Open311RequestCreate, session: AsyncSession = 
     if not category:
         raise HTTPException(status_code=404, detail="Unknown service_code")
 
+    cat_allowed, cat_msg = await gis.evaluate_category_exclusions(session, service_code=payload.service_code)
+    if not cat_allowed:
+        raise HTTPException(status_code=400, detail=cat_msg or "Category excluded")
+
     allowed, warning = await gis.evaluate_location(session, payload.lat, payload.long, service_code=payload.service_code)
     if not allowed:
         raise HTTPException(status_code=400, detail=warning or "Location outside township boundary")
+    ra_allowed, ra_msg = await gis.evaluate_road_exclusions(session, address_string=payload.address_string)
+    if not ra_allowed:
+        raise HTTPException(status_code=400, detail=ra_msg or "Road excluded")
 
     ai_result = await analyze_request(payload.description, payload.media_url, session=session)
 

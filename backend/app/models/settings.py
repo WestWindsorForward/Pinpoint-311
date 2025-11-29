@@ -53,6 +53,28 @@ class GeoBoundary(Base, TimestampMixin):
     road_name_filters: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
+class CategoryExclusion(Base, TimestampMixin):
+    __tablename__ = "category_exclusions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    category_slug: Mapped[str] = mapped_column(String(128), index=True)
+    redirect_name: Mapped[str | None] = mapped_column(String(255))
+    redirect_url: Mapped[str | None] = mapped_column(String(512))
+    redirect_message: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class RoadExclusion(Base, TimestampMixin):
+    __tablename__ = "road_exclusions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    road_name: Mapped[str] = mapped_column(String(255), index=True)
+    redirect_name: Mapped[str | None] = mapped_column(String(255))
+    redirect_url: Mapped[str | None] = mapped_column(String(512))
+    redirect_message: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
 class ApiCredential(Base, TimestampMixin):
     __tablename__ = "api_credentials"
 

@@ -62,6 +62,7 @@ const router = createBrowserRouter([
             <AdminLayout />
           </RequireRole>
         ),
+        errorElement: <ErrorFallback />,
         children: [
           { index: true, element: <Suspense fallback={<div className="h-24 animate-pulse rounded-xl bg-slate-100" />}> <OverviewPage /> </Suspense> },
           { path: "overview", element: <Suspense fallback={<div className="h-24 animate-pulse rounded-xl bg-slate-100" />}> <OverviewPage /> </Suspense> },

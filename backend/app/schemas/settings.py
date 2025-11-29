@@ -82,3 +82,53 @@ class ArcGISLayerImport(BaseModel):
     notes: str | None = None
     service_code_filters: list[str] | None = None
     road_name_filters: list[str] | None = None
+
+
+class CategoryExclusionCreate(BaseModel):
+    category_slug: str
+    redirect_name: str | None = None
+    redirect_url: str | None = None
+    redirect_message: str | None = None
+    is_active: bool = True
+
+
+class CategoryExclusionUpdate(BaseModel):
+    category_slug: str | None = None
+    redirect_name: str | None = None
+    redirect_url: str | None = None
+    redirect_message: str | None = None
+    is_active: bool | None = None
+
+
+class CategoryExclusionRead(CategoryExclusionCreate):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RoadExclusionCreate(BaseModel):
+    road_name: str
+    redirect_name: str | None = None
+    redirect_url: str | None = None
+    redirect_message: str | None = None
+    is_active: bool = True
+
+
+class RoadExclusionUpdate(BaseModel):
+    road_name: str | None = None
+    redirect_name: str | None = None
+    redirect_url: str | None = None
+    redirect_message: str | None = None
+    is_active: bool | None = None
+
+
+class RoadExclusionRead(RoadExclusionCreate):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

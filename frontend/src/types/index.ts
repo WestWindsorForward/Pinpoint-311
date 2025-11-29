@@ -122,3 +122,25 @@ export type TokenResponse = {
   token_type: string;
   expires_in: number;
 };
+
+export type CategoryExclusion = {
+  id: number;
+  category_slug: string;
+  redirect_name?: string | null;
+  redirect_url?: string | null;
+  redirect_message?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RoadExclusion = {
+  id: number;
+  road_name: string;
+  redirect_name?: string | null;
+  redirect_url?: string | null;
+  redirect_message?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
