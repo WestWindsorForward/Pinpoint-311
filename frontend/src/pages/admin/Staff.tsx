@@ -36,8 +36,12 @@ export function StaffPage() {
   const staff = staffQuery.data ?? [];
   const updateMutation = useMutation({
     mutationFn: async (member: StaffUser) => client.put(`/api/admin/staff/${member.id}`, { display_name: member.display_name, role: member.role, department_slugs: member.department_slugs ?? [] }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff-directory"] }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["staff-directory"] });
+      setSaved((variables as StaffUser).id);
+    },
   });
+  const [saved, setSaved] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<StaffUser> | null>(null);
   const handleDepartments = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -84,6 +88,7 @@ export function StaffPage() {
                       <div className="mt-2 flex items-center gap-2">
                         <button className="rounded-full border border-slate-200 px-3 py-1 text-xs" onClick={() => { if (draft) updateMutation.mutate({ ...(member as any), ...draft } as any); setEditingId(null); }} disabled={updateMutation.isPending}>Save</button>
                         <button className="rounded-full border border-slate-200 px-3 py-1 text-xs" onClick={() => { setEditingId(null); setDraft(null); }}>Cancel</button>
+                        <span className="text-[11px] font-semibold uppercase text-emerald-600">{saved === (member.id as any) ? "Saved" : ""}</span>
                       </div>
                     </div>
                   ) : (

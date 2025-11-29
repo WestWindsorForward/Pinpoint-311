@@ -139,21 +139,12 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label className="text-sm font-medium text-slate-600">Phone</label>
-          <input
-            {...register("resident_phone")}
-            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600">Address</label>
-          <input
-            {...register("address_string")}
-            className="mt-1 w-full rounded-xl border border-slate-300 p-2"
-          />
-        </div>
+      <div>
+        <label className="text-sm font-medium text-slate-600">Phone</label>
+        <input
+          {...register("resident_phone")}
+          className="mt-1 w-full rounded-xl border border-slate-300 p-2"
+        />
       </div>
 
         <div>

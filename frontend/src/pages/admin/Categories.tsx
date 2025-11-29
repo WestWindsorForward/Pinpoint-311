@@ -29,9 +29,13 @@ export function CategoriesPage() {
   const departments = departmentsQuery.data ?? [];
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Partial<AdminCategory> | null>(null);
+  const [savedId, setSavedId] = useState<number | null>(null);
   const updateMutation = useMutation({
     mutationFn: async (category: AdminCategory) => client.put(`/api/admin/categories/${category.id}`, { name: category.name, slug: category.slug, description: category.description, default_department_slug: (category as any).default_department_slug ?? undefined }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-categories"] }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      setSavedId((variables as AdminCategory).id);
+    },
   });
   return (
     <div className="space-y-6">
@@ -90,6 +94,7 @@ export function CategoriesPage() {
                   <div className="mt-2 flex items-center justify-end gap-2">
                     <button className="rounded-full border border-slate-200 px-3 py-1 text-xs" onClick={() => { if (draft) updateMutation.mutate({ ...(category as any), ...draft } as any); setEditingId(null); }} disabled={updateMutation.isPending}>Save</button>
                     <button className="rounded-full border border-slate-200 px-3 py-1 text-xs" onClick={() => { setEditingId(null); setDraft(null); }}>Cancel</button>
+                    <span className="text-[11px] font-semibold uppercase text-emerald-600">{savedId === category.id ? "Saved" : ""}</span>
                   </div>
                 </div>
               ) : (
