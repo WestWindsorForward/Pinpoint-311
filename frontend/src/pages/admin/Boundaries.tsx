@@ -51,10 +51,17 @@ export function BoundariesPage() {
       redirect_url: boundary.redirect_url ?? null,
       notes: boundary.notes ?? null,
       service_code_filters: boundary.service_code_filters ?? [],
+      road_name_filters: boundary.road_name_filters ?? [],
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["geo-boundaries"] }),
+    onError: (err: any) => {
+      console.error("Boundary update failed", err?.response?.data || err);
+      alert("Boundary update failed: " + (err?.response?.data?.detail || err.message || "Unknown error"));
+    },
   });
   const boundaries = boundariesQuery.data ?? [];
+  const primaryActive = boundaries.find((b: any) => b.kind === "primary" && b.is_active);
+  const exclusions = boundaries.filter((b: any) => b.kind === "exclusion");
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -108,6 +115,28 @@ export function BoundariesPage() {
         </div>
       </div>
       )}
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 p-4">
+          <h4 className="text-sm font-semibold text-slate-700">Active Primary Boundary</h4>
+          {primaryActive ? (
+            <p className="text-sm text-slate-600">{primaryActive.name}</p>
+          ) : (
+            <p className="text-sm text-slate-500">None set. Use GeoJSON or Google tabs above to create one.</p>
+          )}
+        </div>
+        <div className="rounded-2xl border border-slate-200 p-4">
+          <h4 className="text-sm font-semibold text-slate-700">Exclusions</h4>
+          {exclusions.length === 0 ? (
+            <p className="text-sm text-slate-500">No exclusions yet. Use Road Names to add filters or import polygons.</p>
+          ) : (
+            <ul className="text-sm text-slate-600">
+              {exclusions.map((b: any) => (
+                <li key={b.id}>{b.name}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
       {activeTab === "roads" && (
       <div className="rounded-2xl border border-slate-200 p-4">
         <h4 className="text-sm font-semibold text-slate-700">Create Road Name Filters</h4>
