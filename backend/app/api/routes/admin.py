@@ -144,7 +144,6 @@ async def upload_asset(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.admin)),
 ) -> dict:
-    path = save_file(f"branding-{asset_key}-{file.filename}", await file.read())
     # Sanitize filename to avoid spaces/unsupported characters in URLs
     clean = _clean_filename(file.filename)
     path = save_file(f"branding-{asset_key}-{clean}", await file.read())
