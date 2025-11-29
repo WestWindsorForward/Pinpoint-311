@@ -29,6 +29,17 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection) -> None:
+    try:
+        result = connection.exec_driver_sql(
+            "SELECT character_maximum_length FROM information_schema.columns WHERE table_name='alembic_version' AND column_name='version_num'"
+        )
+        row = result.fetchone()
+        if row and row[0] is not None and row[0] < 64:
+            connection.exec_driver_sql(
+                "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
+            )
+    except Exception:
+        pass
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
