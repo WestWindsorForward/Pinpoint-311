@@ -160,7 +160,11 @@ export function BoundariesPage() {
               />
             </>
           ) : (
-            <label className="text-sm text-slate-600">Search phrase<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={google.query} onChange={(e) => setGoogle((p) => ({ ...p, query: e.target.value }))} /></label>
+            <div className="space-y-1">
+              <label className="text-sm text-amber-700">Google Maps API key not configured in Runtime Config.</label>
+              <label className="text-sm text-slate-600">Search phrase<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={google.query} onChange={(e) => setGoogle((p) => ({ ...p, query: e.target.value }))} /></label>
+              <p className="text-xs text-slate-500">Tip: You can still paste a Place ID below, or import via GeoJSON/ArcGIS.</p>
+            </div>
           )}
           <label className="text-sm text-slate-600">Place ID<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={google.place_id} onChange={(e) => setGoogle((p) => ({ ...p, place_id: e.target.value }))} /></label>
           <label className="text-sm text-slate-600">Override name<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={google.name} onChange={(e) => setGoogle((p) => ({ ...p, name: e.target.value }))} /></label>
@@ -224,8 +228,8 @@ export function BoundariesPage() {
                 <input className="rounded-md border p-2 md:col-span-2" placeholder="Message" value={ex.redirect_message ?? ""} onChange={(e) => (ex.redirect_message = e.target.value)} />
               </div>
               <div className="mt-2 flex items-center justify-end gap-2">
-                <button className="rounded-full border border-slate-200 px-3 py-1 text-xs" onClick={async () => { await client.put(`/api/admin/exclusions/categories/${ex.id}`, { category_slug: ex.category_slug, redirect_name: ex.redirect_name || null, redirect_url: ex.redirect_url || null, redirect_message: ex.redirect_message || null, is_active: ex.is_active }); queryClient.invalidateQueries({ queryKey: ["category-exclusions"] }); }}>Save</button>
-                <button className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50" onClick={async () => { await client.delete(`/api/admin/exclusions/categories/${ex.id}`); queryClient.invalidateQueries({ queryKey: ["category-exclusions"] }); }}>Delete</button>
+                <button className="rounded-full border border-slate-200 px-3 py-1 text-xs" onClick={async () => { try { await client.put(`/api/admin/exclusions/categories/${ex.id}`, { category_slug: ex.category_slug, redirect_name: ex.redirect_name || null, redirect_url: ex.redirect_url || null, redirect_message: ex.redirect_message || null, is_active: ex.is_active }); queryClient.invalidateQueries({ queryKey: ["category-exclusions"] }); } catch (err: any) { alert("Save failed: " + (err?.response?.data?.detail || err.message || "Unknown error")); } }}>Save</button>
+                <button className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50" onClick={async () => { try { await client.delete(`/api/admin/exclusions/categories/${ex.id}`); queryClient.invalidateQueries({ queryKey: ["category-exclusions"] }); } catch (err: any) { alert("Delete failed: " + (err?.response?.data?.detail || err.message || "Unknown error")); } }}>Delete</button>
               </div>
             </li>
           ))}
@@ -238,7 +242,7 @@ export function BoundariesPage() {
             <label className="text-sm text-slate-600">Redirect Name<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={roadForm.redirect_name} onChange={(e) => setRoadForm((p) => ({ ...p, redirect_name: e.target.value }))} /></label>
             <label className="text-sm text-slate-600">Redirect URL<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={roadForm.redirect_url} onChange={(e) => setRoadForm((p) => ({ ...p, redirect_url: e.target.value }))} /></label>
             <label className="text-sm text-slate-600 md:col-span-2">Message<input className="mt-1 w-full rounded-xl border border-slate-300 p-2" value={roadForm.redirect_message} onChange={(e) => setRoadForm((p) => ({ ...p, redirect_message: e.target.value }))} /></label>
-            <div className="md:col-span-2 flex justify-end"><button className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50" onClick={async () => { await client.post("/api/admin/exclusions/roads", { road_name: roadForm.road_name, redirect_name: roadForm.redirect_name || null, redirect_url: roadForm.redirect_url || null, redirect_message: roadForm.redirect_message || null, is_active: true }); queryClient.invalidateQueries({ queryKey: ["road-exclusions"] }); setRoadForm({ road_name: "", redirect_name: "", redirect_url: "", redirect_message: "", is_active: true }); }} disabled={!roadForm.road_name}>Save Exclusion</button></div>
+            <div className="md:col-span-2 flex justify-end"><button className="rounded-xl bg-emerald-600 px-4 py-2 text-white disabled:opacity-50" onClick={async () => { try { await client.post("/api/admin/exclusions/roads", { road_name: roadForm.road_name, redirect_name: roadForm.redirect_name || null, redirect_url: roadForm.redirect_url || null, redirect_message: roadForm.redirect_message || null, is_active: true }); queryClient.invalidateQueries({ queryKey: ["road-exclusions"] }); setRoadForm({ road_name: "", redirect_name: "", redirect_url: "", redirect_message: "", is_active: true }); } catch (err: any) { alert("Save failed: " + (err?.response?.data?.detail || err.message || "Unknown error")); } }} disabled={!roadForm.road_name}>Save Exclusion</button></div>
           </div>
           <ul className="mt-4 space-y-2">
             {roadExclusions.map((ex) => (
@@ -250,8 +254,8 @@ export function BoundariesPage() {
                   <input className="rounded-md border p-2 md:col-span-2" placeholder="Message" value={ex.redirect_message ?? ""} onChange={(e) => (ex.redirect_message = e.target.value)} />
                 </div>
                 <div className="mt-2 flex items-center justify-end gap-2">
-                  <button className="rounded-full border border-slate-200 px-3 py-1 text-xs" onClick={async () => { await client.put(`/api/admin/exclusions/roads/${ex.id}`, { road_name: ex.road_name, redirect_name: ex.redirect_name || null, redirect_url: ex.redirect_url || null, redirect_message: ex.redirect_message || null, is_active: ex.is_active }); queryClient.invalidateQueries({ queryKey: ["road-exclusions"] }); }}>Save</button>
-                  <button className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50" onClick={async () => { await client.delete(`/api/admin/exclusions/roads/${ex.id}`); queryClient.invalidateQueries({ queryKey: ["road-exclusions"] }); }}>Delete</button>
+                  <button className="rounded-full border border-slate-200 px-3 py-1 text-xs" onClick={async () => { try { await client.put(`/api/admin/exclusions/roads/${ex.id}`, { road_name: ex.road_name, redirect_name: ex.redirect_name || null, redirect_url: ex.redirect_url || null, redirect_message: ex.redirect_message || null, is_active: ex.is_active }); queryClient.invalidateQueries({ queryKey: ["road-exclusions"] }); } catch (err: any) { alert("Save failed: " + (err?.response?.data?.detail || err.message || "Unknown error")); } }}>Save</button>
+                  <button className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50" onClick={async () => { try { await client.delete(`/api/admin/exclusions/roads/${ex.id}`); queryClient.invalidateQueries({ queryKey: ["road-exclusions"] }); } catch (err: any) { alert("Delete failed: " + (err?.response?.data?.detail || err.message || "Unknown error")); } }}>Delete</button>
                 </div>
               </li>
             ))}

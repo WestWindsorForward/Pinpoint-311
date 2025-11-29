@@ -7,7 +7,7 @@ import type { IssueCategory } from "../types";
 import { MapPicker } from "./MapPicker";
 
 interface Props {
-  categories: IssueCategory[];
+  categories?: IssueCategory[];
   mapsApiKey?: string | null;
 }
 
@@ -21,14 +21,15 @@ interface FormValues {
 }
 
 export function RequestForm({ categories, mapsApiKey }: Props) {
+  const categoriesList = Array.isArray(categories) ? categories : [];
   const { register, handleSubmit, reset, setValue } = useForm<FormValues>({
-    defaultValues: { service_code: categories[0]?.slug ?? "" },
+    defaultValues: { service_code: categoriesList[0]?.slug ?? "" },
   });
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const createRequest = useCreateResidentRequest();
-  const hasCategories = categories.length > 0;
+  const hasCategories = categoriesList.length > 0;
 
   const handleLocationChange = (newCoords: { lat: number; lng: number }, address?: string) => {
     setCoords(newCoords);
@@ -110,7 +111,7 @@ export function RequestForm({ categories, mapsApiKey }: Props) {
           {...register("service_code", { required: true })}
           className="mt-1 w-full rounded-xl border border-slate-300 p-2"
         >
-          {categories.map((category) => (
+          {categoriesList.map((category) => (
             <option key={category.slug} value={category.slug}>
               {category.name}
             </option>

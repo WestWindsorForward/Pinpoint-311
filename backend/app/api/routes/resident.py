@@ -42,7 +42,9 @@ async def get_resident_config(request: Request, session: AsyncSession = Depends(
     categories_stmt = select(IssueCategory).where(IssueCategory.is_active.is_(True))
     categories_result = await session.execute(categories_stmt)
     runtime_cfg = await runtime_config_service.get_runtime_config(session)
-    maps_key = runtime_cfg.get("google_maps_api_key") or settings.google_maps_api_key
+    maps_key = (
+        runtime_cfg.get("google_maps_api_key") if isinstance(runtime_cfg, dict) else None
+    ) or settings.google_maps_api_key
 
     defaults = settings.branding.model_dump()
     branding_payload: dict[str, Any] = dict(defaults)

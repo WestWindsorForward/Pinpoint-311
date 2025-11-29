@@ -30,8 +30,8 @@ export function ResidentPortal() {
         <Hero />
         <section className="grid gap-6 lg:grid-cols-2">
           <RequestForm
-            categories={data.categories}
-            mapsApiKey={data.integrations.google_maps_api_key ?? null}
+            categories={Array.isArray(data.categories) ? data.categories : []}
+            mapsApiKey={data.integrations?.google_maps_api_key ?? null}
           />
           <div className="space-y-6">
             <RequestTracker
