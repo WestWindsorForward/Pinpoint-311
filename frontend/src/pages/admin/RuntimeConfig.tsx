@@ -29,6 +29,7 @@ export function RuntimeConfigPage() {
     email_enabled: Boolean((config as any).email_enabled ?? false),
     sms_enabled: Boolean((config as any).sms_enabled ?? false),
     ai_enabled: Boolean((config as any).ai_enabled ?? false),
+    request_sections: Array.isArray((config as any).request_sections) ? (config as any).request_sections : [],
   };
   if (isLoading) return <div className="h-32 animate-pulse rounded-xl bg-slate-100" />;
   return (
@@ -95,6 +96,11 @@ function RuntimeConfigForm({ defaults, onSave, isSaving }: { defaults: Record<st
           <label className="flex items-center gap-3 text-sm text-slate-600"><input type="checkbox" checked={form.sms_enabled} onChange={(e) => handleChange("sms_enabled", e.target.checked)} />SMS Alerts</label>
           <label className="flex items-center gap-3 text-sm text-slate-600"><input type="checkbox" checked={form.ai_enabled} onChange={(e) => handleChange("ai_enabled", e.target.checked)} />AI Assistance</label>
         </div>
+      </div>
+      <div className="rounded-xl border border-slate-200 p-4">
+        <p className="text-sm font-semibold text-slate-700">Request Sections</p>
+        <p className="text-xs text-slate-500">Define the sections your staff can assign to requests (one per line).</p>
+        <textarea className="mt-2 h-28 w-full rounded-xl border border-slate-300 p-2 font-mono text-xs" value={(form.request_sections || []).join("\n")} onChange={(e) => handleChange("request_sections", e.target.value.split(/\n+/).map(s => s.trim()).filter(Boolean))} />
       </div>
       <div className="flex flex-wrap items-center justify-end gap-3"><button className="rounded-xl bg-slate-900 px-6 py-2 font-semibold text-white disabled:opacity-50" onClick={handleSubmit} disabled={disabled}>{isSaving ? "Saving…" : "Save overrides"}</button></div>
     </div>

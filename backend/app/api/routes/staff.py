@@ -55,6 +55,12 @@ async def update_request(
         service_request.priority = payload["priority"]
     if "assigned_department" in payload:
         service_request.assigned_department = payload["assigned_department"]
+    # allow updating a configured section via meta
+    section = payload.get("request_section")
+    if section is not None:
+        current = service_request.meta or {}
+        current["request_section"] = section
+        service_request.meta = current
     await session.commit()
     await session.refresh(service_request, attribute_names=["attachments", "updates"])
     await broadcast_status_change(

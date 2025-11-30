@@ -84,7 +84,7 @@ export function RequestDetailsPage() {
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-slate-700">Location</h2>
           {mapsKey ? (
-            <LoadScript googleMapsApiKey={mapsKey} onError={() => {
+            <LoadScript googleMapsApiKey={mapsKey} libraries={["places"]} onError={() => {
               const el = document.getElementById("map-error");
               if (el) el.textContent = "Maps failed to load. Check API key and billing.";
             }}>

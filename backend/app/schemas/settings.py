@@ -52,6 +52,7 @@ class RuntimeConfigUpdate(BaseModel):
     otel_enabled: bool | None = None
     otel_endpoint: str | None = None
     otel_headers: str | None = None
+    request_sections: list[str] | None = None
 
 
 class GeoBoundaryGoogleImport(BaseModel):

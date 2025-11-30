@@ -63,6 +63,9 @@ async def get_resident_config(request: Request, session: AsyncSession = Depends(
         "integrations": {
             "google_maps_api_key": maps_key,
         },
+        "settings": {
+            "request_sections": (runtime_cfg.get("request_sections") if isinstance(runtime_cfg, dict) else []) or [],
+        },
         "categories": [
             {
                 "slug": cat.slug,
