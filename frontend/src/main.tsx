@@ -85,6 +85,7 @@ const router = createBrowserRouter([
             <Suspense fallback={<div className="h-24 animate-pulse rounded-xl bg-slate-100" />}> <StaffCommandCenter /> </Suspense>
           </RequireRole>
         ),
+        errorElement: <ErrorFallback />,
       },
     ],
   },

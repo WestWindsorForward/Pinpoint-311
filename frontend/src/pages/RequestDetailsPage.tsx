@@ -12,6 +12,7 @@ export function RequestDetailsPage() {
   const staffDir = useStaffDirectory();
   const departmentsQuery = useDepartments();
   const mapsKey = residentConfig?.integrations?.google_maps_api_key ?? null;
+  const sections = Array.isArray((residentConfig as any)?.settings?.request_sections) ? ((residentConfig as any).settings.request_sections as string[]) : [];
   const reqQuery = useQuery({
     queryKey: ["request", externalId],
     queryFn: async () => (await client.get<ServiceRequest>(`/api/resident/requests/${externalId}`)).data,
@@ -64,7 +65,7 @@ export function RequestDetailsPage() {
             onChange={(e) => updateMutation.mutate({ status: e.target.value })}
           >
             {(["received","triaging","assigned","in_progress","waiting_external","resolved","closed"] as const).map(s => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>{String(s).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</option>
             ))}
           </select>
           <select
@@ -77,6 +78,18 @@ export function RequestDetailsPage() {
               <option key={dep.slug} value={dep.slug}>{dep.name}</option>
             ))}
           </select>
+          {sections.length > 0 && (
+            <select
+              className="rounded-lg border border-slate-300 p-2 text-sm"
+              defaultValue={(meta.request_section as string) || ""}
+              onChange={(e) => updateMutation.mutate({ request_section: e.target.value || null })}
+            >
+              <option value="">No section</option>
+              {sections.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          )}
         </div>
       </header>
 
