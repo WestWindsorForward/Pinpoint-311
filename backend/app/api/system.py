@@ -162,6 +162,23 @@ async def update_system(_: User = Depends(get_current_admin)):
         # Get the project root (assuming backend is in /app in container)
         project_root = os.environ.get("PROJECT_ROOT", "/app/..")
         
+        # Add safe directory to fix ownership issues in Docker
+        subprocess.run(
+            ["git", "config", "--global", "--add", "safe.directory", project_root],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        # Also add root as safe (for mounted volumes)
+        subprocess.run(
+            ["git", "config", "--global", "--add", "safe.directory", "/"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
         # Pull latest code
         pull_result = subprocess.run(
             ["git", "pull", "origin", "main"],
