@@ -43,7 +43,12 @@ class ApiClient {
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-            throw new Error(error.detail || 'Request failed');
+            // Handle FastAPI validation errors (422)
+            if (error.detail && Array.isArray(error.detail)) {
+                const messages = error.detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(', ');
+                throw new Error(messages || 'Validation error');
+            }
+            throw new Error(error.detail || error.message || 'Request failed');
         }
 
         if (response.status === 204) {
@@ -92,6 +97,13 @@ class ApiClient {
 
     async deleteService(id: number): Promise<void> {
         return this.request<void>(`/services/${id}`, { method: 'DELETE' });
+    }
+
+    async updateService(id: number, data: Partial<ServiceDefinition>): Promise<ServiceDefinition> {
+        return this.request<ServiceDefinition>(`/services/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
     }
 
     // Departments

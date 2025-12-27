@@ -6,7 +6,7 @@ from typing import List
 
 from app.db.session import get_db
 from app.models import ServiceDefinition, Department, User
-from app.schemas import ServiceCreate, ServiceResponse
+from app.schemas import ServiceCreate, ServiceResponse, ServiceUpdate
 from app.core.auth import get_current_admin
 
 router = APIRouter()
@@ -97,6 +97,64 @@ async def get_service(service_id: int, db: AsyncSession = Depends(get_db)):
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
     return service
+
+
+@router.put("/{service_id}", response_model=ServiceResponse)
+async def update_service(
+    service_id: int,
+    service_data: ServiceUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin)
+):
+    """Update service category with routing configuration (admin only)"""
+    result = await db.execute(
+        select(ServiceDefinition)
+        .where(ServiceDefinition.id == service_id)
+        .options(selectinload(ServiceDefinition.departments))
+        .options(selectinload(ServiceDefinition.assigned_department))
+    )
+    service = result.scalar_one_or_none()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    # Update basic fields
+    if service_data.service_name is not None:
+        service.service_name = service_data.service_name
+    if service_data.description is not None:
+        service.description = service_data.description
+    if service_data.icon is not None:
+        service.icon = service_data.icon
+    if service_data.is_active is not None:
+        service.is_active = service_data.is_active
+    
+    # Update routing configuration
+    if service_data.routing_mode is not None:
+        service.routing_mode = service_data.routing_mode
+    if service_data.routing_config is not None:
+        service.routing_config = service_data.routing_config
+    if service_data.assigned_department_id is not None:
+        service.assigned_department_id = service_data.assigned_department_id
+    
+    # Update departments
+    if service_data.department_ids is not None:
+        departments = []
+        for dept_id in service_data.department_ids:
+            result = await db.execute(select(Department).where(Department.id == dept_id))
+            dept = result.scalar_one_or_none()
+            if dept:
+                departments.append(dept)
+        service.departments = departments
+    
+    await db.commit()
+    
+    # Reload with relationships
+    result = await db.execute(
+        select(ServiceDefinition)
+        .where(ServiceDefinition.id == service_id)
+        .options(selectinload(ServiceDefinition.departments))
+        .options(selectinload(ServiceDefinition.assigned_department))
+    )
+    return result.scalar_one()
 
 
 @router.delete("/{service_id}", status_code=status.HTTP_204_NO_CONTENT)

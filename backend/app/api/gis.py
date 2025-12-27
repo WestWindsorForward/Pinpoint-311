@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional, List
 import json
+import httpx
 
 from app.db.session import get_db
 from app.models import User, SystemSecret, SystemSettings
@@ -184,3 +185,121 @@ async def get_maps_config(db: AsyncSession = Depends(get_db)):
         },
         "default_zoom": 12
     }
+
+
+# State FIPS codes for Census API
+STATE_FIPS = {
+    'AL': '01', 'AK': '02', 'AZ': '04', 'AR': '05', 'CA': '06', 'CO': '08', 'CT': '09',
+    'DE': '10', 'FL': '12', 'GA': '13', 'HI': '15', 'ID': '16', 'IL': '17', 'IN': '18',
+    'IA': '19', 'KS': '20', 'KY': '21', 'LA': '22', 'ME': '23', 'MD': '24', 'MA': '25',
+    'MI': '26', 'MN': '27', 'MS': '28', 'MO': '29', 'MT': '30', 'NE': '31', 'NV': '32',
+    'NH': '33', 'NJ': '34', 'NM': '35', 'NY': '36', 'NC': '37', 'ND': '38', 'OH': '39',
+    'OK': '40', 'OR': '41', 'PA': '42', 'RI': '44', 'SC': '45', 'SD': '46', 'TN': '47',
+    'TX': '48', 'UT': '49', 'VT': '50', 'VA': '51', 'WA': '53', 'WV': '54', 'WI': '55', 'WY': '56'
+}
+
+
+@router.get("/census-boundary-search")
+async def search_census_boundary(
+    town_name: str,
+    state_abbr: str,
+    layer_type: str = "township",  # township, city, county
+    _: User = Depends(get_current_admin)
+):
+    """Search for a township/city/county boundary from Census TIGERweb API"""
+    
+    # Layer IDs for TIGERweb
+    layers = {
+        "county": 84,
+        "city": 24,       # Incorporated Places
+        "township": 26    # County Subdivisions
+    }
+    
+    layer_id = layers.get(layer_type, 26)
+    state_fips = STATE_FIPS.get(state_abbr.upper(), "00")
+    
+    if state_fips == "00":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid state abbreviation: {state_abbr}"
+        )
+    
+    # Build query
+    base_url = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer"
+    where_clause = f"UPPER(BASENAME) LIKE '%{town_name.upper()}%' AND STATE = '{state_fips}'"
+    
+    params = {
+        "f": "geojson",
+        "where": where_clause,
+        "outFields": "*",
+        "outSR": "4326"
+    }
+    
+    url = f"{base_url}/{layer_id}/query"
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(url, params=params)
+        
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Failed to connect to Census API"
+            )
+        
+        data = response.json()
+        
+        if not data.get("features"):
+            return {"results": [], "message": "No boundaries found. Try a different name or layer type."}
+        
+        # Return search results (simplified for selection)
+        results = []
+        for feature in data["features"]:
+            props = feature.get("properties", {})
+            results.append({
+                "name": props.get("BASENAME") or props.get("NAME"),
+                "full_name": props.get("NAME") or props.get("BASENAME"),
+                "geoid": props.get("GEOID"),
+                "state": state_abbr.upper(),
+                "layer_type": layer_type,
+                "geometry": feature.get("geometry")  # Include full geometry for saving
+            })
+        
+        return {"results": results}
+
+
+@router.post("/boundaries/save-census")
+async def save_census_boundary(
+    name: str,
+    geojson_data: dict,
+    _: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Save a Census boundary as the township boundary"""
+    try:
+        api_key = await get_google_api_key(db)
+        service = get_boundary_service(api_key)
+        
+        # Convert single geometry/feature to GeoJSON FeatureCollection if needed
+        if "type" in geojson_data and geojson_data["type"] in ["Polygon", "MultiPolygon"]:
+            geojson_data = {
+                "type": "FeatureCollection",
+                "features": [{
+                    "type": "Feature",
+                    "geometry": geojson_data,
+                    "properties": {"name": name}
+                }]
+            }
+        elif "type" in geojson_data and geojson_data["type"] == "Feature":
+            geojson_data = {
+                "type": "FeatureCollection",
+                "features": [geojson_data]
+            }
+        
+        service.load_boundary_from_geojson(name, geojson_data)
+        
+        return {"status": "success", "message": f"Boundary '{name}' saved successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )

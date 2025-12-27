@@ -106,12 +106,30 @@ class ServiceBase(BaseModel):
 
 class ServiceCreate(ServiceBase):
     department_ids: Optional[List[int]] = []
+    routing_mode: Optional[str] = "township"  # township, third_party, road_based
+    routing_config: Optional[Dict[str, Any]] = {}
+    assigned_department_id: Optional[int] = None
+
+
+class ServiceUpdate(BaseModel):
+    service_name: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    is_active: Optional[bool] = None
+    department_ids: Optional[List[int]] = None
+    routing_mode: Optional[str] = None
+    routing_config: Optional[Dict[str, Any]] = None
+    assigned_department_id: Optional[int] = None
 
 
 class ServiceResponse(ServiceBase):
     id: int
     is_active: bool
     departments: List[DepartmentResponse] = []
+    routing_mode: Optional[str] = "township"
+    routing_config: Optional[Dict[str, Any]] = {}
+    assigned_department_id: Optional[int] = None
+    assigned_department: Optional[DepartmentResponse] = None
 
     class Config:
         from_attributes = True

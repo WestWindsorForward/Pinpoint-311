@@ -76,6 +76,21 @@ class ServiceDefinition(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
+    # Routing configuration
+    routing_mode = Column(String(50), default="township")  # township, third_party, road_based
+    routing_config = Column(JSON, default={})
+    # For third_party: { "url": "...", "message": "..." }
+    # For road_based: { 
+    #   "default": "township|third_party", 
+    #   "township_roads": ["Main St", ...],
+    #   "county_roads": ["County Rd 1", ...],
+    #   "third_party_url": "...", 
+    #   "third_party_message": "..." 
+    # }
+    
+    assigned_department_id = Column(Integer, ForeignKey("departments.id"))
+    assigned_department = relationship("Department", foreign_keys=[assigned_department_id])
+    
     departments = relationship(
         "Department",
         secondary=service_departments,

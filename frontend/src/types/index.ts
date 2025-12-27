@@ -37,6 +37,18 @@ export interface ServiceDefinition {
     icon: string;
     is_active: boolean;
     departments: Department[];
+    routing_mode?: 'township' | 'third_party' | 'road_based';
+    routing_config?: {
+        url?: string;
+        message?: string;
+        default?: 'township' | 'third_party';
+        township_roads?: string[];
+        county_roads?: string[];
+        third_party_url?: string;
+        third_party_message?: string;
+    };
+    assigned_department_id?: number;
+    assigned_department?: Department;
 }
 
 export interface ServiceCreate {
@@ -45,6 +57,9 @@ export interface ServiceCreate {
     description?: string;
     icon?: string;
     department_ids?: number[];
+    routing_mode?: string;
+    routing_config?: Record<string, any>;
+    assigned_department_id?: number;
 }
 
 // Service Request types
