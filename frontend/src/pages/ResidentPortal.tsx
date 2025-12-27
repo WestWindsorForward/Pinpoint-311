@@ -16,6 +16,8 @@ import {
     Volume2,
     HelpCircle,
     Sparkles,
+    Camera,
+    X,
 } from 'lucide-react';
 import { Button, Input, Textarea, Card } from '../components/ui';
 import { useSettings } from '../context/SettingsContext';
@@ -58,6 +60,23 @@ export default function ResidentPortal() {
         phone: '',
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+    // Photo upload state
+    const [photos, setPhotos] = useState<File[]>([]);
+    const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
+
+    // Location/GPS state  
+    const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [mapsApiKey, setMapsApiKey] = useState<string | null>(null);
+
+    // Load Maps API key
+    useEffect(() => {
+        api.getMapsConfig().then((config) => {
+            if (config.google_maps_api_key) {
+                setMapsApiKey(config.google_maps_api_key);
+            }
+        }).catch(() => { });
+    }, []);
 
     useEffect(() => {
         loadServices();
@@ -132,6 +151,31 @@ export default function ResidentPortal() {
         });
         setFormErrors({});
         setSubmittedId(null);
+        setPhotos([]);
+        setPhotoPreviewUrls([]);
+        setLocation(null);
+    };
+
+    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+
+        const newPhotos = Array.from(files).slice(0, 3 - photos.length); // Max 3 photos
+        setPhotos((prev) => [...prev, ...newPhotos]);
+
+        // Create preview URLs
+        newPhotos.forEach((file) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhotoPreviewUrls((prev) => [...prev, reader.result as string]);
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleRemovePhoto = (index: number) => {
+        setPhotos((prev) => prev.filter((_, i) => i !== index));
+        setPhotoPreviewUrls((prev) => prev.filter((_, i) => i !== index));
     };
 
     const getIcon = (iconName: string) => {
@@ -330,6 +374,66 @@ export default function ResidentPortal() {
                                                 setFormData((prev) => ({ ...prev, address: e.target.value }))
                                             }
                                         />
+
+                                        {/* Google Maps Embed */}
+                                        {mapsApiKey && formData.address && (
+                                            <div className="rounded-xl overflow-hidden border border-white/10">
+                                                <iframe
+                                                    width="100%"
+                                                    height="200"
+                                                    style={{ border: 0 }}
+                                                    loading="lazy"
+                                                    referrerPolicy="no-referrer-when-downgrade"
+                                                    src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${encodeURIComponent(formData.address)}&zoom=16`}
+                                                />
+                                            </div>
+                                        )}
+                                        {!mapsApiKey && formData.address && (
+                                            <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center text-white/40">
+                                                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">Map preview requires Google Maps API key</p>
+                                            </div>
+                                        )}
+
+                                        {/* Photo Upload */}
+                                        <div className="space-y-3">
+                                            <label className="block text-sm font-medium text-white/70">
+                                                Photos (optional, max 3)
+                                            </label>
+
+                                            <div className="flex gap-3 flex-wrap">
+                                                {photoPreviewUrls.map((url, idx) => (
+                                                    <div key={idx} className="relative group">
+                                                        <img
+                                                            src={url}
+                                                            alt={`Photo ${idx + 1}`}
+                                                            className="w-24 h-24 object-cover rounded-xl border border-white/20"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemovePhoto(idx)}
+                                                            className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X className="w-4 h-4 text-white" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+
+                                                {photos.length < 3 && (
+                                                    <label className="w-24 h-24 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/20 hover:border-white/40 cursor-pointer transition-colors">
+                                                        <Camera className="w-6 h-6 text-white/40" />
+                                                        <span className="text-xs text-white/40 mt-1">Add Photo</span>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            multiple
+                                                            onChange={handlePhotoUpload}
+                                                            className="hidden"
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </Card>
 
