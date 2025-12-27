@@ -228,9 +228,10 @@ class ApiClient {
     async configureDomain(domain: string): Promise<{
         status: string;
         message: string;
-        steps_completed?: string[];
-        ssl_error?: string;
-        url?: string;
+        domain?: string;
+        nginx_config?: string;
+        setup_script?: string;
+        instructions?: string[];
     }> {
         return this.request(`/system/domain/configure?domain=${encodeURIComponent(domain)}`, {
             method: 'POST',

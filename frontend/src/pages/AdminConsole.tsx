@@ -751,17 +751,28 @@ export default function AdminConsole() {
                                                         setIsLoading(true);
                                                         try {
                                                             const result = await api.configureDomain(domain);
-                                                            if (result.status === 'success') {
-                                                                alert(`✅ ${result.message}\n\nAccess at: ${result.url}`);
+                                                            if (result.status === 'ready') {
+                                                                // Copy script to clipboard
+                                                                await navigator.clipboard.writeText(result.setup_script || '');
+                                                                alert(
+                                                                    `✅ Setup script generated and copied to clipboard!\n\n` +
+                                                                    `Instructions:\n` +
+                                                                    `1. SSH into server: ssh ubuntu@132.226.32.116\n` +
+                                                                    `2. Create file: nano setup-${domain}.sh\n` +
+                                                                    `3. Paste the script (Ctrl+Shift+V)\n` +
+                                                                    `4. Save and exit (Ctrl+X, Y, Enter)\n` +
+                                                                    `5. Run: sudo bash setup-${domain}.sh\n\n` +
+                                                                    `The script will automatically configure Nginx and SSL.`
+                                                                );
                                                             } else {
-                                                                alert(`⚠️ ${result.message}\n\n${result.ssl_error || 'Check DNS propagation and try again.'}`);
+                                                                alert(`⚠️ ${result.message}`);
                                                             }
                                                         } catch (err: any) { alert(`Error: ${err.message}`); }
                                                         finally { setIsLoading(false); }
                                                     }}
                                                     isLoading={isLoading}
                                                 >
-                                                    Configure SSL
+                                                    Generate Setup Script
                                                 </Button>
                                             </div>
                                         </div>
