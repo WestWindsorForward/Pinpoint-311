@@ -70,8 +70,14 @@ async def create_user(
     
     db.add(user)
     await db.commit()
-    await db.refresh(user)
-    return user
+    
+    # Reload with departments relationship for response
+    result = await db.execute(
+        select(User)
+        .where(User.id == user.id)
+        .options(selectinload(User.departments))
+    )
+    return result.scalar_one()
 
 
 @router.get("/{user_id}", response_model=UserResponse)
