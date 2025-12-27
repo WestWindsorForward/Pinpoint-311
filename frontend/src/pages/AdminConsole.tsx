@@ -60,11 +60,28 @@ export default function AdminConsole() {
     const [services, setServices] = useState<ServiceDefinition[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [showServiceModal, setShowServiceModal] = useState(false);
+    const [editingService, setEditingService] = useState<ServiceDefinition | null>(null);
     const [newService, setNewService] = useState({
         service_code: '',
         service_name: '',
         description: '',
         icon: 'AlertCircle',
+    });
+
+    // Service routing edit state
+    const [showServiceEditModal, setShowServiceEditModal] = useState(false);
+    const [serviceRouting, setServiceRouting] = useState({
+        routing_mode: 'township' as 'township' | 'third_party' | 'road_based',
+        assigned_department_id: null as number | null,
+        routing_config: {
+            url: '',
+            message: '',
+            default: 'township' as 'township' | 'third_party',
+            township_roads: '',
+            county_roads: '',
+            third_party_url: '',
+            third_party_message: '',
+        },
     });
 
     // Department management state
@@ -214,6 +231,61 @@ export default function AdminConsole() {
             loadTabData();
         } catch (err) {
             console.error('Failed to delete service:', err);
+        }
+    };
+
+    const handleEditService = (service: ServiceDefinition) => {
+        setEditingService(service);
+        const config = service.routing_config || {};
+        setServiceRouting({
+            routing_mode: service.routing_mode || 'township',
+            assigned_department_id: service.assigned_department_id || null,
+            routing_config: {
+                url: config.url || '',
+                message: config.message || '',
+                default: config.default || 'township',
+                township_roads: config.township_roads?.join(', ') || '',
+                county_roads: config.county_roads?.join(', ') || '',
+                third_party_url: config.third_party_url || '',
+                third_party_message: config.third_party_message || '',
+            },
+        });
+        setShowServiceEditModal(true);
+    };
+
+    const handleSaveServiceRouting = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingService) return;
+
+        try {
+            const config: Record<string, any> = {};
+            if (serviceRouting.routing_mode === 'third_party') {
+                config.url = serviceRouting.routing_config.url;
+                config.message = serviceRouting.routing_config.message;
+            } else if (serviceRouting.routing_mode === 'road_based') {
+                config.default = serviceRouting.routing_config.default;
+                config.township_roads = serviceRouting.routing_config.township_roads
+                    .split(',').map(r => r.trim()).filter(Boolean);
+                config.county_roads = serviceRouting.routing_config.county_roads
+                    .split(',').map(r => r.trim()).filter(Boolean);
+                config.third_party_url = serviceRouting.routing_config.third_party_url;
+                config.third_party_message = serviceRouting.routing_config.third_party_message;
+            }
+
+            await api.updateService(editingService.id, {
+                routing_mode: serviceRouting.routing_mode,
+                routing_config: config,
+                assigned_department_id: serviceRouting.assigned_department_id || undefined,
+            });
+
+            setShowServiceEditModal(false);
+            setEditingService(null);
+            loadTabData();
+            setSaveMessage('Service routing updated!');
+            setTimeout(() => setSaveMessage(''), 3000);
+        } catch (err: any) {
+            console.error('Failed to update service:', err);
+            alert(err.message || 'Failed to update service');
         }
     };
 
@@ -695,17 +767,37 @@ export default function AdminConsole() {
                                                 <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center text-primary-300">
                                                     <Grid3X3 className="w-6 h-6" />
                                                 </div>
-                                                <div className="flex-1">
+                                                <div className="flex-1 min-w-0">
                                                     <h3 className="font-semibold text-white">{service.service_name}</h3>
-                                                    <p className="text-sm text-white/50 mt-1">{service.description}</p>
-                                                    <p className="text-xs text-white/30 mt-2 font-mono">{service.service_code}</p>
+                                                    <p className="text-sm text-white/50 mt-1 line-clamp-2">{service.description}</p>
+                                                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                                        <span className="text-xs text-white/30 font-mono">{service.service_code}</span>
+                                                        {service.routing_mode && service.routing_mode !== 'township' && (
+                                                            <Badge variant={service.routing_mode === 'third_party' ? 'warning' : 'info'}>
+                                                                {service.routing_mode === 'third_party' ? '3rd Party' : 'Road-Based'}
+                                                            </Badge>
+                                                        )}
+                                                        {service.assigned_department && (
+                                                            <Badge variant="default">{service.assigned_department.name}</Badge>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleDeleteService(service.id)}
-                                                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-500/20 rounded-lg transition-all"
-                                                >
-                                                    <Trash2 className="w-4 h-4 text-red-400" />
-                                                </button>
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => handleEditService(service)}
+                                                        className="opacity-0 group-hover:opacity-100 p-2 hover:bg-white/10 rounded-lg transition-all"
+                                                        title="Configure routing"
+                                                    >
+                                                        <Edit className="w-4 h-4 text-white/60" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteService(service.id)}
+                                                        className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-500/20 rounded-lg transition-all"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 text-red-400" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </Card>
                                     ))}
@@ -1228,6 +1320,162 @@ export default function AdminConsole() {
                     <div className="flex justify-end gap-3 pt-4">
                         <Button variant="ghost" onClick={() => setShowServiceModal(false)}>Cancel</Button>
                         <Button type="submit">Create Category</Button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Service Routing Edit Modal */}
+            <Modal
+                isOpen={showServiceEditModal}
+                onClose={() => {
+                    setShowServiceEditModal(false);
+                    setEditingService(null);
+                }}
+                title={`Configure Routing: ${editingService?.service_name || ''}`}
+            >
+                <form onSubmit={handleSaveServiceRouting} className="space-y-5">
+                    {/* Department Assignment */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-white/70">Assigned Department</label>
+                        <select
+                            value={serviceRouting.assigned_department_id || ''}
+                            onChange={(e) => setServiceRouting(p => ({
+                                ...p,
+                                assigned_department_id: e.target.value ? parseInt(e.target.value) : null
+                            }))}
+                            className="w-full h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                            <option value="">No department assigned</option>
+                            {departments.map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Routing Mode */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-white/70">Routing Mode</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {[
+                                { value: 'township', label: 'Township Handles', desc: 'Standard - we process this' },
+                                { value: 'third_party', label: '3rd Party', desc: 'Redirect to external service' },
+                                { value: 'road_based', label: 'Road-Based', desc: 'Route by road name' },
+                            ].map(mode => (
+                                <button
+                                    type="button"
+                                    key={mode.value}
+                                    onClick={() => setServiceRouting(p => ({ ...p, routing_mode: mode.value as any }))}
+                                    className={`p-3 rounded-lg border text-left transition-colors ${serviceRouting.routing_mode === mode.value
+                                            ? 'bg-primary-500/20 border-primary-500 text-white'
+                                            : 'bg-white/5 border-white/10 text-white/70 hover:border-white/30'
+                                        }`}
+                                >
+                                    <div className="font-medium text-sm">{mode.label}</div>
+                                    <div className="text-xs text-white/50 mt-1">{mode.desc}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Third Party Config */}
+                    {serviceRouting.routing_mode === 'third_party' && (
+                        <div className="space-y-4 p-4 rounded-lg bg-white/5 border border-white/10">
+                            <h4 className="font-medium text-white">Third Party Redirect</h4>
+                            <Input
+                                label="Redirect URL"
+                                placeholder="https://county.gov/roads"
+                                value={serviceRouting.routing_config.url}
+                                onChange={(e) => setServiceRouting(p => ({
+                                    ...p,
+                                    routing_config: { ...p.routing_config, url: e.target.value }
+                                }))}
+                            />
+                            <Input
+                                label="Message to Show"
+                                placeholder="This is handled by the County..."
+                                value={serviceRouting.routing_config.message}
+                                onChange={(e) => setServiceRouting(p => ({
+                                    ...p,
+                                    routing_config: { ...p.routing_config, message: e.target.value }
+                                }))}
+                            />
+                        </div>
+                    )}
+
+                    {/* Road-Based Config */}
+                    {serviceRouting.routing_mode === 'road_based' && (
+                        <div className="space-y-4 p-4 rounded-lg bg-white/5 border border-white/10">
+                            <h4 className="font-medium text-white">Road-Based Routing</h4>
+
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-white/70">Default if road not matched</label>
+                                <select
+                                    value={serviceRouting.routing_config.default}
+                                    onChange={(e) => setServiceRouting(p => ({
+                                        ...p,
+                                        routing_config: { ...p.routing_config, default: e.target.value as any }
+                                    }))}
+                                    className="w-full h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
+                                >
+                                    <option value="township">Township handles (default)</option>
+                                    <option value="third_party">Redirect to 3rd party</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-green-300">Township Roads (we handle)</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="Main St, Oak Ave, Elm Rd..."
+                                    value={serviceRouting.routing_config.township_roads}
+                                    onChange={(e) => setServiceRouting(p => ({
+                                        ...p,
+                                        routing_config: { ...p.routing_config, township_roads: e.target.value }
+                                    }))}
+                                    className="w-full rounded-lg bg-white/10 border border-white/20 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                />
+                                <p className="text-xs text-white/40">Comma-separated list of roads the township maintains</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-amber-300">County/State Roads (redirect)</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="County Rd 1, Route 206, State Hwy 27..."
+                                    value={serviceRouting.routing_config.county_roads}
+                                    onChange={(e) => setServiceRouting(p => ({
+                                        ...p,
+                                        routing_config: { ...p.routing_config, county_roads: e.target.value }
+                                    }))}
+                                    className="w-full rounded-lg bg-white/10 border border-white/20 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                />
+                                <p className="text-xs text-white/40">Comma-separated list of roads that should be redirected</p>
+                            </div>
+
+                            <Input
+                                label="Third Party URL (for county roads)"
+                                placeholder="https://county.gov/roads"
+                                value={serviceRouting.routing_config.third_party_url}
+                                onChange={(e) => setServiceRouting(p => ({
+                                    ...p,
+                                    routing_config: { ...p.routing_config, third_party_url: e.target.value }
+                                }))}
+                            />
+                            <Input
+                                label="Redirect Message"
+                                placeholder="This road is maintained by the County..."
+                                value={serviceRouting.routing_config.third_party_message}
+                                onChange={(e) => setServiceRouting(p => ({
+                                    ...p,
+                                    routing_config: { ...p.routing_config, third_party_message: e.target.value }
+                                }))}
+                            />
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button variant="ghost" onClick={() => setShowServiceEditModal(false)}>Cancel</Button>
+                        <Button type="submit">Save Routing Config</Button>
                     </div>
                 </form>
             </Modal>
