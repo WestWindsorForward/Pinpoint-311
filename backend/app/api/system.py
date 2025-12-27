@@ -287,7 +287,12 @@ async def configure_domain(
         await db.commit()
     
     # Generate Caddyfile with custom domain (Caddy auto-handles HTTPS)
-    caddyfile_content = f"""# Caddy configuration for Township 311
+    caddyfile_content = f"""# Global options - enable admin API for auto-reload
+{{
+    admin 0.0.0.0:2019
+}}
+
+# Caddy configuration for Township 311
 # Auto-generated - Custom domain: {domain}
 
 # Custom domain with automatic HTTPS
@@ -309,11 +314,6 @@ async def configure_domain(
         X-Frame-Options DENY
         Referrer-Policy strict-origin-when-cross-origin
     }}
-}}
-
-# www redirect to main domain
-www.{domain} {{
-    redir https://{domain}{{uri}} permanent
 }}
 
 # Also keep IP access on HTTP for fallback
