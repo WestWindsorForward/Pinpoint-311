@@ -170,10 +170,6 @@ export default function AdminConsole() {
     // Modules state
     const [modules, setModules] = useState({ ai_analysis: false, sms_alerts: false, email_notifications: false });
 
-    // Census boundary search state
-    const [censusSearch, setCensusSearch] = useState({ townName: '', stateAbbr: 'NJ', layerType: 'township' });
-    const [censusResults, setCensusResults] = useState<any[]>([]);
-    const [censusLoading, setCensusLoading] = useState(false);
 
     // Password reset state
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -254,39 +250,6 @@ export default function AdminConsole() {
         }
     };
 
-    const handleSearchCensus = async () => {
-        if (!censusSearch.townName || !censusSearch.stateAbbr) return;
-        setCensusLoading(true);
-        setCensusResults([]);
-        try {
-            const result = await api.searchCensusBoundary(
-                censusSearch.townName,
-                censusSearch.stateAbbr,
-                censusSearch.layerType
-            );
-            setCensusResults(result.results || []);
-            if (result.results?.length === 0) {
-                alert(result.message || 'No boundaries found. Try a different name or layer type.');
-            }
-        } catch (err: any) {
-            console.error('Census search failed:', err);
-            alert(err.message || 'Failed to search Census boundary');
-        } finally {
-            setCensusLoading(false);
-        }
-    };
-
-    const handleSaveCensusBoundary = async (result: any) => {
-        try {
-            await api.saveCensusBoundary(result.name, result.geometry);
-            setSaveMessage(`Boundary "${result.name}" saved!`);
-            setCensusResults([]);
-            setTimeout(() => setSaveMessage(''), 3000);
-        } catch (err: any) {
-            console.error('Failed to save boundary:', err);
-            alert(err.message || 'Failed to save boundary');
-        }
-    };
 
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -752,62 +715,6 @@ export default function AdminConsole() {
                                     </Card>
                                 </div>
 
-                                {/* Census Boundary Search */}
-                                <Card className="mt-6">
-                                    <h3 className="text-lg font-semibold text-white mb-4">Township Boundary</h3>
-                                    <p className="text-sm text-white/50 mb-4">
-                                        Search the U.S. Census TIGERweb database to auto-import your township boundary.
-                                    </p>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                                        <Input
-                                            placeholder="Town name (e.g., Montclair)"
-                                            value={censusSearch.townName}
-                                            onChange={(e) => setCensusSearch(p => ({ ...p, townName: e.target.value }))}
-                                        />
-                                        <select
-                                            value={censusSearch.stateAbbr}
-                                            onChange={(e) => setCensusSearch(p => ({ ...p, stateAbbr: e.target.value }))}
-                                            className="h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
-                                        >
-                                            {['NJ', 'NY', 'PA', 'CT', 'MA', 'DE', 'MD', 'VA', 'OH', 'CA', 'TX', 'FL'].map(s => (
-                                                <option key={s} value={s}>{s}</option>
-                                            ))}
-                                        </select>
-                                        <select
-                                            value={censusSearch.layerType}
-                                            onChange={(e) => setCensusSearch(p => ({ ...p, layerType: e.target.value }))}
-                                            className="h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
-                                        >
-                                            <option value="township">Township/Subdivision</option>
-                                            <option value="city">City/Town</option>
-                                            <option value="county">County</option>
-                                        </select>
-                                        <Button onClick={handleSearchCensus} isLoading={censusLoading}>
-                                            Search Census
-                                        </Button>
-                                    </div>
-
-                                    {censusResults.length > 0 && (
-                                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                                            <p className="text-sm text-white/60 mb-2">Select a boundary to save:</p>
-                                            {censusResults.map((result, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                                                >
-                                                    <div>
-                                                        <p className="font-medium text-white">{result.full_name}</p>
-                                                        <p className="text-xs text-white/50">GEOID: {result.geoid} | {result.layer_type}</p>
-                                                    </div>
-                                                    <Button size="sm" onClick={() => handleSaveCensusBoundary(result)}>
-                                                        Use This
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </Card>
 
                                 {/* Domain Connection */}
                                 <Card className="mt-6">
