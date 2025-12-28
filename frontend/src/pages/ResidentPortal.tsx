@@ -20,6 +20,7 @@ import {
     X,
 } from 'lucide-react';
 import { Button, Input, Textarea, Card } from '../components/ui';
+import GoogleMapsLocationPicker from '../components/GoogleMapsLocationPicker';
 import { useSettings } from '../context/SettingsContext';
 import { api } from '../services/api';
 import { ServiceDefinition, ServiceRequestCreate } from '../types';
@@ -74,7 +75,11 @@ export default function ResidentPortal() {
     const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
 
     // Location/GPS state  
-    const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [location, setLocation] = useState<{ address: string; lat: number | null; lng: number | null }>({
+        address: '',
+        lat: null,
+        lng: null
+    });
     const [mapsApiKey, setMapsApiKey] = useState<string | null>(null);
 
     // Load Maps API key
@@ -217,7 +222,7 @@ export default function ResidentPortal() {
         setSubmittedId(null);
         setPhotos([]);
         setPhotoPreviewUrls([]);
-        setLocation(null);
+        setLocation({ address: '', lat: null, lng: null });
         // Clear blocking state
         setIsBlocked(false);
         setBlockMessage('');
@@ -487,39 +492,47 @@ export default function ResidentPortal() {
                                                 required
                                             />
 
-                                            <Input
-                                                label="Location / Address"
-                                                placeholder="Street address or intersection"
-                                                leftIcon={<MapPin className="w-5 h-5" />}
-                                                value={formData.address}
-                                                onChange={(e) => {
-                                                    const newAddress = e.target.value;
-                                                    setFormData((prev) => ({ ...prev, address: newAddress }));
-                                                    // Check road-based blocking when address changes
-                                                    if (selectedService.routing_mode === 'road_based') {
-                                                        checkRoadBasedBlocking(newAddress, selectedService);
-                                                    }
-                                                }}
-                                            />
-
-                                            {/* Google Maps Embed */}
-                                            {mapsApiKey && formData.address && (
-                                                <div className="rounded-xl overflow-hidden border border-white/10">
-                                                    <iframe
-                                                        width="100%"
-                                                        height="200"
-                                                        style={{ border: 0 }}
-                                                        loading="lazy"
-                                                        referrerPolicy="no-referrer-when-downgrade"
-                                                        src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${encodeURIComponent(formData.address)}&zoom=16`}
+                                            {/* Google Maps Location Picker */}
+                                            {mapsApiKey ? (
+                                                <div>
+                                                    <label className="block text-sm font-medium text-white/70 mb-2">
+                                                        Location / Address
+                                                    </label>
+                                                    <GoogleMapsLocationPicker
+                                                        apiKey={mapsApiKey}
+                                                        value={location}
+                                                        onChange={(newLocation) => {
+                                                            setLocation(newLocation);
+                                                            setFormData((prev) => ({ ...prev, address: newLocation.address }));
+                                                            // Check road-based blocking when address changes
+                                                            if (selectedService.routing_mode === 'road_based') {
+                                                                checkRoadBasedBlocking(newLocation.address, selectedService);
+                                                            }
+                                                        }}
+                                                        placeholder="Search for an address or click on the map..."
                                                     />
                                                 </div>
-                                            )}
-                                            {!mapsApiKey && formData.address && (
-                                                <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center text-white/40">
-                                                    <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                                    <p className="text-sm">Map preview requires Google Maps API key</p>
-                                                </div>
+                                            ) : (
+                                                <>
+                                                    <Input
+                                                        label="Location / Address"
+                                                        placeholder="Street address or intersection"
+                                                        leftIcon={<MapPin className="w-5 h-5" />}
+                                                        value={formData.address}
+                                                        onChange={(e) => {
+                                                            const newAddress = e.target.value;
+                                                            setFormData((prev) => ({ ...prev, address: newAddress }));
+                                                            // Check road-based blocking when address changes
+                                                            if (selectedService.routing_mode === 'road_based') {
+                                                                checkRoadBasedBlocking(newAddress, selectedService);
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center text-white/40">
+                                                        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                        <p className="text-sm">Interactive map requires Google Maps API key</p>
+                                                    </div>
+                                                </>
                                             )}
 
                                             {/* Photo Upload */}
