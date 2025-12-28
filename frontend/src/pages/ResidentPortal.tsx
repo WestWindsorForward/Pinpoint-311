@@ -61,6 +61,11 @@ export default function ResidentPortal() {
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+    // Blocking state for third-party/road-based services
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [blockMessage, setBlockMessage] = useState('');
+    const [blockContacts, setBlockContacts] = useState<{ name: string; phone: string; url: string }[]>([]);
+
     // Photo upload state
     const [photos, setPhotos] = useState<File[]>([]);
     const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
@@ -102,7 +107,63 @@ export default function ResidentPortal() {
     const handleSelectService = (service: ServiceDefinition) => {
         setSelectedService(service);
         setFormData((prev) => ({ ...prev, service_code: service.service_code }));
+
+        // Clear any previous blocking state
+        setIsBlocked(false);
+        setBlockMessage('');
+        setBlockContacts([]);
+
+        // Check if third-party only service - block immediately
+        if (service.routing_mode === 'third_party') {
+            setIsBlocked(true);
+            setBlockMessage(service.routing_config?.message || 'This service is handled by a third party.');
+            setBlockContacts(service.routing_config?.contacts || []);
+        }
+
         setStep('form');
+    };
+
+    // Check if address matches road-based blocking rules
+    const checkRoadBasedBlocking = (address: string, service: ServiceDefinition) => {
+        if (service.routing_mode !== 'road_based' || !address) return;
+
+        const config = service.routing_config;
+        if (!config) return;
+
+        const addressLower = address.toLowerCase();
+        const defaultHandler = config.default_handler || 'township';
+
+        if (defaultHandler === 'township') {
+            // Check exclusion list - if address matches, block
+            const exclusionList = config.exclusion_list || [];
+            const matchesExclusion = exclusionList.some(road =>
+                addressLower.includes(road.toLowerCase())
+            );
+            if (matchesExclusion) {
+                setIsBlocked(true);
+                setBlockMessage(config.third_party_message || 'This road is handled by a third party.');
+                setBlockContacts(config.third_party_contacts || []);
+            } else {
+                setIsBlocked(false);
+                setBlockMessage('');
+                setBlockContacts([]);
+            }
+        } else {
+            // Third party default - check inclusion list - if NOT in list, block
+            const inclusionList = config.inclusion_list || [];
+            const matchesInclusion = inclusionList.some(road =>
+                addressLower.includes(road.toLowerCase())
+            );
+            if (!matchesInclusion) {
+                setIsBlocked(true);
+                setBlockMessage(config.third_party_message || 'This road is handled by a third party.');
+                setBlockContacts(config.third_party_contacts || []);
+            } else {
+                setIsBlocked(false);
+                setBlockMessage('');
+                setBlockContacts([]);
+            }
+        }
     };
 
     const validateForm = (): boolean => {
@@ -154,6 +215,10 @@ export default function ResidentPortal() {
         setPhotos([]);
         setPhotoPreviewUrls([]);
         setLocation(null);
+        // Clear blocking state
+        setIsBlocked(false);
+        setBlockMessage('');
+        setBlockContacts([]);
     };
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -350,157 +415,216 @@ export default function ResidentPortal() {
                                 </div>
                             </div>
 
-                            {/* Form */}
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <Card>
-                                    <div className="space-y-5">
-                                        <Textarea
-                                            label="Description *"
-                                            placeholder="Please describe the issue in detail..."
-                                            value={formData.description}
-                                            onChange={(e) =>
-                                                setFormData((prev) => ({ ...prev, description: e.target.value }))
-                                            }
-                                            error={formErrors.description}
-                                            required
-                                        />
+                            {/* Blocking Notice for Third Party / Road-Based */}
+                            {isBlocked && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="p-6 rounded-2xl bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-red-500/30"
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                                            <AlertCircle className="w-6 h-6 text-red-400" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-lg font-semibold text-red-300 mb-2">
+                                                Cannot Submit This Request
+                                            </h3>
+                                            <p className="text-white/70 mb-4">
+                                                {blockMessage}
+                                            </p>
 
-                                        <Input
-                                            label="Location / Address"
-                                            placeholder="Street address or intersection"
-                                            leftIcon={<MapPin className="w-5 h-5" />}
-                                            value={formData.address}
-                                            onChange={(e) =>
-                                                setFormData((prev) => ({ ...prev, address: e.target.value }))
-                                            }
-                                        />
+                                            {blockContacts.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <p className="text-sm text-white/50 font-medium">Contact Information:</p>
+                                                    {blockContacts.map((contact, idx) => (
+                                                        <div key={idx} className="flex flex-wrap gap-3 text-sm">
+                                                            {contact.name && (
+                                                                <span className="text-white font-medium">{contact.name}</span>
+                                                            )}
+                                                            {contact.phone && (
+                                                                <a href={`tel:${contact.phone}`} className="text-primary-400 hover:text-primary-300">
+                                                                    📞 {contact.phone}
+                                                                </a>
+                                                            )}
+                                                            {contact.url && (
+                                                                <a href={contact.url} target="_blank" rel="noopener noreferrer" className="text-primary-400 hover:text-primary-300 underline">
+                                                                    🔗 Visit Website
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
 
-                                        {/* Google Maps Embed */}
-                                        {mapsApiKey && formData.address && (
-                                            <div className="rounded-xl overflow-hidden border border-white/10">
-                                                <iframe
-                                                    width="100%"
-                                                    height="200"
-                                                    style={{ border: 0 }}
-                                                    loading="lazy"
-                                                    referrerPolicy="no-referrer-when-downgrade"
-                                                    src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${encodeURIComponent(formData.address)}&zoom=16`}
+                            {/* Form - only show if NOT blocked OR if road-based (need address first) */}
+                            {(!isBlocked || selectedService.routing_mode === 'road_based') && (
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    <Card>
+                                        <div className="space-y-5">
+                                            <Textarea
+                                                label="Description *"
+                                                placeholder="Please describe the issue in detail..."
+                                                value={formData.description}
+                                                onChange={(e) =>
+                                                    setFormData((prev) => ({ ...prev, description: e.target.value }))
+                                                }
+                                                error={formErrors.description}
+                                                required
+                                            />
+
+                                            <Input
+                                                label="Location / Address"
+                                                placeholder="Street address or intersection"
+                                                leftIcon={<MapPin className="w-5 h-5" />}
+                                                value={formData.address}
+                                                onChange={(e) => {
+                                                    const newAddress = e.target.value;
+                                                    setFormData((prev) => ({ ...prev, address: newAddress }));
+                                                    // Check road-based blocking when address changes
+                                                    if (selectedService.routing_mode === 'road_based') {
+                                                        checkRoadBasedBlocking(newAddress, selectedService);
+                                                    }
+                                                }}
+                                            />
+
+                                            {/* Google Maps Embed */}
+                                            {mapsApiKey && formData.address && (
+                                                <div className="rounded-xl overflow-hidden border border-white/10">
+                                                    <iframe
+                                                        width="100%"
+                                                        height="200"
+                                                        style={{ border: 0 }}
+                                                        loading="lazy"
+                                                        referrerPolicy="no-referrer-when-downgrade"
+                                                        src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${encodeURIComponent(formData.address)}&zoom=16`}
+                                                    />
+                                                </div>
+                                            )}
+                                            {!mapsApiKey && formData.address && (
+                                                <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center text-white/40">
+                                                    <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                    <p className="text-sm">Map preview requires Google Maps API key</p>
+                                                </div>
+                                            )}
+
+                                            {/* Photo Upload */}
+                                            <div className="space-y-3">
+                                                <label className="block text-sm font-medium text-white/70">
+                                                    Photos (optional, max 3)
+                                                </label>
+
+                                                <div className="flex gap-3 flex-wrap">
+                                                    {photoPreviewUrls.map((url, idx) => (
+                                                        <div key={idx} className="relative group">
+                                                            <img
+                                                                src={url}
+                                                                alt={`Photo ${idx + 1}`}
+                                                                className="w-24 h-24 object-cover rounded-xl border border-white/20"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemovePhoto(idx)}
+                                                                className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                <X className="w-4 h-4 text-white" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+
+                                                    {photos.length < 3 && (
+                                                        <label className="w-24 h-24 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/20 hover:border-white/40 cursor-pointer transition-colors">
+                                                            <Camera className="w-6 h-6 text-white/40" />
+                                                            <span className="text-xs text-white/40 mt-1">Add Photo</span>
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                multiple
+                                                                onChange={handlePhotoUpload}
+                                                                className="hidden"
+                                                            />
+                                                        </label>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Card>
+
+                                    <Card>
+                                        <h3 className="text-lg font-semibold text-white mb-4">
+                                            Contact Information
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <Input
+                                                    label="First Name"
+                                                    placeholder="John"
+                                                    value={formData.first_name}
+                                                    onChange={(e) =>
+                                                        setFormData((prev) => ({ ...prev, first_name: e.target.value }))
+                                                    }
+                                                />
+                                                <Input
+                                                    label="Last Name"
+                                                    placeholder="Doe"
+                                                    value={formData.last_name}
+                                                    onChange={(e) =>
+                                                        setFormData((prev) => ({ ...prev, last_name: e.target.value }))
+                                                    }
                                                 />
                                             </div>
-                                        )}
-                                        {!mapsApiKey && formData.address && (
-                                            <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center text-white/40">
-                                                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                                <p className="text-sm">Map preview requires Google Maps API key</p>
-                                            </div>
-                                        )}
 
-                                        {/* Photo Upload */}
-                                        <div className="space-y-3">
-                                            <label className="block text-sm font-medium text-white/70">
-                                                Photos (optional, max 3)
-                                            </label>
-
-                                            <div className="flex gap-3 flex-wrap">
-                                                {photoPreviewUrls.map((url, idx) => (
-                                                    <div key={idx} className="relative group">
-                                                        <img
-                                                            src={url}
-                                                            alt={`Photo ${idx + 1}`}
-                                                            className="w-24 h-24 object-cover rounded-xl border border-white/20"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleRemovePhoto(idx)}
-                                                            className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        >
-                                                            <X className="w-4 h-4 text-white" />
-                                                        </button>
-                                                    </div>
-                                                ))}
-
-                                                {photos.length < 3 && (
-                                                    <label className="w-24 h-24 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/20 hover:border-white/40 cursor-pointer transition-colors">
-                                                        <Camera className="w-6 h-6 text-white/40" />
-                                                        <span className="text-xs text-white/40 mt-1">Add Photo</span>
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            multiple
-                                                            onChange={handlePhotoUpload}
-                                                            className="hidden"
-                                                        />
-                                                    </label>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card>
-
-                                <Card>
-                                    <h3 className="text-lg font-semibold text-white mb-4">
-                                        Contact Information
-                                    </h3>
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <Input
-                                                label="First Name"
-                                                placeholder="John"
-                                                value={formData.first_name}
+                                                label="Email *"
+                                                type="email"
+                                                placeholder="you@example.com"
+                                                value={formData.email}
                                                 onChange={(e) =>
-                                                    setFormData((prev) => ({ ...prev, first_name: e.target.value }))
+                                                    setFormData((prev) => ({ ...prev, email: e.target.value }))
                                                 }
+                                                error={formErrors.email}
+                                                required
                                             />
+
                                             <Input
-                                                label="Last Name"
-                                                placeholder="Doe"
-                                                value={formData.last_name}
+                                                label="Phone (optional)"
+                                                type="tel"
+                                                placeholder="(555) 123-4567"
+                                                value={formData.phone}
                                                 onChange={(e) =>
-                                                    setFormData((prev) => ({ ...prev, last_name: e.target.value }))
+                                                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
                                                 }
                                             />
                                         </div>
+                                    </Card>
 
-                                        <Input
-                                            label="Email *"
-                                            type="email"
-                                            placeholder="you@example.com"
-                                            value={formData.email}
-                                            onChange={(e) =>
-                                                setFormData((prev) => ({ ...prev, email: e.target.value }))
-                                            }
-                                            error={formErrors.email}
-                                            required
-                                        />
+                                    {formErrors.submit && (
+                                        <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300">
+                                            {formErrors.submit}
+                                        </div>
+                                    )}
 
-                                        <Input
-                                            label="Phone (optional)"
-                                            type="tel"
-                                            placeholder="(555) 123-4567"
-                                            value={formData.phone}
-                                            onChange={(e) =>
-                                                setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                                            }
-                                        />
-                                    </div>
-                                </Card>
-
-                                {formErrors.submit && (
-                                    <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300">
-                                        {formErrors.submit}
-                                    </div>
-                                )}
-
-                                <Button
-                                    type="submit"
-                                    size="lg"
-                                    className="w-full"
-                                    isLoading={isSubmitting}
-                                    rightIcon={<Send className="w-5 h-5" />}
-                                >
-                                    Submit Request
-                                </Button>
-                            </form>
+                                    {!isBlocked ? (
+                                        <Button
+                                            type="submit"
+                                            size="lg"
+                                            className="w-full"
+                                            isLoading={isSubmitting}
+                                            rightIcon={<Send className="w-5 h-5" />}
+                                        >
+                                            Submit Request
+                                        </Button>
+                                    ) : (
+                                        <div className="p-4 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-center">
+                                            Submission blocked - see notice above
+                                        </div>
+                                    )}
+                                </form>
+                            )}
                         </motion.div>
                     )}
 
