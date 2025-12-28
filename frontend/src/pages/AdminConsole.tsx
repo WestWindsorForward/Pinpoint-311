@@ -149,6 +149,8 @@ export default function AdminConsole() {
             inclusion_list: '', // Township roads (when third party is default)
             third_party_message: '',
             third_party_contacts: [] as { name: string; phone: string; url: string }[],
+            // Custom questions
+            custom_questions: [] as { id: string; label: string; type: string; options: string[]; required: boolean; placeholder: string }[],
         },
     });
 
@@ -360,6 +362,15 @@ export default function AdminConsole() {
                 inclusion_list: Array.isArray(config.inclusion_list) ? config.inclusion_list.join(', ') : '',
                 third_party_message: config.third_party_message || '',
                 third_party_contacts: config.third_party_contacts || [],
+                // Custom questions
+                custom_questions: (config.custom_questions || []).map(q => ({
+                    id: q.id || crypto.randomUUID(),
+                    label: q.label || '',
+                    type: q.type || 'text',
+                    options: q.options || [],
+                    required: q.required || false,
+                    placeholder: q.placeholder || '',
+                })),
             },
         });
         setShowServiceEditModal(true);
@@ -387,6 +398,9 @@ export default function AdminConsole() {
                 config.third_party_message = serviceRouting.routing_config.third_party_message;
                 config.third_party_contacts = serviceRouting.routing_config.third_party_contacts;
             }
+
+            // Always include custom questions
+            config.custom_questions = serviceRouting.routing_config.custom_questions.filter(q => q.label.trim());
 
             await api.updateService(editingService.id, {
                 routing_mode: serviceRouting.routing_mode,
@@ -1876,9 +1890,129 @@ export default function AdminConsole() {
                         </div>
                     )}
 
-                    <div className="flex justify-end gap-3 pt-4">
+                    {/* Custom Questions Builder - Only for township and road_based */}
+                    {serviceRouting.routing_mode !== 'third_party' && (
+                        <div className="space-y-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                            <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-purple-300 flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4" /> Custom Follow-Up Questions
+                                </h4>
+                                <button
+                                    type="button"
+                                    onClick={() => setServiceRouting(p => ({
+                                        ...p,
+                                        routing_config: {
+                                            ...p.routing_config,
+                                            custom_questions: [
+                                                ...p.routing_config.custom_questions,
+                                                { id: crypto.randomUUID(), label: '', type: 'text', options: [], required: false, placeholder: '' }
+                                            ]
+                                        }
+                                    }))}
+                                    className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                                >
+                                    <Plus className="w-4 h-4" /> Add Question
+                                </button>
+                            </div>
+
+                            {serviceRouting.routing_config.custom_questions.length === 0 ? (
+                                <p className="text-sm text-white/40 italic">No custom questions. Add questions to collect additional info from residents.</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {serviceRouting.routing_config.custom_questions.map((q, idx) => (
+                                        <div key={q.id} className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs text-white/40">Question {idx + 1}</span>
+                                                <button type="button" onClick={() => {
+                                                    const newQs = serviceRouting.routing_config.custom_questions.filter((_, i) => i !== idx);
+                                                    setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, custom_questions: newQs } }));
+                                                }} className="p-1 text-red-400 hover:text-red-300"><X className="w-3 h-3" /></button>
+                                            </div>
+
+                                            {/* Question Label */}
+                                            <input
+                                                placeholder="Question text..."
+                                                value={q.label}
+                                                onChange={(e) => {
+                                                    const newQs = [...serviceRouting.routing_config.custom_questions];
+                                                    newQs[idx] = { ...newQs[idx], label: e.target.value };
+                                                    setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, custom_questions: newQs } }));
+                                                }}
+                                                className="w-full h-9 rounded-lg bg-white/10 border border-white/20 text-white px-3 text-sm"
+                                            />
+
+                                            {/* Type and Required Row */}
+                                            <div className="flex gap-2 items-center">
+                                                <select
+                                                    value={q.type}
+                                                    onChange={(e) => {
+                                                        const newQs = [...serviceRouting.routing_config.custom_questions];
+                                                        newQs[idx] = { ...newQs[idx], type: e.target.value };
+                                                        setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, custom_questions: newQs } }));
+                                                    }}
+                                                    className="flex-1 h-9 rounded-lg bg-white/10 border border-white/20 text-white px-2 text-sm"
+                                                >
+                                                    <option value="text">Text (short)</option>
+                                                    <option value="textarea">Text (long)</option>
+                                                    <option value="number">Number</option>
+                                                    <option value="date">Date</option>
+                                                    <option value="yes_no">Yes / No</option>
+                                                    <option value="select">Dropdown</option>
+                                                    <option value="radio">Radio Buttons</option>
+                                                    <option value="checkbox">Checkboxes</option>
+                                                </select>
+                                                <label className="flex items-center gap-2 text-sm text-white/70">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={q.required}
+                                                        onChange={(e) => {
+                                                            const newQs = [...serviceRouting.routing_config.custom_questions];
+                                                            newQs[idx] = { ...newQs[idx], required: e.target.checked };
+                                                            setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, custom_questions: newQs } }));
+                                                        }}
+                                                        className="rounded"
+                                                    />
+                                                    Required
+                                                </label>
+                                            </div>
+
+                                            {/* Options (for select/radio/checkbox) */}
+                                            {['select', 'radio', 'checkbox'].includes(q.type) && (
+                                                <input
+                                                    placeholder="Options (comma-separated): Option A, Option B, Option C"
+                                                    value={q.options?.join(', ') || ''}
+                                                    onChange={(e) => {
+                                                        const newQs = [...serviceRouting.routing_config.custom_questions];
+                                                        newQs[idx] = { ...newQs[idx], options: e.target.value.split(',').map(o => o.trim()) };
+                                                        setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, custom_questions: newQs } }));
+                                                    }}
+                                                    className="w-full h-9 rounded-lg bg-white/10 border border-white/20 text-white px-3 text-sm"
+                                                />
+                                            )}
+
+                                            {/* Placeholder (for text types) */}
+                                            {['text', 'textarea', 'number'].includes(q.type) && (
+                                                <input
+                                                    placeholder="Placeholder text (optional)"
+                                                    value={q.placeholder}
+                                                    onChange={(e) => {
+                                                        const newQs = [...serviceRouting.routing_config.custom_questions];
+                                                        newQs[idx] = { ...newQs[idx], placeholder: e.target.value };
+                                                        setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, custom_questions: newQs } }));
+                                                    }}
+                                                    className="w-full h-9 rounded-lg bg-white/10 border border-white/20 text-white/60 px-3 text-sm"
+                                                />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
                         <Button variant="ghost" onClick={() => setShowServiceEditModal(false)}>Cancel</Button>
-                        <Button type="submit">Save Routing Config</Button>
+                        <Button type="submit">Save Configuration</Button>
                     </div>
                 </form>
             </Modal>

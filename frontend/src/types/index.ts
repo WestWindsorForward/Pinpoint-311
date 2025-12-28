@@ -28,6 +28,16 @@ export interface Department {
     is_active: boolean;
 }
 
+// Custom Question types
+export interface CustomQuestion {
+    id: string;           // UUID for tracking
+    label: string;        // Question text
+    type: 'text' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'number' | 'date' | 'yes_no';
+    options?: string[];   // For select/radio/checkbox types
+    required: boolean;
+    placeholder?: string;
+}
+
 // Service types
 export interface ServiceDefinition {
     id: number;
@@ -51,6 +61,8 @@ export interface ServiceDefinition {
         inclusion_list?: string[];
         third_party_message?: string;
         third_party_contacts?: { name: string; phone: string; url: string }[];
+        // Custom questions (applies to all modes)
+        custom_questions?: CustomQuestion[];
     };
     assigned_department_id?: number;
     assigned_department?: Department;

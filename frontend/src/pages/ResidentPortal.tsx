@@ -66,6 +66,9 @@ export default function ResidentPortal() {
     const [blockMessage, setBlockMessage] = useState('');
     const [blockContacts, setBlockContacts] = useState<{ name: string; phone: string; url: string }[]>([]);
 
+    // Custom question answers
+    const [customAnswers, setCustomAnswers] = useState<Record<string, string | string[]>>({});
+
     // Photo upload state
     const [photos, setPhotos] = useState<File[]>([]);
     const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
@@ -219,6 +222,8 @@ export default function ResidentPortal() {
         setIsBlocked(false);
         setBlockMessage('');
         setBlockContacts([]);
+        // Clear custom answers
+        setCustomAnswers({});
     };
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -558,6 +563,149 @@ export default function ResidentPortal() {
                                             </div>
                                         </div>
                                     </Card>
+
+                                    {/* Custom Questions - Dynamic */}
+                                    {selectedService.routing_config?.custom_questions &&
+                                        selectedService.routing_config.custom_questions.length > 0 && (
+                                            <Card>
+                                                <h3 className="text-lg font-semibold text-white mb-4">
+                                                    Additional Information
+                                                </h3>
+                                                <div className="space-y-4">
+                                                    {selectedService.routing_config.custom_questions.map((q) => (
+                                                        <div key={q.id} className="space-y-2">
+                                                            <label className="block text-sm font-medium text-white/70">
+                                                                {q.label} {q.required && <span className="text-red-400">*</span>}
+                                                            </label>
+
+                                                            {/* Text Input */}
+                                                            {q.type === 'text' && (
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder={q.placeholder || ''}
+                                                                    value={(customAnswers[q.id] as string) || ''}
+                                                                    onChange={(e) => setCustomAnswers(p => ({ ...p, [q.id]: e.target.value }))}
+                                                                    className="w-full h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
+                                                                    required={q.required}
+                                                                />
+                                                            )}
+
+                                                            {/* Textarea */}
+                                                            {q.type === 'textarea' && (
+                                                                <textarea
+                                                                    rows={3}
+                                                                    placeholder={q.placeholder || ''}
+                                                                    value={(customAnswers[q.id] as string) || ''}
+                                                                    onChange={(e) => setCustomAnswers(p => ({ ...p, [q.id]: e.target.value }))}
+                                                                    className="w-full rounded-lg bg-white/10 border border-white/20 text-white px-3 py-2"
+                                                                    required={q.required}
+                                                                />
+                                                            )}
+
+                                                            {/* Number */}
+                                                            {q.type === 'number' && (
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder={q.placeholder || ''}
+                                                                    value={(customAnswers[q.id] as string) || ''}
+                                                                    onChange={(e) => setCustomAnswers(p => ({ ...p, [q.id]: e.target.value }))}
+                                                                    className="w-full h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
+                                                                    required={q.required}
+                                                                />
+                                                            )}
+
+                                                            {/* Date */}
+                                                            {q.type === 'date' && (
+                                                                <input
+                                                                    type="date"
+                                                                    value={(customAnswers[q.id] as string) || ''}
+                                                                    onChange={(e) => setCustomAnswers(p => ({ ...p, [q.id]: e.target.value }))}
+                                                                    className="w-full h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
+                                                                    required={q.required}
+                                                                />
+                                                            )}
+
+                                                            {/* Yes/No */}
+                                                            {q.type === 'yes_no' && (
+                                                                <div className="flex gap-3">
+                                                                    {['Yes', 'No'].map(opt => (
+                                                                        <button
+                                                                            key={opt}
+                                                                            type="button"
+                                                                            onClick={() => setCustomAnswers(p => ({ ...p, [q.id]: opt }))}
+                                                                            className={`flex-1 py-2 rounded-lg border transition-colors ${customAnswers[q.id] === opt
+                                                                                ? 'bg-primary-500/30 border-primary-500 text-white'
+                                                                                : 'bg-white/5 border-white/20 text-white/70 hover:border-white/40'
+                                                                                }`}
+                                                                        >
+                                                                            {opt}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Select Dropdown */}
+                                                            {q.type === 'select' && (
+                                                                <select
+                                                                    value={(customAnswers[q.id] as string) || ''}
+                                                                    onChange={(e) => setCustomAnswers(p => ({ ...p, [q.id]: e.target.value }))}
+                                                                    className="w-full h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
+                                                                    required={q.required}
+                                                                >
+                                                                    <option value="">Select...</option>
+                                                                    {q.options?.map(opt => (
+                                                                        <option key={opt} value={opt}>{opt}</option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
+
+                                                            {/* Radio Buttons */}
+                                                            {q.type === 'radio' && (
+                                                                <div className="space-y-2">
+                                                                    {q.options?.map(opt => (
+                                                                        <label key={opt} className="flex items-center gap-3 text-white/80 cursor-pointer">
+                                                                            <input
+                                                                                type="radio"
+                                                                                name={q.id}
+                                                                                value={opt}
+                                                                                checked={customAnswers[q.id] === opt}
+                                                                                onChange={(e) => setCustomAnswers(p => ({ ...p, [q.id]: e.target.value }))}
+                                                                                className="w-4 h-4"
+                                                                            />
+                                                                            {opt}
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Checkboxes */}
+                                                            {q.type === 'checkbox' && (
+                                                                <div className="space-y-2">
+                                                                    {q.options?.map(opt => (
+                                                                        <label key={opt} className="flex items-center gap-3 text-white/80 cursor-pointer">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                value={opt}
+                                                                                checked={(customAnswers[q.id] as string[] || []).includes(opt)}
+                                                                                onChange={(e) => {
+                                                                                    const current = (customAnswers[q.id] as string[]) || [];
+                                                                                    const updated = e.target.checked
+                                                                                        ? [...current, opt]
+                                                                                        : current.filter(v => v !== opt);
+                                                                                    setCustomAnswers(p => ({ ...p, [q.id]: updated }));
+                                                                                }}
+                                                                                className="w-4 h-4 rounded"
+                                                                            />
+                                                                            {opt}
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </Card>
+                                        )}
 
                                     <Card>
                                         <h3 className="text-lg font-semibold text-white mb-4">
