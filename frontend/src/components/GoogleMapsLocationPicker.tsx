@@ -104,7 +104,7 @@ export default function GoogleMapsLocationPicker({
         if (markerRef.current) {
             markerRef.current.setPosition(positionObj);
         } else {
-            // Create a custom marker with a visible pin icon
+            // Create a custom marker with a polished pin icon
             markerRef.current = new window.google.maps.Marker({
                 position: positionObj,
                 map: mapRef.current,
@@ -112,19 +112,24 @@ export default function GoogleMapsLocationPicker({
                 animation: window.google.maps.Animation.DROP,
                 icon: {
                     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="50" viewBox="0 0 40 50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="60" viewBox="0 0 48 60">
                             <defs>
-                                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                                    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
+                                <linearGradient id="pinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#818cf8"/>
+                                    <stop offset="100%" style="stop-color:#4f46e5"/>
+                                </linearGradient>
+                                <filter id="shadow" x="-30%" y="-10%" width="160%" height="140%">
+                                    <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.35"/>
                                 </filter>
                             </defs>
-                            <path d="M20 0 C8.954 0 0 8.954 0 20 C0 35 20 50 20 50 C20 50 40 35 40 20 C40 8.954 31.046 0 20 0 Z" 
-                                  fill="#6366f1" filter="url(#shadow)"/>
-                            <circle cx="20" cy="18" r="8" fill="white"/>
+                            <path d="M24 0 C10.745 0 0 10.745 0 24 C0 42 24 60 24 60 C24 60 48 42 48 24 C48 10.745 37.255 0 24 0 Z" 
+                                  fill="url(#pinGradient)" filter="url(#shadow)"/>
+                            <circle cx="24" cy="22" r="10" fill="white" opacity="0.95"/>
+                            <circle cx="24" cy="22" r="5" fill="#4f46e5"/>
                         </svg>
                     `),
-                    scaledSize: new window.google.maps.Size(40, 50),
-                    anchor: new window.google.maps.Point(20, 50),
+                    scaledSize: new window.google.maps.Size(48, 60),
+                    anchor: new window.google.maps.Point(24, 60),
                 },
             });
 
@@ -368,28 +373,37 @@ export default function GoogleMapsLocationPicker({
                     className="w-full h-72 md:h-96"
                     style={{ minHeight: '288px' }}
                 />
-                {/* Instructions overlay */}
+                {/* Instructions overlay - only when no location selected */}
                 {!value?.lat && !value?.lng && !isLoading && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="bg-black/60 backdrop-blur-sm rounded-xl px-4 py-3 text-center">
-                            <MapPin className="w-6 h-6 text-primary-400 mx-auto mb-2" />
-                            <p className="text-sm text-white/80">
-                                Search for an address or click on the map
+                        <div className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-md rounded-2xl px-6 py-5 text-center border border-white/10 shadow-2xl max-w-xs mx-4">
+                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary-500/20 flex items-center justify-center">
+                                <MapPin className="w-6 h-6 text-primary-400" />
+                            </div>
+                            <p className="text-base font-medium text-white mb-1">
+                                Select a Location
+                            </p>
+                            <p className="text-sm text-white/60">
+                                Type an address above or tap anywhere on the map to place a pin
                             </p>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Selected location info */}
+            {/* Selected location info - mobile responsive */}
             {value?.lat && value?.lng && (
-                <div className="flex items-center justify-center gap-2 text-sm text-white/50 bg-white/5 rounded-xl px-4 py-2">
-                    <MapPin className="w-4 h-4 text-primary-400" />
-                    <span>
-                        {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 text-sm bg-white/5 rounded-xl px-4 py-3 border border-white/10">
+                    <div className="flex items-center gap-2 text-white/60">
+                        <MapPin className="w-4 h-4 text-primary-400 flex-shrink-0" />
+                        <span className="font-mono text-xs sm:text-sm">
+                            {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
+                        </span>
+                    </div>
+                    <span className="hidden sm:block text-white/20">•</span>
+                    <span className="text-primary-400 text-xs sm:text-sm font-medium">
+                        📍 Drag the pin to fine-tune
                     </span>
-                    <span className="text-white/30">•</span>
-                    <span className="text-primary-400">Drag pin to adjust</span>
                 </div>
             )}
         </div>
