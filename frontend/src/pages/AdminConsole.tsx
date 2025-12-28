@@ -1571,14 +1571,82 @@ export default function AdminConsole() {
 
                                             {/* Current Boundary Status */}
                                             {townshipBoundary && (
-                                                <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30">
-                                                    <p className="text-sm text-green-300 mb-2">✓ Township Boundary Configured</p>
-                                                    <p className="text-xs text-white/60">
-                                                        Boundary data is saved and will be displayed on the resident portal map.
-                                                    </p>
+                                                <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 mb-4">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="text-sm text-green-300 mb-2">✓ Township Boundary Configured</p>
+                                                            <p className="text-xs text-white/60">
+                                                                Boundary data is saved and will be displayed on the resident portal map.
+                                                            </p>
+                                                        </div>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={async () => {
+                                                                if (confirm('Are you sure you want to clear the township boundary?')) {
+                                                                    try {
+                                                                        await api.saveTownshipBoundary({});
+                                                                        setTownshipBoundary(null);
+                                                                        setSaveMessage('Boundary cleared');
+                                                                        setTimeout(() => setSaveMessage(null), 3000);
+                                                                    } catch (err) {
+                                                                        alert('Failed to clear boundary');
+                                                                    }
+                                                                }
+                                                            }}
+                                                        >
+                                                            Clear
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             )}
+
+                                            {/* Divider */}
+                                            <div className="flex items-center gap-4 my-6">
+                                                <div className="flex-1 h-px bg-white/10"></div>
+                                                <span className="text-sm text-white/40">or upload existing GeoJSON</span>
+                                                <div className="flex-1 h-px bg-white/10"></div>
+                                            </div>
+
+                                            {/* GeoJSON Upload */}
+                                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                                <p className="text-sm text-white/70 mb-3">
+                                                    Upload a GeoJSON file containing your township boundary
+                                                </p>
+                                                <input
+                                                    type="file"
+                                                    accept=".geojson,.json"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
+
+                                                        try {
+                                                            const text = await file.text();
+                                                            const geojson = JSON.parse(text);
+
+                                                            // Validate it's a valid GeoJSON
+                                                            if (!geojson.type) {
+                                                                throw new Error('Invalid GeoJSON format');
+                                                            }
+
+                                                            await api.saveTownshipBoundary(geojson, file.name);
+                                                            setTownshipBoundary(geojson);
+                                                            setSelectedOsmResult(null);
+                                                            setSaveMessage('GeoJSON boundary uploaded successfully!');
+                                                            setTimeout(() => setSaveMessage(null), 3000);
+                                                        } catch (err) {
+                                                            console.error('Failed to upload GeoJSON:', err);
+                                                            alert('Failed to upload GeoJSON. Make sure the file is valid JSON.');
+                                                        }
+
+                                                        // Reset file input
+                                                        e.target.value = '';
+                                                    }}
+                                                    className="block w-full text-sm text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-500 file:text-white hover:file:bg-primary-600 file:cursor-pointer"
+                                                />
+                                            </div>
                                         </Card>
+
                                     </>
                                 )}
                             </div>

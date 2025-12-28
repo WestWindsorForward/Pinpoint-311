@@ -15,9 +15,75 @@ interface GoogleMapsLocationPickerProps {
     defaultZoom?: number;
     value?: { address: string; lat: number | null; lng: number | null };
     onChange: (location: { address: string; lat: number | null; lng: number | null }) => void;
+    onOutOfBounds?: () => void; // Called when pin is placed outside boundary
     placeholder?: string;
     className?: string;
 }
+
+// Point-in-polygon check using ray casting algorithm
+const isPointInPolygon = (lat: number, lng: number, polygon: number[][]): boolean => {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const [xi, yi] = polygon[i];
+        const [xj, yj] = polygon[j];
+
+        if (((yi > lat) !== (yj > lat)) &&
+            (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+        }
+    }
+    return inside;
+};
+
+// Check if a point is inside a GeoJSON geometry
+const isPointInBoundary = (lat: number, lng: number, geojson: any): boolean => {
+    if (!geojson) return true; // No boundary = always valid
+
+    try {
+        // Handle different GeoJSON structures
+        let polygons: number[][][] = [];
+
+        if (geojson.type === 'FeatureCollection') {
+            for (const feature of geojson.features || []) {
+                if (feature.geometry?.type === 'Polygon') {
+                    polygons.push(feature.geometry.coordinates[0]);
+                } else if (feature.geometry?.type === 'MultiPolygon') {
+                    for (const poly of feature.geometry.coordinates) {
+                        polygons.push(poly[0]);
+                    }
+                }
+            }
+        } else if (geojson.type === 'Feature') {
+            if (geojson.geometry?.type === 'Polygon') {
+                polygons.push(geojson.geometry.coordinates[0]);
+            } else if (geojson.geometry?.type === 'MultiPolygon') {
+                for (const poly of geojson.geometry.coordinates) {
+                    polygons.push(poly[0]);
+                }
+            }
+        } else if (geojson.type === 'Polygon') {
+            polygons.push(geojson.coordinates[0]);
+        } else if (geojson.type === 'MultiPolygon') {
+            for (const poly of geojson.coordinates) {
+                polygons.push(poly[0]);
+            }
+        }
+
+        if (polygons.length === 0) return true;
+
+        // Check if point is in any of the polygons
+        // GeoJSON uses [lng, lat] order
+        for (const polygon of polygons) {
+            if (isPointInPolygon(lng, lat, polygon)) {
+                return true;
+            }
+        }
+        return false;
+    } catch (e) {
+        console.warn('Failed to check boundary:', e);
+        return true; // On error, allow the point
+    }
+};
 
 
 // Script loading state to prevent multiple loads
@@ -61,6 +127,7 @@ export default function GoogleMapsLocationPicker({
     defaultZoom = 17,
     value,
     onChange,
+    onOutOfBounds,
     placeholder = 'Search for an address...',
     className = '',
 }: GoogleMapsLocationPickerProps) {
@@ -75,6 +142,8 @@ export default function GoogleMapsLocationPicker({
     const [error, setError] = useState<string | null>(null);
     const [inputValue, setInputValue] = useState(value?.address || '');
     const [isLocating, setIsLocating] = useState(false);
+    const [isOutOfBounds, setIsOutOfBounds] = useState(false);
+
 
     // Sync input value with external value ONLY when address changes from parent
     useEffect(() => {
@@ -104,6 +173,14 @@ export default function GoogleMapsLocationPicker({
         const positionObj = position instanceof window.google.maps.LatLng
             ? { lat: position.lat(), lng: position.lng() }
             : position;
+
+        // Check if position is within boundary
+        const inBounds = isPointInBoundary(positionObj.lat, positionObj.lng, townshipBoundary);
+        setIsOutOfBounds(!inBounds);
+
+        if (!inBounds && onOutOfBounds) {
+            onOutOfBounds();
+        }
 
         if (markerRef.current) {
             markerRef.current.setPosition(positionObj);
@@ -136,6 +213,13 @@ export default function GoogleMapsLocationPicker({
             markerRef.current.addListener('dragend', async () => {
                 const pos = markerRef.current?.getPosition();
                 if (pos) {
+                    const inBounds = isPointInBoundary(pos.lat(), pos.lng(), townshipBoundary);
+                    setIsOutOfBounds(!inBounds);
+
+                    if (!inBounds && onOutOfBounds) {
+                        onOutOfBounds();
+                    }
+
                     const address = await reverseGeocode(pos.lat(), pos.lng());
                     setInputValue(address);
                     onChange({ address, lat: pos.lat(), lng: pos.lng() });
@@ -145,7 +229,8 @@ export default function GoogleMapsLocationPicker({
 
         // Center map on marker
         mapRef.current.panTo(positionObj);
-    }, [onChange, reverseGeocode]);
+    }, [onChange, reverseGeocode, townshipBoundary, onOutOfBounds]);
+
 
     // Initialize Google Maps
     useEffect(() => {
@@ -191,22 +276,71 @@ export default function GoogleMapsLocationPicker({
                 // Add township boundary overlay if GeoJSON is provided
                 if (townshipBoundary) {
                     try {
-                        // Add the GeoJSON boundary to the map's data layer
-                        map.data.addGeoJson(townshipBoundary);
+                        // Extract coordinates from GeoJSON for spotlight effect
+                        let boundaryCoords: google.maps.LatLngLiteral[] = [];
+                        const geojson = townshipBoundary as any;
 
-                        // Style the boundary with semi-transparent fill and stroke
-                        map.data.setStyle({
-                            fillColor: '#6366f1',
-                            fillOpacity: 0.15,
-                            strokeColor: '#6366f1',
-                            strokeWeight: 3,
-                            strokeOpacity: 0.8,
-                            clickable: false,
-                        });
+                        // Get first polygon coordinates from GeoJSON
+                        let coords: number[][] = [];
+                        if (geojson.type === 'FeatureCollection' && geojson.features?.[0]) {
+                            const geom = geojson.features[0].geometry;
+                            if (geom?.type === 'Polygon') {
+                                coords = geom.coordinates[0];
+                            } else if (geom?.type === 'MultiPolygon') {
+                                coords = geom.coordinates[0][0];
+                            }
+                        } else if (geojson.type === 'Feature') {
+                            if (geojson.geometry?.type === 'Polygon') {
+                                coords = geojson.geometry.coordinates[0];
+                            } else if (geojson.geometry?.type === 'MultiPolygon') {
+                                coords = geojson.geometry.coordinates[0][0];
+                            }
+                        } else if (geojson.type === 'Polygon') {
+                            coords = geojson.coordinates[0];
+                        } else if (geojson.type === 'MultiPolygon') {
+                            coords = geojson.coordinates[0][0];
+                        }
+
+                        // Convert GeoJSON coords [lng, lat] to Google Maps format {lat, lng}
+                        boundaryCoords = coords.map(([lng, lat]) => ({ lat, lng }));
+
+                        if (boundaryCoords.length > 0) {
+                            // Create outer boundary (entire world)
+                            const worldBounds: google.maps.LatLngLiteral[] = [
+                                { lat: -85, lng: -180 },
+                                { lat: 85, lng: -180 },
+                                { lat: 85, lng: 180 },
+                                { lat: -85, lng: 180 },
+                            ];
+
+                            // Create polygon with hole - dark overlay outside boundary
+                            new window.google.maps.Polygon({
+                                paths: [worldBounds, boundaryCoords],
+                                fillColor: '#000000',
+                                fillOpacity: 0.35,
+                                strokeColor: '#6366f1',
+                                strokeWeight: 3,
+                                strokeOpacity: 0.8,
+                                map: map,
+                                clickable: false,
+                            });
+                        } else {
+                            // Fallback: just show boundary line without spotlight
+                            map.data.addGeoJson(townshipBoundary);
+                            map.data.setStyle({
+                                fillColor: 'transparent',
+                                fillOpacity: 0,
+                                strokeColor: '#6366f1',
+                                strokeWeight: 3,
+                                strokeOpacity: 0.8,
+                                clickable: false,
+                            });
+                        }
                     } catch (e) {
                         console.warn('Failed to add township boundary:', e);
                     }
                 }
+
 
 
                 // Create autocomplete
@@ -397,6 +531,16 @@ export default function GoogleMapsLocationPicker({
                 />
             </div>
 
+            {/* Out of bounds warning */}
+            {isOutOfBounds && (
+                <div className="flex items-center gap-2 text-sm bg-red-500/10 rounded-xl px-4 py-3 border border-red-500/30">
+                    <span className="text-red-400">⚠️</span>
+                    <span className="text-red-300">
+                        This location is outside the township boundary. Please select a location within the jurisdiction.
+                    </span>
+                </div>
+            )}
+
             {/* Instructions or Selected location info - shown BELOW the map */}
             {!value?.lat && !value?.lng && !isLoading ? (
                 <div className="flex items-center justify-center gap-2 text-sm bg-white/5 rounded-xl px-4 py-3 border border-white/10">
@@ -417,6 +561,7 @@ export default function GoogleMapsLocationPicker({
                     </span>
                 </div>
             ) : null}
+
         </div>
     );
 }

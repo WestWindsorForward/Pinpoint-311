@@ -82,6 +82,8 @@ export default function ResidentPortal() {
     });
     const [mapsApiKey, setMapsApiKey] = useState<string | null>(null);
     const [townshipBoundary, setTownshipBoundary] = useState<object | null>(null);
+    const [isLocationOutOfBounds, setIsLocationOutOfBounds] = useState(false);
+
 
     // Load Maps API key and configuration
     useEffect(() => {
@@ -507,9 +509,10 @@ export default function ResidentPortal() {
                                                         apiKey={mapsApiKey}
                                                         townshipBoundary={townshipBoundary}
                                                         value={location}
-
+                                                        onOutOfBounds={() => setIsLocationOutOfBounds(true)}
                                                         onChange={(newLocation) => {
                                                             setLocation(newLocation);
+                                                            setIsLocationOutOfBounds(false); // Reset when location changes
                                                             // Save both address AND coordinates
                                                             setFormData((prev) => ({
                                                                 ...prev,
@@ -524,6 +527,7 @@ export default function ResidentPortal() {
                                                         }}
                                                         placeholder="Search for an address or click on the map..."
                                                     />
+
 
                                                 </div>
                                             ) : (
@@ -788,7 +792,7 @@ export default function ResidentPortal() {
                                         </div>
                                     )}
 
-                                    {!isBlocked ? (
+                                    {!isBlocked && !isLocationOutOfBounds ? (
                                         <Button
                                             type="submit"
                                             size="lg"
@@ -798,11 +802,16 @@ export default function ResidentPortal() {
                                         >
                                             Submit Request
                                         </Button>
+                                    ) : isLocationOutOfBounds ? (
+                                        <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-center">
+                                            <strong>Cannot submit:</strong> The selected location is outside the township boundary. Please choose a location within the jurisdiction.
+                                        </div>
                                     ) : (
                                         <div className="p-4 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-center">
                                             Submission blocked - see notice above
                                         </div>
                                     )}
+
                                 </form>
                             )}
                         </motion.div>
