@@ -1741,29 +1741,34 @@ export default function AdminConsole() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-white/70">Contact Info (Name / Phone / URL)</label>
+                            <div className="space-y-3">
+                                <label className="block text-sm font-medium text-white/70">Contact Information</label>
                                 {serviceRouting.routing_config.contacts.map((contact, idx) => (
-                                    <div key={idx} className="flex gap-2">
-                                        <input placeholder="Name" value={contact.name} onChange={(e) => {
+                                    <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-white/40">Contact {idx + 1}</span>
+                                            <button type="button" onClick={() => {
+                                                const c = serviceRouting.routing_config.contacts.filter((_, i) => i !== idx);
+                                                setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, contacts: c } }));
+                                            }} className="p-1 text-red-400 hover:text-red-300"><X className="w-3 h-3" /></button>
+                                        </div>
+                                        <input placeholder="Name (e.g., Mercer County Roads)" value={contact.name} onChange={(e) => {
                                             const c = [...serviceRouting.routing_config.contacts];
                                             c[idx] = { ...c[idx], name: e.target.value };
                                             setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, contacts: c } }));
-                                        }} className="flex-1 h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3" />
-                                        <input placeholder="Phone" value={contact.phone} onChange={(e) => {
-                                            const c = [...serviceRouting.routing_config.contacts];
-                                            c[idx] = { ...c[idx], phone: e.target.value };
-                                            setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, contacts: c } }));
-                                        }} className="flex-1 h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3" />
-                                        <input placeholder="URL" value={contact.url} onChange={(e) => {
-                                            const c = [...serviceRouting.routing_config.contacts];
-                                            c[idx] = { ...c[idx], url: e.target.value };
-                                            setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, contacts: c } }));
-                                        }} className="flex-1 h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3" />
-                                        <button type="button" onClick={() => {
-                                            const c = serviceRouting.routing_config.contacts.filter((_, i) => i !== idx);
-                                            setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, contacts: c } }));
-                                        }} className="p-2 text-red-400 hover:text-red-300"><X className="w-4 h-4" /></button>
+                                        }} className="w-full h-9 rounded-lg bg-white/10 border border-white/20 text-white px-3 text-sm" />
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input placeholder="Phone" value={contact.phone} onChange={(e) => {
+                                                const c = [...serviceRouting.routing_config.contacts];
+                                                c[idx] = { ...c[idx], phone: e.target.value };
+                                                setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, contacts: c } }));
+                                            }} className="w-full h-9 rounded-lg bg-white/10 border border-white/20 text-white px-3 text-sm" />
+                                            <input placeholder="Website URL" value={contact.url} onChange={(e) => {
+                                                const c = [...serviceRouting.routing_config.contacts];
+                                                c[idx] = { ...c[idx], url: e.target.value };
+                                                setServiceRouting(p => ({ ...p, routing_config: { ...p.routing_config, contacts: c } }));
+                                            }} className="w-full h-9 rounded-lg bg-white/10 border border-white/20 text-white px-3 text-sm" />
+                                        </div>
                                     </div>
                                 ))}
                                 <button type="button" onClick={() => setServiceRouting(p => ({
