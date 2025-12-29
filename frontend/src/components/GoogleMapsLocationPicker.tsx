@@ -418,23 +418,67 @@ export default function GoogleMapsLocationPicker({
                                         map: map,
                                         icon: {
                                             path: window.google.maps.SymbolPath.CIRCLE,
-                                            scale: 8,
+                                            scale: 10,
                                             fillColor: layer.fill_color,
-                                            fillOpacity: 0.9,
-                                            strokeColor: layer.stroke_color,
-                                            strokeWeight: layer.stroke_width,
+                                            fillOpacity: 0.95,
+                                            strokeColor: '#ffffff',
+                                            strokeWeight: 2,
                                         },
                                         title: props.name || props.asset_id || layer.name,
                                     });
 
-                                    // Add click handler to show asset info
+                                    // Add click handler to show premium styled asset info
                                     marker.addListener('click', () => {
+                                        const assetName = props.name || layer.name;
+                                        const assetId = props.asset_id || '';
+                                        const assetType = props.asset_type ? props.asset_type.replace(/_/g, ' ') : '';
+
                                         const infoWindow = new window.google.maps.InfoWindow({
-                                            content: `<div style="color: #333; padding: 8px;">
-                                                <strong>${props.name || layer.name}</strong>
-                                                ${props.asset_id ? `<br><small>ID: ${props.asset_id}</small>` : ''}
-                                                ${props.asset_type ? `<br><small>Type: ${props.asset_type}</small>` : ''}
-                                            </div>`,
+                                            content: `
+                                                <div style="
+                                                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                                    padding: 12px 16px;
+                                                    min-width: 180px;
+                                                ">
+                                                    <div style="
+                                                        font-size: 16px;
+                                                        font-weight: 600;
+                                                        color: #1e293b;
+                                                        margin-bottom: 8px;
+                                                    ">${assetName}</div>
+                                                    ${assetId ? `
+                                                        <div style="
+                                                            display: flex;
+                                                            align-items: center;
+                                                            gap: 6px;
+                                                            margin-bottom: 4px;
+                                                        ">
+                                                            <span style="color: #64748b; font-size: 12px;">ID:</span>
+                                                            <span style="
+                                                                font-family: ui-monospace, monospace;
+                                                                font-size: 13px;
+                                                                color: #334155;
+                                                                background: #f1f5f9;
+                                                                padding: 2px 8px;
+                                                                border-radius: 4px;
+                                                            ">${assetId}</span>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${assetType ? `
+                                                        <div style="
+                                                            display: inline-block;
+                                                            font-size: 11px;
+                                                            text-transform: uppercase;
+                                                            letter-spacing: 0.5px;
+                                                            color: white;
+                                                            background: ${layer.fill_color};
+                                                            padding: 3px 10px;
+                                                            border-radius: 12px;
+                                                            margin-top: 6px;
+                                                        ">${assetType}</div>
+                                                    ` : ''}
+                                                </div>
+                                            `,
                                         });
                                         infoWindow.open(map, marker);
                                     });

@@ -208,6 +208,7 @@ export default function AdminConsole() {
         fill_opacity: 0.3,
         stroke_width: 2,
         show_on_resident_portal: true,
+        service_codes: [] as string[],
         geojson: null as object | null,
     });
 
@@ -1731,6 +1732,7 @@ export default function AdminConsole() {
                                                             fill_opacity: 0.3,
                                                             stroke_width: 2,
                                                             show_on_resident_portal: true,
+                                                            service_codes: [],
                                                             geojson: null,
                                                         });
                                                         setShowLayerModal(true);
@@ -1811,6 +1813,7 @@ export default function AdminConsole() {
                                                                             fill_opacity: layer.fill_opacity,
                                                                             stroke_width: layer.stroke_width,
                                                                             show_on_resident_portal: layer.show_on_resident_portal,
+                                                                            service_codes: layer.service_codes || [],
                                                                             geojson: layer.geojson,
                                                                         });
                                                                         setShowLayerModal(true);
@@ -2420,6 +2423,7 @@ export default function AdminConsole() {
                                     fill_opacity: newLayer.fill_opacity,
                                     stroke_width: newLayer.stroke_width,
                                     show_on_resident_portal: newLayer.show_on_resident_portal,
+                                    service_codes: newLayer.service_codes,
                                     geojson: newLayer.geojson,
                                 });
                                 setSaveMessage('Layer updated!');
@@ -2432,6 +2436,7 @@ export default function AdminConsole() {
                                     fill_opacity: newLayer.fill_opacity,
                                     stroke_width: newLayer.stroke_width,
                                     show_on_resident_portal: newLayer.show_on_resident_portal,
+                                    service_codes: newLayer.service_codes,
                                     geojson: newLayer.geojson,
                                 });
                                 setSaveMessage('Layer created!');
@@ -2552,6 +2557,47 @@ export default function AdminConsole() {
                         />
                         {newLayer.geojson && (
                             <p className="text-xs text-green-400 mt-1">✓ GeoJSON loaded</p>
+                        )}
+                    </div>
+
+                    {/* Category selector */}
+                    <div>
+                        <label className="block text-sm font-medium text-white/70 mb-2">
+                            Apply to Categories
+                            <span className="text-white/40 font-normal ml-2">(leave empty for all)</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 rounded-lg bg-white/5 border border-white/10">
+                            {services.map((service) => (
+                                <label
+                                    key={service.service_code}
+                                    className="flex items-center gap-2 text-sm text-white/70 hover:text-white cursor-pointer p-2 rounded hover:bg-white/5"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={newLayer.service_codes.includes(service.service_code)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setNewLayer(p => ({
+                                                    ...p,
+                                                    service_codes: [...p.service_codes, service.service_code]
+                                                }));
+                                            } else {
+                                                setNewLayer(p => ({
+                                                    ...p,
+                                                    service_codes: p.service_codes.filter(c => c !== service.service_code)
+                                                }));
+                                            }
+                                        }}
+                                        className="rounded"
+                                    />
+                                    {service.service_name}
+                                </label>
+                            ))}
+                        </div>
+                        {newLayer.service_codes.length > 0 && (
+                            <p className="text-xs text-primary-400 mt-1">
+                                Layer will show only for {newLayer.service_codes.length} selected {newLayer.service_codes.length === 1 ? 'category' : 'categories'}
+                            </p>
                         )}
                     </div>
 

@@ -355,6 +355,7 @@ class ApiClient {
         fill_opacity?: number;
         stroke_width?: number;
         show_on_resident_portal?: boolean;
+        service_codes?: string[];
         geojson: object;
     }): Promise<MapLayer> {
         return this.request('/map-layers/', {
@@ -372,6 +373,7 @@ class ApiClient {
         stroke_width?: number;
         is_active?: boolean;
         show_on_resident_portal?: boolean;
+        service_codes?: string[];
         geojson?: object;
     }): Promise<MapLayer> {
         return this.request(`/map-layers/${layerId}`, {

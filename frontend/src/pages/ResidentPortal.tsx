@@ -18,6 +18,8 @@ import {
     Sparkles,
     Camera,
     X,
+    Phone,
+    ExternalLink,
 } from 'lucide-react';
 import { Button, Input, Textarea, Card } from '../components/ui';
 import GoogleMapsLocationPicker from '../components/GoogleMapsLocationPicker';
@@ -530,6 +532,59 @@ export default function ResidentPortal() {
                                     <p className="text-sm text-white/50">{selectedService.description}</p>
                                 </div>
                             </div>
+
+                            {/* Third-Party Service Blocking Notice - shown when entire service is third-party */}
+                            {isBlocked && selectedService.routing_mode === 'third_party' && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="p-6 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30"
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                                            <AlertCircle className="w-6 h-6 text-amber-400" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-lg font-semibold text-amber-300 mb-2">
+                                                Third-Party Service
+                                            </h3>
+                                            <p className="text-white/70 mb-4">
+                                                {blockMessage}
+                                            </p>
+
+                                            {blockContacts.length > 0 && (
+                                                <div className="space-y-3 p-4 rounded-xl bg-white/5">
+                                                    <p className="text-sm text-white/50 font-medium">Please contact:</p>
+                                                    {blockContacts.map((contact, idx) => (
+                                                        <div key={idx} className="flex flex-wrap gap-4 text-sm">
+                                                            {contact.name && (
+                                                                <span className="text-white font-semibold">{contact.name}</span>
+                                                            )}
+                                                            {contact.phone && (
+                                                                <a href={`tel:${contact.phone}`} className="inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 font-medium">
+                                                                    <Phone className="w-4 h-4" />
+                                                                    {contact.phone}
+                                                                </a>
+                                                            )}
+                                                            {contact.url && (
+                                                                <a
+                                                                    href={contact.url.startsWith('http') ? contact.url : `https://${contact.url}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 font-medium underline"
+                                                                >
+                                                                    <ExternalLink className="w-4 h-4" />
+                                                                    Visit Website
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
 
                             {/* Form - only show if NOT blocked OR if road-based (need address first) */}
                             {(!isBlocked || selectedService.routing_mode === 'road_based') && (
