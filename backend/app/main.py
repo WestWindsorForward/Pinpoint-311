@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api import auth, users, departments, services, system, open311, gis
+from app.api import auth, users, departments, services, system, open311, gis, map_layers
 from app.db.init_db import seed_database
 
 
@@ -42,6 +42,8 @@ app.include_router(services.router, prefix="/api/services", tags=["Services"])
 app.include_router(system.router, prefix="/api/system", tags=["System"])
 app.include_router(open311.router, prefix="/api/open311/v2", tags=["Open311"])
 app.include_router(gis.router, prefix="/api/gis", tags=["GIS"])
+app.include_router(map_layers.router, prefix="/api/map-layers", tags=["Map Layers"])
+
 
 
 @app.get("/api/health")

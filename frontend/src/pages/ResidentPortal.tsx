@@ -22,7 +22,7 @@ import {
 import { Button, Input, Textarea, Card } from '../components/ui';
 import GoogleMapsLocationPicker from '../components/GoogleMapsLocationPicker';
 import { useSettings } from '../context/SettingsContext';
-import { api } from '../services/api';
+import { api, MapLayer } from '../services/api';
 import { ServiceDefinition, ServiceRequestCreate } from '../types';
 
 // Icon mapping for service categories
@@ -74,6 +74,9 @@ export default function ResidentPortal() {
     const [photos, setPhotos] = useState<File[]>([]);
     const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
 
+    // Custom map layers
+    const [mapLayers, setMapLayers] = useState<MapLayer[]>([]);
+
     // Location/GPS state  
     const [location, setLocation] = useState<{ address: string; lat: number | null; lng: number | null }>({
         address: '',
@@ -95,7 +98,13 @@ export default function ResidentPortal() {
                 setTownshipBoundary(config.township_boundary);
             }
         }).catch(() => { });
+
+        // Load custom map layers (public endpoint)
+        api.getMapLayers().then((layers) => {
+            setMapLayers(layers);
+        }).catch(() => { });
     }, []);
+
 
 
     useEffect(() => {
@@ -493,6 +502,7 @@ export default function ResidentPortal() {
                                                     <GoogleMapsLocationPicker
                                                         apiKey={mapsApiKey}
                                                         townshipBoundary={townshipBoundary}
+                                                        customLayers={mapLayers}
                                                         value={location}
                                                         onOutOfBounds={() => setIsLocationOutOfBounds(true)}
                                                         onChange={(newLocation) => {

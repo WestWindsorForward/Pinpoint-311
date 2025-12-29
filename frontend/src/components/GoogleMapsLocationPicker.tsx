@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MapPin, Crosshair, Loader2 } from 'lucide-react';
+import { MapLayer } from '../services/api';
 
 declare global {
     interface Window {
@@ -11,6 +12,7 @@ declare global {
 interface GoogleMapsLocationPickerProps {
     apiKey: string;
     townshipBoundary?: object | null; // GeoJSON boundary from OpenStreetMap
+    customLayers?: MapLayer[]; // Custom GeoJSON layers (parks, storm drains, etc.)
     defaultCenter?: { lat: number; lng: number };
     defaultZoom?: number;
     value?: { address: string; lat: number | null; lng: number | null };
@@ -148,6 +150,7 @@ const loadGoogleMapsScript = (apiKey: string): Promise<void> => {
 export default function GoogleMapsLocationPicker({
     apiKey,
     townshipBoundary,
+    customLayers = [],
     defaultCenter = { lat: 40.3573, lng: -74.6672 }, // Default to central NJ
     defaultZoom = 17,
     value,
@@ -156,6 +159,7 @@ export default function GoogleMapsLocationPicker({
     placeholder = 'Search for an address...',
     className = '',
 }: GoogleMapsLocationPickerProps) {
+
 
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -378,6 +382,42 @@ export default function GoogleMapsLocationPicker({
                 }
 
 
+                // Render custom layers (parks, storm drains, utilities, etc.)
+                if (customLayers && customLayers.length > 0) {
+                    customLayers.forEach((layer, layerIndex) => {
+                        try {
+                            if (!layer.geojson) return;
+
+                            // Add GeoJSON to map data with unique identifier
+                            const features = map.data.addGeoJson(layer.geojson as object);
+
+                            // Style this layer's features
+                            features.forEach(feature => {
+                                map.data.overrideStyle(feature, {
+                                    fillColor: layer.fill_color,
+                                    fillOpacity: layer.fill_opacity,
+                                    strokeColor: layer.stroke_color,
+                                    strokeWeight: layer.stroke_width,
+                                    strokeOpacity: 1,
+                                    clickable: true,
+                                });
+                            });
+
+                            console.log(`Rendered custom layer: ${layer.name} with ${features.length} features`);
+                        } catch (e) {
+                            console.warn(`Failed to render custom layer ${layer.name}:`, e);
+                        }
+                    });
+
+                    // Add click handler for custom layer features (show layer name)
+                    map.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
+                        const infoWindow = new window.google.maps.InfoWindow();
+                        const layerName = event.feature.getProperty('name') || 'Feature';
+                        infoWindow.setContent(`<div style="color: #333; padding: 4px;">${layerName}</div>`);
+                        infoWindow.setPosition(event.latLng);
+                        infoWindow.open(map);
+                    });
+                }
 
 
                 // Create autocomplete

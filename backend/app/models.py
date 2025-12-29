@@ -168,3 +168,31 @@ class SystemSecret(Base):
     key_value = Column(Text)  # Should be encrypted in production
     description = Column(String(255))
     is_configured = Column(Boolean, default=False)
+
+
+class MapLayer(Base):
+    """Custom GeoJSON layers for township assets (parks, storm drains, utilities, etc.)"""
+    __tablename__ = "map_layers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)  # "Parks", "Storm Drains", etc.
+    description = Column(String(500))
+    layer_type = Column(String(50))  # polygon, line, point, or auto-detected
+    
+    # Styling
+    fill_color = Column(String(20), default="#3b82f6")
+    stroke_color = Column(String(20), default="#1d4ed8")
+    fill_opacity = Column(Float, default=0.3)
+    stroke_width = Column(Integer, default=2)
+    
+    # GeoJSON data
+    geojson = Column(JSON, nullable=False)
+    
+    # Visibility
+    is_active = Column(Boolean, default=True)
+    show_on_resident_portal = Column(Boolean, default=True)
+    
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+

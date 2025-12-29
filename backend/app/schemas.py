@@ -251,3 +251,43 @@ class StatisticsResponse(BaseModel):
     requests_by_category: Dict[str, int]
     requests_by_status: Dict[str, int]
     recent_requests: List[ServiceRequestResponse]
+
+
+# ============ Map Layers ============
+class MapLayerBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = None
+    layer_type: Optional[str] = None  # polygon, line, point
+    fill_color: str = "#3b82f6"
+    stroke_color: str = "#1d4ed8"
+    fill_opacity: float = 0.3
+    stroke_width: int = 2
+    show_on_resident_portal: bool = True
+
+
+class MapLayerCreate(MapLayerBase):
+    geojson: Dict[str, Any]
+
+
+class MapLayerUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    fill_color: Optional[str] = None
+    stroke_color: Optional[str] = None
+    fill_opacity: Optional[float] = None
+    stroke_width: Optional[int] = None
+    is_active: Optional[bool] = None
+    show_on_resident_portal: Optional[bool] = None
+    geojson: Optional[Dict[str, Any]] = None
+
+
+class MapLayerResponse(MapLayerBase):
+    id: int
+    geojson: Dict[str, Any]
+    is_active: bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+

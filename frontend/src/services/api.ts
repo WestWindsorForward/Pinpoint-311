@@ -336,7 +336,74 @@ class ApiClient {
             body: JSON.stringify(geometry),
         });
     }
+
+    // ========== Map Layers ==========
+
+    async getMapLayers(): Promise<MapLayer[]> {
+        return this.request('/map-layers');
+    }
+
+    async getAllMapLayers(): Promise<MapLayer[]> {
+        return this.request('/map-layers/all');
+    }
+
+    async createMapLayer(layerData: {
+        name: string;
+        description?: string;
+        fill_color?: string;
+        stroke_color?: string;
+        fill_opacity?: number;
+        stroke_width?: number;
+        show_on_resident_portal?: boolean;
+        geojson: object;
+    }): Promise<MapLayer> {
+        return this.request('/map-layers', {
+            method: 'POST',
+            body: JSON.stringify(layerData),
+        });
+    }
+
+    async updateMapLayer(layerId: number, layerData: {
+        name?: string;
+        description?: string;
+        fill_color?: string;
+        stroke_color?: string;
+        fill_opacity?: number;
+        stroke_width?: number;
+        is_active?: boolean;
+        show_on_resident_portal?: boolean;
+        geojson?: object;
+    }): Promise<MapLayer> {
+        return this.request(`/map-layers/${layerId}`, {
+            method: 'PUT',
+            body: JSON.stringify(layerData),
+        });
+    }
+
+    async deleteMapLayer(layerId: number): Promise<void> {
+        return this.request(`/map-layers/${layerId}`, {
+            method: 'DELETE',
+        });
+    }
 }
 
 export const api = new ApiClient();
 export default api;
+
+// Type for MapLayer
+export interface MapLayer {
+    id: number;
+    name: string;
+    description?: string;
+    layer_type?: string;
+    fill_color: string;
+    stroke_color: string;
+    fill_opacity: number;
+    stroke_width: number;
+    geojson: object;
+    is_active: boolean;
+    show_on_resident_portal: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+

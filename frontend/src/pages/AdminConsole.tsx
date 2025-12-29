@@ -50,12 +50,13 @@ import {
     Settings,
     HelpCircle,
     Info,
+    Layers,
     type LucideIcon,
 } from 'lucide-react';
 import { Button, Card, Modal, Input, Select, Badge } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { api } from '../services/api';
+import { api, MapLayer } from '../services/api';
 import { User, ServiceDefinition, SystemSettings, SystemSecret, Department } from '../types';
 
 // Icon library for service categories
@@ -195,6 +196,21 @@ export default function AdminConsole() {
     const [isFetchingBoundary, setIsFetchingBoundary] = useState(false);
     const [isSavingMaps, setIsSavingMaps] = useState(false);
 
+    // Custom map layers state
+    const [mapLayers, setMapLayers] = useState<MapLayer[]>([]);
+    const [showLayerModal, setShowLayerModal] = useState(false);
+    const [editingLayer, setEditingLayer] = useState<MapLayer | null>(null);
+    const [newLayer, setNewLayer] = useState({
+        name: '',
+        description: '',
+        fill_color: '#3b82f6',
+        stroke_color: '#1d4ed8',
+        fill_opacity: 0.3,
+        stroke_width: 2,
+        show_on_resident_portal: true,
+        geojson: null as object | null,
+    });
+
 
     // Password reset state
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -264,6 +280,9 @@ export default function AdminConsole() {
                         if (mapsConfig.township_boundary) {
                             setTownshipBoundary(mapsConfig.township_boundary);
                         }
+                        // Load custom map layers
+                        const layers = await api.getAllMapLayers();
+                        setMapLayers(layers);
                     } catch (err) {
                         console.error('Failed to load Maps config:', err);
                     }
@@ -1691,7 +1710,140 @@ export default function AdminConsole() {
                                             </div>
                                         </Card>
 
+                                        {/* Custom Map Layers */}
+                                        <Card>
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-white">Custom Map Layers</h3>
+                                                    <p className="text-sm text-white/50">
+                                                        Upload GeoJSON files for parks, storm drains, utilities, and other assets.
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setEditingLayer(null);
+                                                        setNewLayer({
+                                                            name: '',
+                                                            description: '',
+                                                            fill_color: '#3b82f6',
+                                                            stroke_color: '#1d4ed8',
+                                                            fill_opacity: 0.3,
+                                                            stroke_width: 2,
+                                                            show_on_resident_portal: true,
+                                                            geojson: null,
+                                                        });
+                                                        setShowLayerModal(true);
+                                                    }}
+                                                    leftIcon={<Plus className="w-4 h-4" />}
+                                                >
+                                                    Add Layer
+                                                </Button>
+                                            </div>
+
+                                            {mapLayers.length === 0 ? (
+                                                <div className="text-center py-8 text-white/40">
+                                                    <Layers className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                                    <p>No custom layers yet</p>
+                                                    <p className="text-sm">Upload GeoJSON files to add layers</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {mapLayers.map((layer) => (
+                                                        <div
+                                                            key={layer.id}
+                                                            className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10"
+                                                        >
+                                                            <div
+                                                                className="w-8 h-8 rounded-lg border-2"
+                                                                style={{
+                                                                    backgroundColor: layer.fill_color + Math.round(layer.fill_opacity * 255).toString(16).padStart(2, '0'),
+                                                                    borderColor: layer.stroke_color,
+                                                                }}
+                                                            />
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-medium text-white">{layer.name}</span>
+                                                                    {layer.layer_type && (
+                                                                        <Badge variant="default" size="sm">
+                                                                            {layer.layer_type}
+                                                                        </Badge>
+                                                                    )}
+                                                                    {!layer.is_active && (
+                                                                        <Badge variant="default" size="sm">
+                                                                            Disabled
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                                {layer.description && (
+                                                                    <p className="text-sm text-white/50">{layer.description}</p>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="flex items-center gap-2 text-sm text-white/60">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={layer.show_on_resident_portal}
+                                                                        onChange={async () => {
+                                                                            try {
+                                                                                await api.updateMapLayer(layer.id, {
+                                                                                    show_on_resident_portal: !layer.show_on_resident_portal,
+                                                                                });
+                                                                                loadTabData();
+                                                                            } catch (err) {
+                                                                                console.error('Failed to update layer:', err);
+                                                                            }
+                                                                        }}
+                                                                        className="rounded"
+                                                                    />
+                                                                    Show
+                                                                </label>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        setEditingLayer(layer);
+                                                                        setNewLayer({
+                                                                            name: layer.name,
+                                                                            description: layer.description || '',
+                                                                            fill_color: layer.fill_color,
+                                                                            stroke_color: layer.stroke_color,
+                                                                            fill_opacity: layer.fill_opacity,
+                                                                            stroke_width: layer.stroke_width,
+                                                                            show_on_resident_portal: layer.show_on_resident_portal,
+                                                                            geojson: layer.geojson,
+                                                                        });
+                                                                        setShowLayerModal(true);
+                                                                    }}
+                                                                >
+                                                                    <Edit className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={async () => {
+                                                                        if (!confirm(`Delete layer "${layer.name}"?`)) return;
+                                                                        try {
+                                                                            await api.deleteMapLayer(layer.id);
+                                                                            loadTabData();
+                                                                            setSaveMessage('Layer deleted');
+                                                                            setTimeout(() => setSaveMessage(null), 3000);
+                                                                        } catch (err) {
+                                                                            console.error('Failed to delete layer:', err);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Trash2 className="w-4 h-4 text-red-400" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </Card>
+
                                     </>
+
                                 )}
                             </div>
 
@@ -2241,6 +2393,181 @@ export default function AdminConsole() {
                     <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
                         <Button variant="ghost" onClick={() => setShowServiceEditModal(false)}>Cancel</Button>
                         <Button type="submit">Save Configuration</Button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Layer Upload/Edit Modal */}
+            <Modal
+                isOpen={showLayerModal}
+                onClose={() => setShowLayerModal(false)}
+                title={editingLayer ? `Edit Layer: ${editingLayer.name}` : 'Add New Layer'}
+            >
+                <form
+                    onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!newLayer.name || !newLayer.geojson) {
+                            alert('Please provide a name and upload a GeoJSON file');
+                            return;
+                        }
+                        try {
+                            if (editingLayer) {
+                                await api.updateMapLayer(editingLayer.id, {
+                                    name: newLayer.name,
+                                    description: newLayer.description,
+                                    fill_color: newLayer.fill_color,
+                                    stroke_color: newLayer.stroke_color,
+                                    fill_opacity: newLayer.fill_opacity,
+                                    stroke_width: newLayer.stroke_width,
+                                    show_on_resident_portal: newLayer.show_on_resident_portal,
+                                    geojson: newLayer.geojson,
+                                });
+                                setSaveMessage('Layer updated!');
+                            } else {
+                                await api.createMapLayer({
+                                    name: newLayer.name,
+                                    description: newLayer.description,
+                                    fill_color: newLayer.fill_color,
+                                    stroke_color: newLayer.stroke_color,
+                                    fill_opacity: newLayer.fill_opacity,
+                                    stroke_width: newLayer.stroke_width,
+                                    show_on_resident_portal: newLayer.show_on_resident_portal,
+                                    geojson: newLayer.geojson,
+                                });
+                                setSaveMessage('Layer created!');
+                            }
+                            setShowLayerModal(false);
+                            loadTabData();
+                            setTimeout(() => setSaveMessage(null), 3000);
+                        } catch (err: any) {
+                            console.error('Failed to save layer:', err);
+                            alert(err.message || 'Failed to save layer');
+                        }
+                    }}
+                    className="space-y-4"
+                >
+                    <Input
+                        label="Layer Name"
+                        placeholder="e.g., Parks, Storm Drains, Utilities"
+                        value={newLayer.name}
+                        onChange={(e) => setNewLayer(p => ({ ...p, name: e.target.value }))}
+                        required
+                    />
+
+                    <Input
+                        label="Description (optional)"
+                        placeholder="Brief description of this layer"
+                        value={newLayer.description}
+                        onChange={(e) => setNewLayer(p => ({ ...p, description: e.target.value }))}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-white/70 mb-2">Fill Color</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="color"
+                                    value={newLayer.fill_color}
+                                    onChange={(e) => setNewLayer(p => ({ ...p, fill_color: e.target.value }))}
+                                    className="w-12 h-10 rounded cursor-pointer"
+                                />
+                                <input
+                                    type="text"
+                                    value={newLayer.fill_color}
+                                    onChange={(e) => setNewLayer(p => ({ ...p, fill_color: e.target.value }))}
+                                    className="flex-1 h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-white/70 mb-2">Stroke Color</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="color"
+                                    value={newLayer.stroke_color}
+                                    onChange={(e) => setNewLayer(p => ({ ...p, stroke_color: e.target.value }))}
+                                    className="w-12 h-10 rounded cursor-pointer"
+                                />
+                                <input
+                                    type="text"
+                                    value={newLayer.stroke_color}
+                                    onChange={(e) => setNewLayer(p => ({ ...p, stroke_color: e.target.value }))}
+                                    className="flex-1 h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-white/70 mb-2">
+                                Fill Opacity: {Math.round(newLayer.fill_opacity * 100)}%
+                            </label>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.1"
+                                value={newLayer.fill_opacity}
+                                onChange={(e) => setNewLayer(p => ({ ...p, fill_opacity: parseFloat(e.target.value) }))}
+                                className="w-full"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-white/70 mb-2">
+                                Stroke Width: {newLayer.stroke_width}px
+                            </label>
+                            <input
+                                type="range"
+                                min="1"
+                                max="10"
+                                value={newLayer.stroke_width}
+                                onChange={(e) => setNewLayer(p => ({ ...p, stroke_width: parseInt(e.target.value) }))}
+                                className="w-full"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-white/70 mb-2">GeoJSON File</label>
+                        <input
+                            type="file"
+                            accept=".geojson,.json"
+                            onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                    const text = await file.text();
+                                    const geojson = JSON.parse(text);
+                                    if (!geojson.type) {
+                                        throw new Error('Invalid GeoJSON format');
+                                    }
+                                    setNewLayer(p => ({ ...p, geojson }));
+                                } catch (err) {
+                                    alert('Failed to parse GeoJSON file');
+                                }
+                                e.target.value = '';
+                            }}
+                            className="w-full text-sm text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-500 file:text-white hover:file:bg-primary-600 file:cursor-pointer"
+                        />
+                        {newLayer.geojson && (
+                            <p className="text-xs text-green-400 mt-1">✓ GeoJSON loaded</p>
+                        )}
+                    </div>
+
+                    <label className="flex items-center gap-2 text-white/70">
+                        <input
+                            type="checkbox"
+                            checked={newLayer.show_on_resident_portal}
+                            onChange={(e) => setNewLayer(p => ({ ...p, show_on_resident_portal: e.target.checked }))}
+                            className="rounded"
+                        />
+                        Show on Resident Portal map
+                    </label>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                        <Button variant="ghost" onClick={() => setShowLayerModal(false)}>Cancel</Button>
+                        <Button type="submit">{editingLayer ? 'Update Layer' : 'Create Layer'}</Button>
                     </div>
                 </form>
             </Modal>
