@@ -186,8 +186,10 @@ export default function AdminConsole() {
         display_name: string;
         lat: string;
         lon: string;
+        geojson?: object;  // Boundary GeoJSON from Nominatim
     } | null>(null);
     const [townshipBoundary, setTownshipBoundary] = useState<object | null>(null);
+
 
     const [isSearchingTownship, setIsSearchingTownship] = useState(false);
     const [isFetchingBoundary, setIsFetchingBoundary] = useState(false);
@@ -320,14 +322,27 @@ export default function AdminConsole() {
         setIsFetchingBoundary(true);
 
         try {
-            const response = await api.fetchOsmBoundary(selectedOsmResult.osm_id);
+            // Use GeoJSON from Nominatim search result if available (polygon_geojson=1)
+            // Otherwise fall back to fetching from polygons.openstreetmap.fr
+            let geojson = selectedOsmResult.geojson;
+
+            if (!geojson) {
+                // Fallback to old method if Nominatim didn't return geojson
+                const response = await api.fetchOsmBoundary(selectedOsmResult.osm_id);
+                geojson = response.geojson;
+            }
+
+            if (!geojson) {
+                alert('No boundary data available for this location.');
+                return;
+            }
 
             // Save the boundary with center coordinates from Nominatim
             const centerLat = parseFloat(selectedOsmResult.lat);
             const centerLng = parseFloat(selectedOsmResult.lon);
-            await api.saveTownshipBoundary(response.geojson, selectedOsmResult.display_name, centerLat, centerLng);
+            await api.saveTownshipBoundary(geojson, selectedOsmResult.display_name, centerLat, centerLng);
 
-            setTownshipBoundary(response.geojson);
+            setTownshipBoundary(geojson);
             setSelectedOsmResult(null);
             setSaveMessage('Township boundary saved successfully!');
             setTimeout(() => setSaveMessage(null), 3000);
@@ -338,6 +353,7 @@ export default function AdminConsole() {
             setIsFetchingBoundary(false);
         }
     };
+
 
 
     const handleCreateUser = async (e: React.FormEvent) => {

@@ -318,13 +318,15 @@ async def search_osm_township(
     """Search for a township/city boundary using OpenStreetMap Nominatim"""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            # Search Nominatim for the location
+            # Search Nominatim for the location with polygon output
             nominatim_url = "https://nominatim.openstreetmap.org/search"
             params = {
                 "q": query,
                 "format": "json",
                 "limit": "5",
-                "addressdetails": "1"
+                "addressdetails": "1",
+                "polygon_geojson": "1",  # Include GeoJSON boundary directly
+                "polygon_threshold": "0.0"  # Full detail boundary
             }
             headers = {
                 "User-Agent": "Township311/1.0 (township311-service)"
@@ -351,7 +353,8 @@ async def search_osm_township(
                         "class": r.get("class"),
                         "lat": r.get("lat"),
                         "lon": r.get("lon"),
-                        "boundingbox": r.get("boundingbox")
+                        "boundingbox": r.get("boundingbox"),
+                        "geojson": r.get("geojson")  # Include boundary GeoJSON directly
                     })
             
             return {"results": filtered_results}

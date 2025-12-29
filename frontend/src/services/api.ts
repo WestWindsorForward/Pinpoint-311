@@ -265,10 +265,12 @@ class ApiClient {
             lat: string;
             lon: string;
             boundingbox: string[];
+            geojson?: object;  // Boundary GeoJSON from Nominatim polygon_geojson=1
         }>;
     }> {
         return this.request(`/gis/osm/search?query=${encodeURIComponent(query)}`);
     }
+
 
     async fetchOsmBoundary(osmId: number): Promise<{
         geojson: object;
