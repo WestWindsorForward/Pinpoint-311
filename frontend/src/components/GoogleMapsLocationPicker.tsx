@@ -316,39 +316,41 @@ export default function GoogleMapsLocationPicker({
                 // Add township boundary overlay if GeoJSON is provided
                 if (townshipBoundary) {
                     try {
-                        // Extract coordinates from GeoJSON for spotlight effect
-                        let boundaryCoords: google.maps.LatLngLiteral[] = [];
+                        // Extract ALL rings from GeoJSON (outer + holes)
                         const geojson = townshipBoundary as any;
 
-                        // Get first polygon coordinates from GeoJSON
-                        let coords: number[][] = [];
+                        // Get all rings from the first polygon in GeoJSON
+                        let allRings: number[][][] = [];
                         if (geojson.type === 'FeatureCollection' && geojson.features?.[0]) {
                             const geom = geojson.features[0].geometry;
                             if (geom?.type === 'Polygon') {
-                                coords = geom.coordinates[0];
+                                allRings = geom.coordinates;
                             } else if (geom?.type === 'MultiPolygon') {
-                                coords = geom.coordinates[0][0];
+                                allRings = geom.coordinates[0];
                             }
                         } else if (geojson.type === 'Feature') {
                             if (geojson.geometry?.type === 'Polygon') {
-                                coords = geojson.geometry.coordinates[0];
+                                allRings = geojson.geometry.coordinates;
                             } else if (geojson.geometry?.type === 'MultiPolygon') {
-                                coords = geojson.geometry.coordinates[0][0];
+                                allRings = geojson.geometry.coordinates[0];
                             }
                         } else if (geojson.type === 'Polygon') {
-                            coords = geojson.coordinates[0];
+                            allRings = geojson.coordinates;
                         } else if (geojson.type === 'MultiPolygon') {
-                            coords = geojson.coordinates[0][0];
+                            allRings = geojson.coordinates[0];
                         }
 
-                        // Convert GeoJSON coords [lng, lat] to Google Maps format {lat, lng}
-                        boundaryCoords = coords.map(([lng, lat]) => ({ lat, lng }));
+                        if (allRings.length > 0) {
+                            // Convert ALL rings from GeoJSON [lng, lat] to Google Maps format
+                            // First ring is outer boundary, subsequent rings are holes
+                            const paths: google.maps.LatLngLiteral[][] = allRings.map(ring =>
+                                ring.map(([lng, lat]) => ({ lat, lng }))
+                            );
 
-                        if (boundaryCoords.length > 0) {
-                            // Simple approach: Just draw the boundary with a light fill INSIDE
-                            // This highlights the valid area rather than darkening outside
+                            // Draw the boundary with all paths (outer + holes)
+                            // Google Maps renders holes correctly when rings have opposite winding
                             new window.google.maps.Polygon({
-                                paths: boundaryCoords,
+                                paths: paths,
                                 fillColor: '#6366f1',
                                 fillOpacity: 0.1,
                                 strokeColor: '#6366f1',
@@ -358,7 +360,7 @@ export default function GoogleMapsLocationPicker({
                                 clickable: false,
                             });
                         } else {
-                            // Fallback: use Data layer for the GeoJSON
+                            // Fallback: use Data layer for the GeoJSON directly
                             map.data.addGeoJson(townshipBoundary);
                             map.data.setStyle({
                                 fillColor: '#6366f1',
@@ -374,6 +376,7 @@ export default function GoogleMapsLocationPicker({
                         console.warn('Failed to add township boundary:', e);
                     }
                 }
+
 
 
 
