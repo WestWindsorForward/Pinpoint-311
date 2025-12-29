@@ -277,16 +277,24 @@ class ApiClient {
         return this.request(`/gis/osm/boundary/${osmId}`);
     }
 
-    async saveTownshipBoundary(geojsonData: object, name?: string): Promise<{
+    async saveTownshipBoundary(geojsonData: object, name?: string, centerLat?: number, centerLng?: number): Promise<{
         status: string;
         message: string;
     }> {
-        const url = name ? `/gis/township-boundary?name=${encodeURIComponent(name)}` : '/gis/township-boundary';
+        const params = new URLSearchParams();
+        if (name) params.append('name', name);
+        if (centerLat !== undefined && centerLng !== undefined) {
+            params.append('center_lat', centerLat.toString());
+            params.append('center_lng', centerLng.toString());
+        }
+        const queryString = params.toString();
+        const url = queryString ? `/gis/township-boundary?${queryString}` : '/gis/township-boundary';
         return this.request(url, {
             method: 'POST',
             body: JSON.stringify(geojsonData),
         });
     }
+
 
     async geocodeAddress(address: string): Promise<{
         lat: number;

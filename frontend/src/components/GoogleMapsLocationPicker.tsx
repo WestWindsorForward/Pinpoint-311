@@ -21,14 +21,19 @@ interface GoogleMapsLocationPickerProps {
 }
 
 // Point-in-polygon check using ray casting algorithm
+// GeoJSON coordinates are in [lng, lat] order
 const isPointInPolygon = (lat: number, lng: number, polygon: number[][]): boolean => {
     let inside = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const [xi, yi] = polygon[i];
-        const [xj, yj] = polygon[j];
+        // GeoJSON coords: [longitude, latitude]
+        const lngi = polygon[i][0];
+        const lati = polygon[i][1];
+        const lngj = polygon[j][0];
+        const latj = polygon[j][1];
 
-        if (((yi > lat) !== (yj > lat)) &&
-            (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+        const intersect = ((lati > lat) !== (latj > lat)) &&
+            (lng < (lngj - lngi) * (lat - lati) / (latj - lati) + lngi);
+        if (intersect) {
             inside = !inside;
         }
     }
@@ -37,7 +42,7 @@ const isPointInPolygon = (lat: number, lng: number, polygon: number[][]): boolea
 
 // Check if a point is inside a GeoJSON geometry
 const isPointInBoundary = (lat: number, lng: number, geojson: any): boolean => {
-    if (!geojson) return true; // No boundary = always valid
+    if (!geojson || Object.keys(geojson).length === 0) return true; // No boundary = always valid
 
     try {
         // Handle different GeoJSON structures
@@ -72,9 +77,8 @@ const isPointInBoundary = (lat: number, lng: number, geojson: any): boolean => {
         if (polygons.length === 0) return true;
 
         // Check if point is in any of the polygons
-        // GeoJSON uses [lng, lat] order
         for (const polygon of polygons) {
-            if (isPointInPolygon(lng, lat, polygon)) {
+            if (isPointInPolygon(lat, lng, polygon)) {
                 return true;
             }
         }
@@ -248,10 +252,25 @@ export default function GoogleMapsLocationPicker({
 
                 if (!isMounted || !mapContainerRef.current || !inputRef.current) return;
 
-                // Create map - use mapId if provided for Vector Maps with Feature Layers
+                // Determine map center: value > boundary center > default
+                let mapCenter = defaultCenter;
+
+                // Try to get center from boundary data
+                const geojson = townshipBoundary as any;
+                if (geojson?.center?.lat && geojson?.center?.lng) {
+                    mapCenter = { lat: geojson.center.lat, lng: geojson.center.lng };
+                }
+
+                // Value takes precedence if coordinates are set
+                if (value?.lat && value?.lng) {
+                    mapCenter = { lat: value.lat, lng: value.lng };
+                }
+
+                // Create map
                 const mapOptions: google.maps.MapOptions = {
-                    center: value?.lat && value?.lng ? { lat: value.lat, lng: value.lng } : defaultCenter,
+                    center: mapCenter,
                     zoom: defaultZoom,
+
                     mapTypeId: 'hybrid', // Satellite with labels
                     mapTypeControl: true,
                     mapTypeControlOptions: {
@@ -305,25 +324,30 @@ export default function GoogleMapsLocationPicker({
                         boundaryCoords = coords.map(([lng, lat]) => ({ lat, lng }));
 
                         if (boundaryCoords.length > 0) {
-                            // Create outer boundary (entire world)
+                            // Reverse the boundary coords to create counter-clockwise winding for the hole
+                            // This makes the OUTSIDE dark and the INSIDE clear (spotlight effect)
+                            const reversedBoundaryCoords = [...boundaryCoords].reverse();
+
+                            // Create outer boundary (entire world) - clockwise
                             const worldBounds: google.maps.LatLngLiteral[] = [
                                 { lat: -85, lng: -180 },
-                                { lat: 85, lng: -180 },
-                                { lat: 85, lng: 180 },
                                 { lat: -85, lng: 180 },
+                                { lat: 85, lng: 180 },
+                                { lat: 85, lng: -180 },
                             ];
 
                             // Create polygon with hole - dark overlay outside boundary
                             new window.google.maps.Polygon({
-                                paths: [worldBounds, boundaryCoords],
+                                paths: [worldBounds, reversedBoundaryCoords],
                                 fillColor: '#000000',
-                                fillOpacity: 0.35,
+                                fillOpacity: 0.4,
                                 strokeColor: '#6366f1',
                                 strokeWeight: 3,
-                                strokeOpacity: 0.8,
+                                strokeOpacity: 1,
                                 map: map,
                                 clickable: false,
                             });
+
                         } else {
                             // Fallback: just show boundary line without spotlight
                             map.data.addGeoJson(townshipBoundary);

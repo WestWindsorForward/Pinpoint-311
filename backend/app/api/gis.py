@@ -397,6 +397,8 @@ async def fetch_osm_boundary(
 async def save_township_boundary(
     geojson_data: dict,
     name: str = None,
+    center_lat: float = None,
+    center_lng: float = None,
     _: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -427,6 +429,10 @@ async def save_township_boundary(
                     "type": "FeatureCollection",
                     "features": [geojson_data]
                 }
+        
+        # Add center coordinates if provided
+        if center_lat is not None and center_lng is not None:
+            boundary_data["center"] = {"lat": center_lat, "lng": center_lng}
         
         settings.township_boundary = boundary_data
         await db.commit()

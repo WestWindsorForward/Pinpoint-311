@@ -184,8 +184,11 @@ export default function AdminConsole() {
     const [selectedOsmResult, setSelectedOsmResult] = useState<{
         osm_id: number;
         display_name: string;
+        lat: string;
+        lon: string;
     } | null>(null);
     const [townshipBoundary, setTownshipBoundary] = useState<object | null>(null);
+
     const [isSearchingTownship, setIsSearchingTownship] = useState(false);
     const [isFetchingBoundary, setIsFetchingBoundary] = useState(false);
     const [isSavingMaps, setIsSavingMaps] = useState(false);
@@ -319,8 +322,10 @@ export default function AdminConsole() {
         try {
             const response = await api.fetchOsmBoundary(selectedOsmResult.osm_id);
 
-            // Save the boundary
-            await api.saveTownshipBoundary(response.geojson, selectedOsmResult.display_name);
+            // Save the boundary with center coordinates from Nominatim
+            const centerLat = parseFloat(selectedOsmResult.lat);
+            const centerLng = parseFloat(selectedOsmResult.lon);
+            await api.saveTownshipBoundary(response.geojson, selectedOsmResult.display_name, centerLat, centerLng);
 
             setTownshipBoundary(response.geojson);
             setSelectedOsmResult(null);
@@ -333,6 +338,7 @@ export default function AdminConsole() {
             setIsFetchingBoundary(false);
         }
     };
+
 
     const handleCreateUser = async (e: React.FormEvent) => {
 
