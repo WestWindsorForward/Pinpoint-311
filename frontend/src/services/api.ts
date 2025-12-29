@@ -357,7 +357,7 @@ class ApiClient {
         show_on_resident_portal?: boolean;
         geojson: object;
     }): Promise<MapLayer> {
-        return this.request('/map-layers', {
+        return this.request('/map-layers/', {
             method: 'POST',
             body: JSON.stringify(layerData),
         });
