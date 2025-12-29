@@ -214,8 +214,8 @@ export default function StaffDashboard() {
                                     setSidebarOpen(false);
                                 }}
                                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${currentView === item.id
-                                        ? 'bg-primary-500/20 text-white'
-                                        : 'text-white/60 hover:bg-white/5 hover:text-white'
+                                    ? 'bg-primary-500/20 text-white'
+                                    : 'text-white/60 hover:bg-white/5 hover:text-white'
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
@@ -422,8 +422,8 @@ export default function StaffDashboard() {
                                                 key={request.id}
                                                 onClick={() => loadRequestDetail(request.service_request_id)}
                                                 className={`w-full text-left p-4 hover:bg-white/5 transition-colors ${selectedRequest?.service_request_id === request.service_request_id
-                                                        ? 'bg-white/10'
-                                                        : ''
+                                                    ? 'bg-white/10'
+                                                    : ''
                                                     }`}
                                                 whileTap={{ scale: 0.98 }}
                                             >
@@ -528,6 +528,59 @@ export default function StaffDashboard() {
                                                 )}
                                             </div>
                                         </Card>
+
+                                        {/* Matched Asset (from map layers) */}
+                                        {(selectedRequest as any).matched_asset && (
+                                            <Card>
+                                                <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                                                    <MapPin className="w-4 h-4 text-primary-400" />
+                                                    Matched Asset
+                                                </h3>
+                                                <div className="p-4 rounded-xl bg-primary-500/10 border border-primary-500/20">
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-white/50">Layer:</span>
+                                                            <span className="text-white font-medium">{(selectedRequest as any).matched_asset.layer_name}</span>
+                                                        </div>
+                                                        {(selectedRequest as any).matched_asset.asset_id && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-white/50">Asset ID:</span>
+                                                                <span className="text-white font-mono">{(selectedRequest as any).matched_asset.asset_id}</span>
+                                                            </div>
+                                                        )}
+                                                        {(selectedRequest as any).matched_asset.asset_type && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-white/50">Type:</span>
+                                                                <span className="text-white">{(selectedRequest as any).matched_asset.asset_type}</span>
+                                                            </div>
+                                                        )}
+                                                        {(selectedRequest as any).matched_asset.distance_meters !== undefined && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-white/50">Distance:</span>
+                                                                <span className="text-white">{(selectedRequest as any).matched_asset.distance_meters}m away</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {/* Additional properties */}
+                                                    {Object.keys((selectedRequest as any).matched_asset.properties || {}).filter(k => !['asset_id', 'asset_type', 'name'].includes(k)).length > 0 && (
+                                                        <div className="mt-4 pt-3 border-t border-white/10">
+                                                            <p className="text-xs text-white/40 mb-2">Additional Properties:</p>
+                                                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                                                {Object.entries((selectedRequest as any).matched_asset.properties || {})
+                                                                    .filter(([k]) => !['asset_id', 'asset_type', 'name'].includes(k))
+                                                                    .map(([key, value]) => (
+                                                                        <div key={key} className="flex justify-between gap-2">
+                                                                            <span className="text-white/50 capitalize">{key.replace(/_/g, ' ')}:</span>
+                                                                            <span className="text-white truncate">{String(value)}</span>
+                                                                        </div>
+                                                                    ))
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </Card>
+                                        )}
 
                                         {/* Timeline */}
                                         <Card>

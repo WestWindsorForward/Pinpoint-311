@@ -382,42 +382,110 @@ export default function GoogleMapsLocationPicker({
                 }
 
 
+
                 // Render custom layers (parks, storm drains, utilities, etc.)
+                // Points = visible markers (pucks), Polygons = invisible (for detection only)
+                const layerMarkersRef: google.maps.Marker[] = [];
+                const layerFeaturesRef: Array<{
+                    layer: typeof customLayers[0];
+                    feature: google.maps.Data.Feature;
+                    geometry: google.maps.Data.Geometry;
+                    properties: Record<string, any>;
+                }> = [];
+
                 if (customLayers && customLayers.length > 0) {
-                    customLayers.forEach((layer, layerIndex) => {
+                    customLayers.forEach((layer) => {
                         try {
                             if (!layer.geojson) return;
+                            const geojson = layer.geojson as any;
 
-                            // Add GeoJSON to map data with unique identifier
-                            const features = map.data.addGeoJson(layer.geojson as object);
+                            // Process features
+                            const features = geojson.type === 'FeatureCollection'
+                                ? geojson.features
+                                : geojson.type === 'Feature'
+                                    ? [geojson]
+                                    : [];
 
-                            // Style this layer's features
-                            features.forEach(feature => {
-                                map.data.overrideStyle(feature, {
-                                    fillColor: layer.fill_color,
-                                    fillOpacity: layer.fill_opacity,
-                                    strokeColor: layer.stroke_color,
-                                    strokeWeight: layer.stroke_width,
-                                    strokeOpacity: 1,
-                                    clickable: true,
-                                });
+                            features.forEach((feature: any) => {
+                                const geomType = feature.geometry?.type;
+                                const coords = feature.geometry?.coordinates;
+                                const props = feature.properties || {};
+
+                                if (geomType === 'Point' && coords) {
+                                    // Render as visible marker (puck)
+                                    const marker = new window.google.maps.Marker({
+                                        position: { lat: coords[1], lng: coords[0] },
+                                        map: map,
+                                        icon: {
+                                            path: window.google.maps.SymbolPath.CIRCLE,
+                                            scale: 8,
+                                            fillColor: layer.fill_color,
+                                            fillOpacity: 0.9,
+                                            strokeColor: layer.stroke_color,
+                                            strokeWeight: layer.stroke_width,
+                                        },
+                                        title: props.name || props.asset_id || layer.name,
+                                    });
+
+                                    // Add click handler to show asset info
+                                    marker.addListener('click', () => {
+                                        const infoWindow = new window.google.maps.InfoWindow({
+                                            content: `<div style="color: #333; padding: 8px;">
+                                                <strong>${props.name || layer.name}</strong>
+                                                ${props.asset_id ? `<br><small>ID: ${props.asset_id}</small>` : ''}
+                                                ${props.asset_type ? `<br><small>Type: ${props.asset_type}</small>` : ''}
+                                            </div>`,
+                                        });
+                                        infoWindow.open(map, marker);
+                                    });
+
+                                    layerMarkersRef.push(marker);
+
+                                    // Store for proximity detection
+                                    layerFeaturesRef.push({
+                                        layer,
+                                        feature: feature as any,
+                                        geometry: { lat: coords[1], lng: coords[0] } as any,
+                                        properties: props,
+                                    });
+                                } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                                    // Add invisibly for proximity detection (not displayed)
+                                    // We'll use Data layer but make it invisible
+                                    const addedFeatures = map.data.addGeoJson({
+                                        type: 'Feature',
+                                        geometry: feature.geometry,
+                                        properties: { ...props, _layerName: layer.name, _layerId: layer.id },
+                                    });
+
+                                    // Make polygon invisible
+                                    addedFeatures.forEach(f => {
+                                        map.data.overrideStyle(f, {
+                                            fillOpacity: 0,
+                                            strokeOpacity: 0,
+                                            clickable: false,
+                                        });
+
+                                        // Store for proximity detection
+                                        layerFeaturesRef.push({
+                                            layer,
+                                            feature: f,
+                                            geometry: feature.geometry,
+                                            properties: props,
+                                        });
+                                    });
+                                }
                             });
 
-                            console.log(`Rendered custom layer: ${layer.name} with ${features.length} features`);
+                            console.log(`Rendered layer: ${layer.name} (${layer.layer_type})`);
                         } catch (e) {
-                            console.warn(`Failed to render custom layer ${layer.name}:`, e);
+                            console.warn(`Failed to render layer ${layer.name}:`, e);
                         }
                     });
 
-                    // Add click handler for custom layer features (show layer name)
-                    map.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
-                        const infoWindow = new window.google.maps.InfoWindow();
-                        const layerName = event.feature.getProperty('name') || 'Feature';
-                        infoWindow.setContent(`<div style="color: #333; padding: 4px;">${layerName}</div>`);
-                        infoWindow.setPosition(event.latLng);
-                        infoWindow.open(map);
-                    });
+                    // Store the features ref for proximity detection
+                    (window as any).__mapLayerFeatures = layerFeaturesRef;
                 }
+
 
 
                 // Create autocomplete

@@ -247,7 +247,48 @@ export default function ResidentPortal() {
 
         setIsSubmitting(true);
         try {
-            const result = await api.createRequest(formData);
+            // Proximity detection: Check if report location is near any layer feature
+            let matchedAsset: typeof formData.matched_asset = undefined;
+
+            if (location.lat && location.lng) {
+                const layerFeatures = (window as any).__mapLayerFeatures || [];
+                const PROXIMITY_THRESHOLD_METERS = 50; // 50 meters for point proximity
+
+                for (const feature of layerFeatures) {
+                    const geom = feature.geometry;
+                    const props = feature.properties || {};
+                    const layer = feature.layer;
+
+                    if (!geom) continue;
+
+                    // Point proximity check (Haversine distance)
+                    if (geom.lat !== undefined && geom.lng !== undefined) {
+                        const distance = calculateDistance(
+                            location.lat, location.lng,
+                            geom.lat, geom.lng
+                        );
+
+                        if (distance <= PROXIMITY_THRESHOLD_METERS) {
+                            matchedAsset = {
+                                layer_name: layer.name,
+                                layer_id: layer.id,
+                                asset_id: props.asset_id,
+                                asset_type: props.asset_type,
+                                properties: props,
+                                distance_meters: Math.round(distance),
+                            };
+                            console.log('Matched nearby asset:', matchedAsset);
+                            break;
+                        }
+                    }
+                    // Polygon containment check would go here (already stored in data layer)
+                }
+            }
+
+            const result = await api.createRequest({
+                ...formData,
+                matched_asset: matchedAsset,
+            });
             setSubmittedId(result.service_request_id);
             setStep('success');
         } catch (err) {
@@ -257,6 +298,19 @@ export default function ResidentPortal() {
             setIsSubmitting(false);
         }
     };
+
+    // Haversine distance calculation (meters)
+    const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+        const R = 6371000; // Earth radius in meters
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
+
 
     const handleReset = () => {
         setStep('categories');

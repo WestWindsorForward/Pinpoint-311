@@ -123,7 +123,16 @@ export interface ServiceRequestCreate {
     email: string;
     phone?: string;
     media_url?: string;
+    matched_asset?: {
+        layer_name: string;
+        layer_id: number;
+        asset_id?: string;
+        asset_type?: string;
+        properties: Record<string, any>;
+        distance_meters?: number;
+    };
 }
+
 
 export interface ManualIntakeCreate {
     service_code: string;

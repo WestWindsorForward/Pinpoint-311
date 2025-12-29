@@ -142,6 +142,10 @@ class ServiceRequest(Base):
     # Staff notes
     staff_notes = Column(Text)
     assigned_to = Column(String(100))
+    
+    # Matched asset from map layers (detected on submit)
+    matched_asset = Column(JSON)  # { layer_name, asset_id, asset_type, properties, distance_meters }
+
 
 
 class SystemSettings(Base):

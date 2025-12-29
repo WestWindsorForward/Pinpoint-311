@@ -147,6 +147,8 @@ class ServiceRequestCreate(BaseModel):
     email: EmailStr
     phone: Optional[str] = None
     media_url: Optional[str] = None
+    matched_asset: Optional[Dict[str, Any]] = None  # Nearby asset from map layers
+
 
 
 class ServiceRequestUpdate(BaseModel):
@@ -171,6 +173,7 @@ class ServiceRequestResponse(BaseModel):
     updated_datetime: Optional[datetime] = None
     source: str
     flagged: bool = False
+    matched_asset: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

@@ -77,6 +77,7 @@ async def create_request(
         email=request_data.email,
         phone=request_data.phone,
         media_url=request_data.media_url,
+        matched_asset=request_data.matched_asset,
         source="resident_portal"
     )
     
