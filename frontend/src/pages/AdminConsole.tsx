@@ -1585,27 +1585,49 @@ export default function AdminConsole() {
                                                                 Boundary data is saved and will be displayed on the resident portal map.
                                                             </p>
                                                         </div>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={async () => {
-                                                                if (confirm('Are you sure you want to clear the township boundary?')) {
-                                                                    try {
-                                                                        await api.saveTownshipBoundary({});
-                                                                        setTownshipBoundary(null);
-                                                                        setSaveMessage('Boundary cleared');
-                                                                        setTimeout(() => setSaveMessage(null), 3000);
-                                                                    } catch (err) {
-                                                                        alert('Failed to clear boundary');
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => {
+                                                                    // Download GeoJSON
+                                                                    const dataStr = JSON.stringify(townshipBoundary, null, 2);
+                                                                    const blob = new Blob([dataStr], { type: 'application/json' });
+                                                                    const url = URL.createObjectURL(blob);
+                                                                    const a = document.createElement('a');
+                                                                    a.href = url;
+                                                                    a.download = 'township-boundary.geojson';
+                                                                    document.body.appendChild(a);
+                                                                    a.click();
+                                                                    document.body.removeChild(a);
+                                                                    URL.revokeObjectURL(url);
+                                                                }}
+                                                            >
+                                                                Download
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={async () => {
+                                                                    if (confirm('Are you sure you want to clear the township boundary?')) {
+                                                                        try {
+                                                                            await api.saveTownshipBoundary({});
+                                                                            setTownshipBoundary(null);
+                                                                            setSaveMessage('Boundary cleared');
+                                                                            setTimeout(() => setSaveMessage(null), 3000);
+                                                                        } catch (err) {
+                                                                            alert('Failed to clear boundary');
+                                                                        }
                                                                     }
-                                                                }
-                                                            }}
-                                                        >
-                                                            Clear
-                                                        </Button>
+                                                                }}
+                                                            >
+                                                                Clear
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
+
 
                                             {/* Divider */}
                                             <div className="flex items-center gap-4 my-6">

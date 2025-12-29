@@ -40,45 +40,66 @@ const isPointInPolygon = (lat: number, lng: number, polygon: number[][]): boolea
     return inside;
 };
 
+// Check if point is inside a polygon with potential holes
+// rings[0] is outer, rings[1+] are holes
+const isPointInPolygonWithHoles = (lat: number, lng: number, rings: number[][][]): boolean => {
+    if (!rings || rings.length === 0) return false;
+
+    // Must be inside outer ring
+    if (!isPointInPolygon(lat, lng, rings[0])) {
+        return false;
+    }
+
+    // Must NOT be inside any hole
+    for (let i = 1; i < rings.length; i++) {
+        if (isPointInPolygon(lat, lng, rings[i])) {
+            return false; // Inside a hole = not in the polygon
+        }
+    }
+
+    return true;
+};
+
 // Check if a point is inside a GeoJSON geometry
 const isPointInBoundary = (lat: number, lng: number, geojson: any): boolean => {
     if (!geojson || Object.keys(geojson).length === 0) return true; // No boundary = always valid
 
     try {
         // Handle different GeoJSON structures
-        let polygons: number[][][] = [];
+        // Each item is an array of rings (outer + holes)
+        let polygonsWithRings: number[][][][] = [];
 
         if (geojson.type === 'FeatureCollection') {
             for (const feature of geojson.features || []) {
                 if (feature.geometry?.type === 'Polygon') {
-                    polygons.push(feature.geometry.coordinates[0]);
+                    polygonsWithRings.push(feature.geometry.coordinates);
                 } else if (feature.geometry?.type === 'MultiPolygon') {
                     for (const poly of feature.geometry.coordinates) {
-                        polygons.push(poly[0]);
+                        polygonsWithRings.push(poly);
                     }
                 }
             }
         } else if (geojson.type === 'Feature') {
             if (geojson.geometry?.type === 'Polygon') {
-                polygons.push(geojson.geometry.coordinates[0]);
+                polygonsWithRings.push(geojson.geometry.coordinates);
             } else if (geojson.geometry?.type === 'MultiPolygon') {
                 for (const poly of geojson.geometry.coordinates) {
-                    polygons.push(poly[0]);
+                    polygonsWithRings.push(poly);
                 }
             }
         } else if (geojson.type === 'Polygon') {
-            polygons.push(geojson.coordinates[0]);
+            polygonsWithRings.push(geojson.coordinates);
         } else if (geojson.type === 'MultiPolygon') {
             for (const poly of geojson.coordinates) {
-                polygons.push(poly[0]);
+                polygonsWithRings.push(poly);
             }
         }
 
-        if (polygons.length === 0) return true;
+        if (polygonsWithRings.length === 0) return true;
 
-        // Check if point is in any of the polygons
-        for (const polygon of polygons) {
-            if (isPointInPolygon(lat, lng, polygon)) {
+        // Check if point is in any of the polygons (respecting holes)
+        for (const rings of polygonsWithRings) {
+            if (isPointInPolygonWithHoles(lat, lng, rings)) {
                 return true;
             }
         }
@@ -324,44 +345,31 @@ export default function GoogleMapsLocationPicker({
                         boundaryCoords = coords.map(([lng, lat]) => ({ lat, lng }));
 
                         if (boundaryCoords.length > 0) {
-                            // Create world bounds - clockwise (fills inside)
-                            const worldBounds: google.maps.LatLngLiteral[] = [
-                                { lat: 85, lng: -180 },
-                                { lat: 85, lng: 180 },
-                                { lat: -85, lng: 180 },
-                                { lat: -85, lng: -180 },
-                                { lat: 85, lng: -180 }, // close the loop
-                            ];
-
-                            // Reverse boundary coords to make them counter-clockwise (creates hole)
-                            const reversedBoundary = [...boundaryCoords].reverse();
-
-                            // Create the dark overlay with world as outer ring and boundary as hole
+                            // Simple approach: Just draw the boundary with a light fill INSIDE
+                            // This highlights the valid area rather than darkening outside
                             new window.google.maps.Polygon({
-                                paths: [worldBounds, reversedBoundary],
-                                fillColor: '#000000',
-                                fillOpacity: 0.4,
+                                paths: boundaryCoords,
+                                fillColor: '#6366f1',
+                                fillOpacity: 0.1,
                                 strokeColor: '#6366f1',
                                 strokeWeight: 3,
                                 strokeOpacity: 1,
                                 map: map,
                                 clickable: false,
-                                geodesic: false,
                             });
-
-
                         } else {
-                            // Fallback: just show boundary line without spotlight
+                            // Fallback: use Data layer for the GeoJSON
                             map.data.addGeoJson(townshipBoundary);
                             map.data.setStyle({
-                                fillColor: 'transparent',
-                                fillOpacity: 0,
+                                fillColor: '#6366f1',
+                                fillOpacity: 0.1,
                                 strokeColor: '#6366f1',
                                 strokeWeight: 3,
-                                strokeOpacity: 0.8,
+                                strokeOpacity: 1,
                                 clickable: false,
                             });
                         }
+
                     } catch (e) {
                         console.warn('Failed to add township boundary:', e);
                     }
