@@ -340,7 +340,7 @@ class ApiClient {
     // ========== Map Layers ==========
 
     async getMapLayers(): Promise<MapLayer[]> {
-        return this.request('/map-layers');
+        return this.request('/map-layers/');
     }
 
     async getAllMapLayers(): Promise<MapLayer[]> {
@@ -403,7 +403,16 @@ export interface MapLayer {
     geojson: object;
     is_active: boolean;
     show_on_resident_portal: boolean;
+    service_codes?: string[];  // Categories this layer applies to (empty = all)
+    routing_config?: {
+        enabled: boolean;
+        contact_name?: string;
+        phone?: string;
+        url?: string;
+        message?: string;
+    };
     created_at?: string;
     updated_at?: string;
 }
+
 

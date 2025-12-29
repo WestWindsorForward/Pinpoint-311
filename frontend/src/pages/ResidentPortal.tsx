@@ -556,7 +556,11 @@ export default function ResidentPortal() {
                                                     <GoogleMapsLocationPicker
                                                         apiKey={mapsApiKey}
                                                         townshipBoundary={townshipBoundary}
-                                                        customLayers={mapLayers}
+                                                        customLayers={mapLayers.filter(layer =>
+                                                            !layer.service_codes ||
+                                                            layer.service_codes.length === 0 ||
+                                                            layer.service_codes.includes(selectedService.service_code)
+                                                        )}
                                                         value={location}
                                                         onOutOfBounds={() => setIsLocationOutOfBounds(true)}
                                                         onChange={(newLocation) => {

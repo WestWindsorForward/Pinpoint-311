@@ -75,6 +75,8 @@ async def create_layer(
         stroke_width=layer_data.stroke_width,
         geojson=layer_data.geojson,
         show_on_resident_portal=layer_data.show_on_resident_portal,
+        service_codes=layer_data.service_codes or [],
+        routing_config=layer_data.routing_config,
     )
     
     db.add(layer)
@@ -129,6 +131,10 @@ async def update_layer(
         layer.show_on_resident_portal = layer_data.show_on_resident_portal
     if layer_data.geojson is not None:
         layer.geojson = layer_data.geojson
+    if layer_data.service_codes is not None:
+        layer.service_codes = layer_data.service_codes
+    if layer_data.routing_config is not None:
+        layer.routing_config = layer_data.routing_config
     
     await db.commit()
     await db.refresh(layer)

@@ -196,7 +196,14 @@ class MapLayer(Base):
     is_active = Column(Boolean, default=True)
     show_on_resident_portal = Column(Boolean, default=True)
     
+    # Category association - which service categories this layer applies to
+    service_codes = Column(JSON, default=list)  # ["streetlight", "pothole", etc.] - empty = all categories
+    
+    # Routing for polygons (redirect requests within polygon to third-party)
+    routing_config = Column(JSON)  # { "enabled": true, "contact_name": "...", "phone": "...", "url": "...", "message": "..." }
+    
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
 
