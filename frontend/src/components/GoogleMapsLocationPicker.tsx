@@ -325,8 +325,6 @@ export default function GoogleMapsLocationPicker({
 
                         if (boundaryCoords.length > 0) {
                             // Create outer boundary (entire world)
-                            // The world bounds go counter-clockwise, township bounds go as-is
-                            // This creates a "donut" where the hole is the township (no fill inside)
                             const worldBounds: google.maps.LatLngLiteral[] = [
                                 { lat: -85, lng: -180 },
                                 { lat: 85, lng: -180 },
@@ -334,9 +332,10 @@ export default function GoogleMapsLocationPicker({
                                 { lat: -85, lng: 180 },
                             ];
 
-                            // Create polygon with hole - dark overlay outside boundary
+                            // Create polygon - swap order to flip which part is dark
+                            // First path is filled, second path is the "hole"
                             new window.google.maps.Polygon({
-                                paths: [worldBounds, boundaryCoords],
+                                paths: [boundaryCoords, worldBounds],
                                 fillColor: '#000000',
                                 fillOpacity: 0.4,
                                 strokeColor: '#6366f1',
@@ -345,6 +344,7 @@ export default function GoogleMapsLocationPicker({
                                 map: map,
                                 clickable: false,
                             });
+
 
                         } else {
                             // Fallback: just show boundary line without spotlight
