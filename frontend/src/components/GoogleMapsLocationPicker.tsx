@@ -481,17 +481,37 @@ export default function GoogleMapsLocationPicker({
                                             content: `
                                                 <div style="
                                                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                                                    padding: 4px 8px 8px 8px;
+                                                    padding: 2px 4px 8px 8px;
                                                     min-width: 180px;
                                                     max-width: 260px;
                                                 ">
                                                     <div style="
-                                                        font-size: 14px;
-                                                        font-weight: 700;
-                                                        color: #0f172a;
+                                                        display: flex;
+                                                        justify-content: space-between;
+                                                        align-items: flex-start;
+                                                        gap: 8px;
                                                         margin-bottom: 4px;
-                                                        line-height: 1.2;
-                                                    ">${assetName}</div>
+                                                    ">
+                                                        <div style="
+                                                            font-size: 14px;
+                                                            font-weight: 700;
+                                                            color: #0f172a;
+                                                            line-height: 1.2;
+                                                            flex: 1;
+                                                        ">${assetName}</div>
+                                                        <button 
+                                                            onclick="document.querySelector('.gm-ui-hover-effect').click()"
+                                                            style="
+                                                                background: none;
+                                                                border: none;
+                                                                cursor: pointer;
+                                                                padding: 0;
+                                                                color: #94a3b8;
+                                                                font-size: 18px;
+                                                                line-height: 1;
+                                                            "
+                                                        >×</button>
+                                                    </div>
                                                     
                                                     ${propsHtml ? `<div style="margin-bottom: 6px; border-top: 1px solid #e2e8f0; padding-top: 4px;">${propsHtml}</div>` : ''}
                                                     
@@ -500,7 +520,7 @@ export default function GoogleMapsLocationPicker({
                                                         style="
                                                             width: 100%;
                                                             padding: 6px 10px;
-                                                            background: linear-gradient(135deg, ${layer.fill_color}, ${layer.stroke_color});
+                                                            background: #8b5cf6;
                                                             color: white;
                                                             border: none;
                                                             border-radius: 6px;
