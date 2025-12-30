@@ -1735,10 +1735,8 @@ export default function AdminConsole() {
                                                             service_codes: [],
                                                             geojson: null,
                                                         });
-                                                        // Ensure services are loaded for category selection
-                                                        if (services.length === 0) {
-                                                            api.getServices().then(setServices).catch(console.error);
-                                                        }
+                                                        // Always load services for category selection
+                                                        api.getServices().then(setServices).catch(console.error);
                                                         setShowLayerModal(true);
                                                     }}
                                                     leftIcon={<Plus className="w-4 h-4" />}
@@ -1820,6 +1818,8 @@ export default function AdminConsole() {
                                                                             service_codes: layer.service_codes || [],
                                                                             geojson: layer.geojson,
                                                                         });
+                                                                        // Always load services for category selection
+                                                                        api.getServices().then(setServices).catch(console.error);
                                                                         setShowLayerModal(true);
                                                                     }}
                                                                 >
