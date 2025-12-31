@@ -203,18 +203,22 @@ export default function AdminConsole() {
     const [newLayer, setNewLayer] = useState({
         name: '',
         description: '',
+        layer_type: '' as '' | 'point' | 'polygon', // User must select first
         fill_color: '#3b82f6',
         stroke_color: '#1d4ed8',
         fill_opacity: 0.3,
         stroke_width: 2,
-        show_on_resident_portal: true,
         service_codes: [] as string[],
         geojson: null as object | null,
         // Polygon routing options
-        routing_mode: 'none' as 'none' | 'log' | 'block', // none=normal, log=log in report, block=redirect to third party
+        routing_mode: 'log' as 'log' | 'block', // log=log in report, block=redirect to third party
         routing_config: null as { message?: string; contacts?: { name: string; phone: string; url: string }[] } | null,
         visible_on_map: true, // Whether to show the layer visually on the map
     });
+    // Nominatim search state for polygon boundaries
+    const [nominatimSearch, setNominatimSearch] = useState('');
+    const [nominatimResults, setNominatimResults] = useState<{ display_name: string; osm_id: number; osm_type: string }[]>([]);
+    const [isSearchingNominatim, setIsSearchingNominatim] = useState(false);
 
 
     // Password reset state
@@ -1735,10 +1739,10 @@ export default function AdminConsole() {
                                                             stroke_color: '#1d4ed8',
                                                             fill_opacity: 0.3,
                                                             stroke_width: 2,
-                                                            show_on_resident_portal: true,
                                                             service_codes: [],
                                                             geojson: null,
-                                                            routing_mode: 'none',
+                                                            layer_type: '',
+                                                            routing_mode: 'log',
                                                             routing_config: null,
                                                             visible_on_map: true,
                                                         });
@@ -1794,11 +1798,11 @@ export default function AdminConsole() {
                                                                 <label className="flex items-center gap-2 text-sm text-white/60">
                                                                     <input
                                                                         type="checkbox"
-                                                                        checked={layer.show_on_resident_portal}
+                                                                        checked={(layer as any).visible_on_map ?? true}
                                                                         onChange={async () => {
                                                                             try {
                                                                                 await api.updateMapLayer(layer.id, {
-                                                                                    show_on_resident_portal: !layer.show_on_resident_portal,
+                                                                                    visible_on_map: !((layer as any).visible_on_map ?? true),
                                                                                 });
                                                                                 loadTabData();
                                                                             } catch (err) {
@@ -1817,14 +1821,14 @@ export default function AdminConsole() {
                                                                         setNewLayer({
                                                                             name: layer.name,
                                                                             description: layer.description || '',
+                                                                            layer_type: (layer as any).layer_type || 'polygon',
                                                                             fill_color: layer.fill_color,
                                                                             stroke_color: layer.stroke_color,
                                                                             fill_opacity: layer.fill_opacity,
                                                                             stroke_width: layer.stroke_width,
-                                                                            show_on_resident_portal: layer.show_on_resident_portal,
                                                                             service_codes: layer.service_codes || [],
                                                                             geojson: layer.geojson,
-                                                                            routing_mode: (layer as any).routing_mode || 'none',
+                                                                            routing_mode: ((layer as any).routing_mode === 'block' ? 'block' : 'log') as 'log' | 'block',
                                                                             routing_config: (layer as any).routing_config || null,
                                                                             visible_on_map: (layer as any).visible_on_map ?? true,
                                                                         });
@@ -2432,26 +2436,32 @@ export default function AdminConsole() {
                                 await api.updateMapLayer(editingLayer.id, {
                                     name: newLayer.name,
                                     description: newLayer.description,
+                                    layer_type: newLayer.layer_type,
                                     fill_color: newLayer.fill_color,
                                     stroke_color: newLayer.stroke_color,
                                     fill_opacity: newLayer.fill_opacity,
                                     stroke_width: newLayer.stroke_width,
-                                    show_on_resident_portal: newLayer.show_on_resident_portal,
                                     service_codes: newLayer.service_codes,
                                     geojson: newLayer.geojson,
+                                    routing_mode: newLayer.routing_mode,
+                                    routing_config: newLayer.routing_config,
+                                    visible_on_map: newLayer.visible_on_map,
                                 });
                                 setSaveMessage('Layer updated!');
                             } else {
                                 await api.createMapLayer({
                                     name: newLayer.name,
                                     description: newLayer.description,
+                                    layer_type: newLayer.layer_type,
                                     fill_color: newLayer.fill_color,
                                     stroke_color: newLayer.stroke_color,
                                     fill_opacity: newLayer.fill_opacity,
                                     stroke_width: newLayer.stroke_width,
-                                    show_on_resident_portal: newLayer.show_on_resident_portal,
                                     service_codes: newLayer.service_codes,
                                     geojson: newLayer.geojson,
+                                    routing_mode: newLayer.routing_mode,
+                                    routing_config: newLayer.routing_config,
+                                    visible_on_map: newLayer.visible_on_map,
                                 });
                                 setSaveMessage('Layer created!');
                             }
@@ -2480,307 +2490,325 @@ export default function AdminConsole() {
                         onChange={(e) => setNewLayer(p => ({ ...p, description: e.target.value }))}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-white/70 mb-2">Fill Color</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="color"
-                                    value={newLayer.fill_color}
-                                    onChange={(e) => setNewLayer(p => ({ ...p, fill_color: e.target.value }))}
-                                    className="w-12 h-10 rounded cursor-pointer"
-                                />
-                                <input
-                                    type="text"
-                                    value={newLayer.fill_color}
-                                    onChange={(e) => setNewLayer(p => ({ ...p, fill_color: e.target.value }))}
-                                    className="flex-1 h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-white/70 mb-2">Stroke Color</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="color"
-                                    value={newLayer.stroke_color}
-                                    onChange={(e) => setNewLayer(p => ({ ...p, stroke_color: e.target.value }))}
-                                    className="w-12 h-10 rounded cursor-pointer"
-                                />
-                                <input
-                                    type="text"
-                                    value={newLayer.stroke_color}
-                                    onChange={(e) => setNewLayer(p => ({ ...p, stroke_color: e.target.value }))}
-                                    className="flex-1 h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-white/70 mb-2">
-                                Fill Opacity: {Math.round(newLayer.fill_opacity * 100)}%
-                            </label>
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.1"
-                                value={newLayer.fill_opacity}
-                                onChange={(e) => setNewLayer(p => ({ ...p, fill_opacity: parseFloat(e.target.value) }))}
-                                className="w-full"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-white/70 mb-2">
-                                Stroke Width: {newLayer.stroke_width}px
-                            </label>
-                            <input
-                                type="range"
-                                min="1"
-                                max="10"
-                                value={newLayer.stroke_width}
-                                onChange={(e) => setNewLayer(p => ({ ...p, stroke_width: parseInt(e.target.value) }))}
-                                className="w-full"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-white/70 mb-2">GeoJSON File</label>
-                        <input
-                            type="file"
-                            accept=".geojson,.json"
-                            onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                try {
-                                    const text = await file.text();
-                                    const geojson = JSON.parse(text);
-                                    if (!geojson.type) {
-                                        throw new Error('Invalid GeoJSON format');
-                                    }
-                                    setNewLayer(p => ({ ...p, geojson }));
-                                } catch (err) {
-                                    alert('Failed to parse GeoJSON file');
-                                }
-                                e.target.value = '';
-                            }}
-                            className="w-full text-sm text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-500 file:text-white hover:file:bg-primary-600 file:cursor-pointer"
-                        />
-                        {newLayer.geojson && (
-                            <p className="text-xs text-green-400 mt-1">✓ GeoJSON loaded</p>
-                        )}
-                    </div>
-
-                    {/* Category selector */}
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="block text-sm font-medium text-white/70">
-                                Show for Categories
-                            </label>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setNewLayer(p => ({ ...p, service_codes: services.map(s => s.service_code) }))}
-                                    className="text-xs text-primary-400 hover:text-primary-300"
-                                >
-                                    Select All
-                                </button>
-                                <span className="text-white/20">|</span>
-                                <button
-                                    type="button"
-                                    onClick={() => setNewLayer(p => ({ ...p, service_codes: [] }))}
-                                    className="text-xs text-white/40 hover:text-white/60"
-                                >
-                                    Clear All
-                                </button>
-                            </div>
-                        </div>
-                        {services.length === 0 ? (
-                            <p className="text-sm text-white/40 p-3 rounded-lg bg-white/5 border border-white/10">
-                                Loading categories...
-                            </p>
-                        ) : (
-                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 rounded-lg bg-white/5 border border-white/10">
-                                {services.map((service) => (
-                                    <label
-                                        key={service.service_code}
-                                        className="flex items-center gap-2 text-sm text-white/70 hover:text-white cursor-pointer p-2 rounded hover:bg-white/10"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={newLayer.service_codes.includes(service.service_code)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setNewLayer(p => ({
-                                                        ...p,
-                                                        service_codes: [...p.service_codes, service.service_code]
-                                                    }));
-                                                } else {
-                                                    setNewLayer(p => ({
-                                                        ...p,
-                                                        service_codes: p.service_codes.filter(c => c !== service.service_code)
-                                                    }));
-                                                }
-                                            }}
-                                            className="w-4 h-4 rounded border-white/30 bg-white/10 text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
-                                        />
-                                        {service.service_name}
-                                    </label>
-                                ))}
-                            </div>
-                        )}
-                        <p className="text-xs text-white/40 mt-1">
-                            {newLayer.service_codes.length === 0
-                                ? '⚠️ Layer will be hidden (select at least one category)'
-                                : newLayer.service_codes.length === services.length
-                                    ? '✓ Layer visible for all categories'
-                                    : `Layer visible for ${newLayer.service_codes.length} ${newLayer.service_codes.length === 1 ? 'category' : 'categories'}`
-                            }
-                        </p>
-                    </div>
-
-                    {/* Polygon Routing Configuration */}
-                    <div className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                    {/* Layer Type Selection - Must choose first */}
+                    <div className="space-y-2">
                         <label className="block text-sm font-medium text-white/70">
-                            Polygon Behavior (for polygon/boundary layers)
+                            Layer Type <span className="text-red-400">*</span>
                         </label>
-                        <div className="flex gap-4">
-                            <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="routing_mode"
-                                    value="none"
-                                    checked={newLayer.routing_mode === 'none'}
-                                    onChange={() => setNewLayer(p => ({ ...p, routing_mode: 'none' }))}
-                                    className="text-primary-500"
-                                />
-                                Normal (no special behavior)
-                            </label>
-                            <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="routing_mode"
-                                    value="log"
-                                    checked={newLayer.routing_mode === 'log'}
-                                    onChange={() => setNewLayer(p => ({ ...p, routing_mode: 'log' }))}
-                                    className="text-primary-500"
-                                />
-                                Log Only (record in report)
-                            </label>
-                            <label className="flex items-center gap-2 text-sm text-amber-400 cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="routing_mode"
-                                    value="block"
-                                    checked={newLayer.routing_mode === 'block'}
-                                    onChange={() => setNewLayer(p => ({ ...p, routing_mode: 'block', routing_config: p.routing_config || { message: '', contacts: [] } }))}
-                                    className="text-amber-500"
-                                />
-                                Block &amp; Redirect
-                            </label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setNewLayer(p => ({ ...p, layer_type: 'point' }))}
+                                className={`p-4 rounded-lg border-2 transition-all ${newLayer.layer_type === 'point'
+                                    ? 'border-primary-500 bg-primary-500/20 text-white'
+                                    : 'border-white/20 bg-white/5 text-white/60 hover:border-white/40'
+                                    }`}
+                            >
+                                <div className="text-2xl mb-1">📍</div>
+                                <div className="font-semibold">Points</div>
+                                <div className="text-xs opacity-60">Individual locations (trees, lights, etc.)</div>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setNewLayer(p => ({ ...p, layer_type: 'polygon' }))}
+                                className={`p-4 rounded-lg border-2 transition-all ${newLayer.layer_type === 'polygon'
+                                    ? 'border-primary-500 bg-primary-500/20 text-white'
+                                    : 'border-white/20 bg-white/5 text-white/60 hover:border-white/40'
+                                    }`}
+                            >
+                                <div className="text-2xl mb-1">🗺️</div>
+                                <div className="font-semibold">Polygon</div>
+                                <div className="text-xs opacity-60">Boundaries (parks, zones, etc.)</div>
+                            </button>
                         </div>
+                    </div>
 
-                        {newLayer.routing_mode === 'block' && (
-                            <div className="space-y-3 pt-3 border-t border-white/10">
-                                <Input
-                                    label="Block Message"
-                                    placeholder="e.g., This location is on university property..."
-                                    value={newLayer.routing_config?.message || ''}
-                                    onChange={(e) => setNewLayer(p => ({
-                                        ...p,
-                                        routing_config: {
-                                            ...p.routing_config,
-                                            message: e.target.value,
-                                            contacts: p.routing_config?.contacts || []
-                                        }
-                                    }))}
-                                />
+                    {/* Only show rest of form after layer type is selected */}
+                    {newLayer.layer_type && (
+                        <>
+
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-white/70 mb-2">
-                                        Redirect Contact
-                                    </label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <Input
-                                            placeholder="Contact Name"
-                                            value={newLayer.routing_config?.contacts?.[0]?.name || ''}
-                                            onChange={(e) => setNewLayer(p => ({
-                                                ...p,
-                                                routing_config: {
-                                                    ...p.routing_config,
-                                                    message: p.routing_config?.message || '',
-                                                    contacts: [{
-                                                        name: e.target.value,
-                                                        phone: p.routing_config?.contacts?.[0]?.phone || '',
-                                                        url: p.routing_config?.contacts?.[0]?.url || ''
-                                                    }]
-                                                }
-                                            }))}
+                                    <label className="block text-sm font-medium text-white/70 mb-2">Fill Color</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="color"
+                                            value={newLayer.fill_color}
+                                            onChange={(e) => setNewLayer(p => ({ ...p, fill_color: e.target.value }))}
+                                            className="w-12 h-10 rounded cursor-pointer"
                                         />
-                                        <Input
-                                            placeholder="Phone"
-                                            value={newLayer.routing_config?.contacts?.[0]?.phone || ''}
-                                            onChange={(e) => setNewLayer(p => ({
-                                                ...p,
-                                                routing_config: {
-                                                    ...p.routing_config,
-                                                    message: p.routing_config?.message || '',
-                                                    contacts: [{
-                                                        name: p.routing_config?.contacts?.[0]?.name || '',
-                                                        phone: e.target.value,
-                                                        url: p.routing_config?.contacts?.[0]?.url || ''
-                                                    }]
-                                                }
-                                            }))}
+                                        <input
+                                            type="text"
+                                            value={newLayer.fill_color}
+                                            onChange={(e) => setNewLayer(p => ({ ...p, fill_color: e.target.value }))}
+                                            className="flex-1 h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
                                         />
-                                        <Input
-                                            placeholder="Website URL"
-                                            value={newLayer.routing_config?.contacts?.[0]?.url || ''}
-                                            onChange={(e) => setNewLayer(p => ({
-                                                ...p,
-                                                routing_config: {
-                                                    ...p.routing_config,
-                                                    message: p.routing_config?.message || '',
-                                                    contacts: [{
-                                                        name: p.routing_config?.contacts?.[0]?.name || '',
-                                                        phone: p.routing_config?.contacts?.[0]?.phone || '',
-                                                        url: e.target.value
-                                                    }]
-                                                }
-                                            }))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-white/70 mb-2">Stroke Color</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="color"
+                                            value={newLayer.stroke_color}
+                                            onChange={(e) => setNewLayer(p => ({ ...p, stroke_color: e.target.value }))}
+                                            className="w-12 h-10 rounded cursor-pointer"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={newLayer.stroke_color}
+                                            onChange={(e) => setNewLayer(p => ({ ...p, stroke_color: e.target.value }))}
+                                            className="flex-1 h-10 rounded-lg bg-white/10 border border-white/20 text-white px-3"
                                         />
                                     </div>
                                 </div>
                             </div>
-                        )}
 
-                        <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer pt-2">
-                            <input
-                                type="checkbox"
-                                checked={newLayer.visible_on_map}
-                                onChange={(e) => setNewLayer(p => ({ ...p, visible_on_map: e.target.checked }))}
-                                className="rounded"
-                            />
-                            Show layer boundary on map (uncheck to keep invisible)
-                        </label>
-                    </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-white/70 mb-2">
+                                        Fill Opacity: {Math.round(newLayer.fill_opacity * 100)}%
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.1"
+                                        value={newLayer.fill_opacity}
+                                        onChange={(e) => setNewLayer(p => ({ ...p, fill_opacity: parseFloat(e.target.value) }))}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-white/70 mb-2">
+                                        Stroke Width: {newLayer.stroke_width}px
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="10"
+                                        value={newLayer.stroke_width}
+                                        onChange={(e) => setNewLayer(p => ({ ...p, stroke_width: parseInt(e.target.value) }))}
+                                        className="w-full"
+                                    />
+                                </div>
+                            </div>
 
-                    <label className="flex items-center gap-2 text-white/70">
-                        <input
-                            type="checkbox"
-                            checked={newLayer.show_on_resident_portal}
-                            onChange={(e) => setNewLayer(p => ({ ...p, show_on_resident_portal: e.target.checked }))}
-                            className="rounded"
-                        />
-                        Show on Resident Portal map
-                    </label>
+                            <div>
+                                <label className="block text-sm font-medium text-white/70 mb-2">GeoJSON File</label>
+                                <input
+                                    type="file"
+                                    accept=".geojson,.json"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        try {
+                                            const text = await file.text();
+                                            const geojson = JSON.parse(text);
+                                            if (!geojson.type) {
+                                                throw new Error('Invalid GeoJSON format');
+                                            }
+                                            setNewLayer(p => ({ ...p, geojson }));
+                                        } catch (err) {
+                                            alert('Failed to parse GeoJSON file');
+                                        }
+                                        e.target.value = '';
+                                    }}
+                                    className="w-full text-sm text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-500 file:text-white hover:file:bg-primary-600 file:cursor-pointer"
+                                />
+                                {newLayer.geojson && (
+                                    <p className="text-xs text-green-400 mt-1">✓ GeoJSON loaded</p>
+                                )}
+                            </div>
 
-                    <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
-                        <Button variant="ghost" onClick={() => setShowLayerModal(false)}>Cancel</Button>
-                        <Button type="submit">{editingLayer ? 'Update Layer' : 'Create Layer'}</Button>
-                    </div>
+                            {/* Category selector */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-sm font-medium text-white/70">
+                                        Show for Categories
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewLayer(p => ({ ...p, service_codes: services.map(s => s.service_code) }))}
+                                            className="text-xs text-primary-400 hover:text-primary-300"
+                                        >
+                                            Select All
+                                        </button>
+                                        <span className="text-white/20">|</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewLayer(p => ({ ...p, service_codes: [] }))}
+                                            className="text-xs text-white/40 hover:text-white/60"
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </div>
+                                {services.length === 0 ? (
+                                    <p className="text-sm text-white/40 p-3 rounded-lg bg-white/5 border border-white/10">
+                                        Loading categories...
+                                    </p>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 rounded-lg bg-white/5 border border-white/10">
+                                        {services.map((service) => (
+                                            <label
+                                                key={service.service_code}
+                                                className="flex items-center gap-2 text-sm text-white/70 hover:text-white cursor-pointer p-2 rounded hover:bg-white/10"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={newLayer.service_codes.includes(service.service_code)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setNewLayer(p => ({
+                                                                ...p,
+                                                                service_codes: [...p.service_codes, service.service_code]
+                                                            }));
+                                                        } else {
+                                                            setNewLayer(p => ({
+                                                                ...p,
+                                                                service_codes: p.service_codes.filter(c => c !== service.service_code)
+                                                            }));
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 rounded border-white/30 bg-white/10 text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
+                                                />
+                                                {service.service_name}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                                <p className="text-xs text-white/40 mt-1">
+                                    {newLayer.service_codes.length === 0
+                                        ? '⚠️ Layer will be hidden (select at least one category)'
+                                        : newLayer.service_codes.length === services.length
+                                            ? '✓ Layer visible for all categories'
+                                            : `Layer visible for ${newLayer.service_codes.length} ${newLayer.service_codes.length === 1 ? 'category' : 'categories'}`
+                                    }
+                                </p>
+                            </div>
+
+                            {/* Polygon Routing Configuration */}
+                            <div className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                                <label className="block text-sm font-medium text-white/70">
+                                    Polygon Behavior (for polygon/boundary layers)
+                                </label>
+                                <div className="flex gap-4">
+                                    <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="routing_mode"
+                                            value="log"
+                                            checked={newLayer.routing_mode === 'log'}
+                                            onChange={() => setNewLayer(p => ({ ...p, routing_mode: 'log' }))}
+                                            className="text-primary-500"
+                                        />
+                                        Log Only (record in report)
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-amber-400 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="routing_mode"
+                                            value="block"
+                                            checked={newLayer.routing_mode === 'block'}
+                                            onChange={() => setNewLayer(p => ({ ...p, routing_mode: 'block', routing_config: p.routing_config || { message: '', contacts: [] } }))}
+                                            className="text-amber-500"
+                                        />
+                                        Block &amp; Redirect
+                                    </label>
+                                </div>
+
+                                {newLayer.routing_mode === 'block' && (
+                                    <div className="space-y-3 pt-3 border-t border-white/10">
+                                        <Input
+                                            label="Block Message"
+                                            placeholder="e.g., This location is on university property..."
+                                            value={newLayer.routing_config?.message || ''}
+                                            onChange={(e) => setNewLayer(p => ({
+                                                ...p,
+                                                routing_config: {
+                                                    ...p.routing_config,
+                                                    message: e.target.value,
+                                                    contacts: p.routing_config?.contacts || []
+                                                }
+                                            }))}
+                                        />
+                                        <div>
+                                            <label className="block text-sm font-medium text-white/70 mb-2">
+                                                Redirect Contact
+                                            </label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <Input
+                                                    placeholder="Contact Name"
+                                                    value={newLayer.routing_config?.contacts?.[0]?.name || ''}
+                                                    onChange={(e) => setNewLayer(p => ({
+                                                        ...p,
+                                                        routing_config: {
+                                                            ...p.routing_config,
+                                                            message: p.routing_config?.message || '',
+                                                            contacts: [{
+                                                                name: e.target.value,
+                                                                phone: p.routing_config?.contacts?.[0]?.phone || '',
+                                                                url: p.routing_config?.contacts?.[0]?.url || ''
+                                                            }]
+                                                        }
+                                                    }))}
+                                                />
+                                                <Input
+                                                    placeholder="Phone"
+                                                    value={newLayer.routing_config?.contacts?.[0]?.phone || ''}
+                                                    onChange={(e) => setNewLayer(p => ({
+                                                        ...p,
+                                                        routing_config: {
+                                                            ...p.routing_config,
+                                                            message: p.routing_config?.message || '',
+                                                            contacts: [{
+                                                                name: p.routing_config?.contacts?.[0]?.name || '',
+                                                                phone: e.target.value,
+                                                                url: p.routing_config?.contacts?.[0]?.url || ''
+                                                            }]
+                                                        }
+                                                    }))}
+                                                />
+                                                <Input
+                                                    placeholder="Website URL"
+                                                    value={newLayer.routing_config?.contacts?.[0]?.url || ''}
+                                                    onChange={(e) => setNewLayer(p => ({
+                                                        ...p,
+                                                        routing_config: {
+                                                            ...p.routing_config,
+                                                            message: p.routing_config?.message || '',
+                                                            contacts: [{
+                                                                name: p.routing_config?.contacts?.[0]?.name || '',
+                                                                phone: p.routing_config?.contacts?.[0]?.phone || '',
+                                                                url: e.target.value
+                                                            }]
+                                                        }
+                                                    }))}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer pt-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={newLayer.visible_on_map}
+                                        onChange={(e) => setNewLayer(p => ({ ...p, visible_on_map: e.target.checked }))}
+                                        className="rounded"
+                                    />
+                                    Show layer boundary on map (uncheck to keep invisible)
+                                </label>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                                <Button variant="ghost" onClick={() => setShowLayerModal(false)}>Cancel</Button>
+                                <Button type="submit" disabled={!newLayer.layer_type}>{editingLayer ? 'Update Layer' : 'Create Layer'}</Button>
+                            </div>
+                        </>
+                    )}
                 </form>
             </Modal>
 

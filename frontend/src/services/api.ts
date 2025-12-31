@@ -350,13 +350,16 @@ class ApiClient {
     async createMapLayer(layerData: {
         name: string;
         description?: string;
+        layer_type?: string;
         fill_color?: string;
         stroke_color?: string;
         fill_opacity?: number;
         stroke_width?: number;
-        show_on_resident_portal?: boolean;
         service_codes?: string[];
         geojson: object;
+        routing_mode?: string;
+        routing_config?: object | null;
+        visible_on_map?: boolean;
     }): Promise<MapLayer> {
         return this.request('/map-layers/', {
             method: 'POST',
@@ -367,14 +370,17 @@ class ApiClient {
     async updateMapLayer(layerId: number, layerData: {
         name?: string;
         description?: string;
+        layer_type?: string;
         fill_color?: string;
         stroke_color?: string;
         fill_opacity?: number;
         stroke_width?: number;
         is_active?: boolean;
-        show_on_resident_portal?: boolean;
         service_codes?: string[];
         geojson?: object;
+        routing_mode?: string;
+        routing_config?: object | null;
+        visible_on_map?: boolean;
     }): Promise<MapLayer> {
         return this.request(`/map-layers/${layerId}`, {
             method: 'PUT',

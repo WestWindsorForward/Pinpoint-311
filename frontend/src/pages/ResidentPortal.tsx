@@ -230,6 +230,72 @@ export default function ResidentPortal() {
         }
     };
 
+    // Ray-casting algorithm for point-in-polygon check
+    const isPointInPolygon = (lat: number, lng: number, polygon: number[][]): boolean => {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i][0], yi = polygon[i][1];
+            const xj = polygon[j][0], yj = polygon[j][1];
+            if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    };
+
+    // Check if location is inside any blocking polygon
+    const checkPolygonContainment = (lat: number, lng: number, serviceCode: string) => {
+        console.log('checkPolygonContainment called:', { lat, lng, serviceCode });
+
+        for (const layer of mapLayers) {
+            // Only check polygon layers with routing_mode='block'
+            const layerRoutingMode = (layer as any).routing_mode;
+            if (layerRoutingMode !== 'block') continue;
+
+            // Check if this layer applies to the current service category
+            const layerServiceCodes = layer.service_codes || [];
+            if (layerServiceCodes.length > 0 && !layerServiceCodes.includes(serviceCode)) continue;
+
+            const geojson = layer.geojson as any;
+            if (!geojson) continue;
+
+            // Handle both FeatureCollection and single Feature
+            const features = geojson.type === 'FeatureCollection' ? geojson.features : [geojson];
+
+            for (const feature of features) {
+                const geometry = feature.geometry;
+                if (!geometry) continue;
+
+                let isInside = false;
+
+                if (geometry.type === 'Polygon') {
+                    // Check outer ring (first ring) - GeoJSON uses [lng, lat]
+                    const coords = geometry.coordinates[0].map((c: number[]) => [c[1], c[0]]); // Convert to [lat, lng]
+                    isInside = isPointInPolygon(lat, lng, coords);
+                } else if (geometry.type === 'MultiPolygon') {
+                    for (const polygon of geometry.coordinates) {
+                        const coords = polygon[0].map((c: number[]) => [c[1], c[0]]);
+                        if (isPointInPolygon(lat, lng, coords)) {
+                            isInside = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isInside) {
+                    console.log('Location is inside blocking polygon:', layer.name);
+                    const routingConfig = (layer as any).routing_config || {};
+                    setIsBlocked(true);
+                    setBlockMessage(routingConfig.message || `This location is within ${layer.name} and is handled by a third party.`);
+                    setBlockContacts(routingConfig.contacts || []);
+                    return true; // Found a blocking polygon
+                }
+            }
+        }
+
+        return false; // Not inside any blocking polygon
+    };
+
 
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {};
@@ -618,6 +684,10 @@ export default function ResidentPortal() {
                                                             // Check road-based blocking when address changes
                                                             if (selectedService.routing_mode === 'road_based') {
                                                                 checkRoadBasedBlocking(newLocation.address, selectedService);
+                                                            }
+                                                            // Check polygon containment blocking when coordinates are available
+                                                            if (newLocation.lat && newLocation.lng) {
+                                                                checkPolygonContainment(newLocation.lat, newLocation.lng, selectedService.service_code);
                                                             }
                                                         }}
                                                         placeholder="Search for an address or click on the map..."
