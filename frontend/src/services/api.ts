@@ -13,6 +13,7 @@ import {
     ServiceCreate,
     Department,
     RequestComment,
+    PublicServiceRequest,
 } from '../types';
 
 const API_BASE = '/api';
@@ -136,6 +137,14 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify(data),
         });
+    }
+
+    async getPublicRequests(status?: string, serviceCode?: string): Promise<PublicServiceRequest[]> {
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (serviceCode) params.append('service_code', serviceCode);
+        const queryString = params.toString() ? `?${params.toString()}` : '';
+        return this.request<PublicServiceRequest[]>(`/open311/v2/public/requests${queryString}`);
     }
 
     // Service Requests (Staff)

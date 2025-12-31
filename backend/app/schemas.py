@@ -204,6 +204,24 @@ class ServiceRequestResponse(BaseModel):
         from_attributes = True
 
 
+class PublicServiceRequestResponse(BaseModel):
+    """Public-facing response that strips all personal information"""
+    service_request_id: str
+    service_code: str
+    service_name: str
+    description: str  # Could be truncated in API
+    status: str
+    address: Optional[str] = None
+    lat: Optional[float] = None
+    long: Optional[float] = None
+    requested_datetime: Optional[datetime] = None
+    updated_datetime: Optional[datetime] = None
+    closed_substatus: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class ServiceRequestDetailResponse(ServiceRequestResponse):
     first_name: Optional[str] = None
     last_name: Optional[str] = None

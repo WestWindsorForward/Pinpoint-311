@@ -106,6 +106,21 @@ export interface ServiceRequest {
     deleted_by: string | null;
 }
 
+// Public-facing request (no personal information)
+export interface PublicServiceRequest {
+    service_request_id: string;
+    service_code: string;
+    service_name: string;
+    description: string;
+    status: RequestStatus;
+    address: string | null;
+    lat: number | null;
+    long: number | null;
+    requested_datetime: string;
+    updated_datetime: string | null;
+    closed_substatus: ClosedSubstatus | null;
+}
+
 export interface ServiceRequestDetail extends ServiceRequest {
     first_name: string | null;
     last_name: string | null;

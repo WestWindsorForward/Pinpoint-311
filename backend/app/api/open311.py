@@ -9,7 +9,7 @@ from app.db.session import get_db
 from app.models import ServiceRequest, ServiceDefinition, User
 from app.schemas import (
     ServiceRequestCreate, ServiceRequestResponse, ServiceRequestDetailResponse,
-    ServiceRequestUpdate, ServiceRequestDelete, ManualIntakeCreate
+    ServiceRequestUpdate, ServiceRequestDelete, ManualIntakeCreate, PublicServiceRequestResponse
 )
 from app.core.auth import get_current_staff
 
@@ -21,6 +21,45 @@ def generate_request_id() -> str:
     timestamp = datetime.now().strftime("%Y%m%d")
     unique = uuid.uuid4().hex[:8].upper()
     return f"REQ-{timestamp}-{unique}"
+
+
+@router.get("/public/requests", response_model=List[PublicServiceRequestResponse])
+async def list_public_requests(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    service_code: Optional[str] = Query(None, description="Filter by service category"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db)
+):
+    """Public endpoint - List all requests WITHOUT personal information"""
+    query = select(ServiceRequest).where(ServiceRequest.deleted_at.is_(None))
+    
+    if status:
+        query = query.where(ServiceRequest.status == status)
+    if service_code:
+        query = query.where(ServiceRequest.service_code == service_code)
+    
+    query = query.order_by(ServiceRequest.requested_datetime.desc()).limit(limit).offset(offset)
+    result = await db.execute(query)
+    requests = result.scalars().all()
+    
+    # Return public response without PII, truncate description for privacy
+    return [
+        PublicServiceRequestResponse(
+            service_request_id=r.service_request_id,
+            service_code=r.service_code,
+            service_name=r.service_name,
+            description=r.description[:200] + "..." if len(r.description) > 200 else r.description,
+            status=r.status,
+            address=r.address,
+            lat=r.lat,
+            long=r.long,
+            requested_datetime=r.requested_datetime,
+            updated_datetime=r.updated_datetime,
+            closed_substatus=r.closed_substatus,
+        )
+        for r in requests
+    ]
 
 
 @router.get("/services.json")
