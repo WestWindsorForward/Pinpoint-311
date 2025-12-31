@@ -119,7 +119,8 @@ export interface PublicServiceRequest {
     requested_datetime: string;
     updated_datetime: string | null;
     closed_substatus: ClosedSubstatus | null;
-    media_url: string | null;
+    media_urls: string[];  // Array of photo URLs
+    photo_count?: number;  // Number of photos (from list response)
     completion_message: string | null;
     completion_photo_url: string | null;
 }
@@ -129,7 +130,7 @@ export interface ServiceRequestDetail extends ServiceRequest {
     last_name: string | null;
     email: string;
     phone: string | null;
-    media_url: string | null;
+    media_urls: string[];  // Array of photo URLs
     ai_analysis: Record<string, unknown> | null;
     flag_reason: string | null;
     staff_notes: string | null;
@@ -167,7 +168,7 @@ export interface ServiceRequestCreate {
     last_name?: string;
     email: string;
     phone?: string;
-    media_url?: string;
+    media_urls?: string[];  // Up to 3 photo URLs/base64
     matched_asset?: {
         layer_name: string;
         layer_id: number;

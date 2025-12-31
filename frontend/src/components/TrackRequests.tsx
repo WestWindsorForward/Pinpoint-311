@@ -330,36 +330,39 @@ export default function TrackRequests({ initialRequestId }: TrackRequestsProps) 
                     </Card>
                 </div>
 
-                {/* Photo if available */}
-                {selectedRequest.media_url && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                        <Card className="overflow-hidden">
-                            <div className="p-4 border-b border-white/10">
-                                <h3 className="font-semibold text-white flex items-center gap-2">
-                                    <Image className="w-5 h-5 text-primary-400" />
-                                    Submitted Photo
-                                </h3>
+                {/* Photos if available */}
+                {selectedRequest.media_urls && selectedRequest.media_urls.length > 0 && (
+                    <div className="mt-6">
+                        <Card className="p-4">
+                            <h3 className="font-semibold text-white flex items-center gap-2 mb-4">
+                                <Image className="w-5 h-5 text-primary-400" />
+                                Submitted Photos ({selectedRequest.media_urls.length})
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {selectedRequest.media_urls.map((url, index) => (
+                                    <a
+                                        key={index}
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block group"
+                                    >
+                                        <div className="relative overflow-hidden rounded-xl aspect-square">
+                                            <img
+                                                src={url}
+                                                alt={`Submitted photo ${index + 1}`}
+                                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                <ExternalLink className="w-8 h-8 text-white" />
+                                            </div>
+                                        </div>
+                                    </a>
+                                ))}
                             </div>
-                            <a
-                                href={selectedRequest.media_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block group"
-                            >
-                                <div className="relative overflow-hidden">
-                                    <img
-                                        src={selectedRequest.media_url}
-                                        alt="Submitted photo"
-                                        className="w-full max-h-64 object-cover transition-transform duration-300 group-hover:scale-105"
-                                    />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                        <ExternalLink className="w-8 h-8 text-white" />
-                                    </div>
-                                </div>
-                            </a>
                         </Card>
                         {selectedRequest.completion_photo_url && (
-                            <Card className="overflow-hidden">
+                            <Card className="overflow-hidden mt-4">
                                 <div className="p-4 border-b border-white/10">
                                     <h3 className="font-semibold text-white flex items-center gap-2">
                                         <CheckCircle className="w-5 h-5 text-emerald-400" />
@@ -578,14 +581,11 @@ export default function TrackRequests({ initialRequestId }: TrackRequestsProps) 
                             >
                                 <Card className="p-5 hover:ring-2 hover:ring-primary-500/50 transition-all group-hover:bg-white/[0.03]">
                                     <div className="flex gap-5">
-                                        {/* Thumbnail if has photo */}
-                                        {request.media_url && (
-                                            <div className="w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-white/5">
-                                                <img
-                                                    src={request.media_url}
-                                                    alt=""
-                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                />
+                                        {/* Photo indicator if has photos */}
+                                        {(request.photo_count || 0) > 0 && (
+                                            <div className="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-primary-500/20 flex flex-col items-center justify-center">
+                                                <Image className="w-8 h-8 text-primary-400" />
+                                                <span className="text-primary-300 text-xs mt-1">{request.photo_count} photo{request.photo_count !== 1 ? 's' : ''}</span>
                                             </div>
                                         )}
 

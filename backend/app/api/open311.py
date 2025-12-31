@@ -79,8 +79,8 @@ async def list_public_requests(
             "requested_datetime": r.requested_datetime.isoformat() if r.requested_datetime else None,
             "updated_datetime": r.updated_datetime.isoformat() if r.updated_datetime else None,
             "closed_substatus": r.closed_substatus,
-            "media_url": None,  # Excluded from list - use has_media flag
-            "has_media": bool(r.media_url),  # Flag indicating photo exists
+            "media_urls": [],  # Excluded from list - use photo_count
+            "photo_count": len(r.media_urls or []),  # Number of photos attached
             "completion_message": r.completion_message[:200] if r.completion_message else None,
             "completion_photo_url": None,  # Excluded from list - use has_completion_photo flag
             "has_completion_photo": bool(r.completion_photo_url),  # Flag indicating completion photo exists
@@ -123,7 +123,7 @@ async def get_public_request_detail(request_id: str, db: AsyncSession = Depends(
         "requested_datetime": request.requested_datetime.isoformat() if request.requested_datetime else None,
         "updated_datetime": request.updated_datetime.isoformat() if request.updated_datetime else None,
         "closed_substatus": request.closed_substatus,
-        "media_url": request.media_url,  # Full media data for detail view
+        "media_urls": request.media_urls or [],  # Full array of photo data for detail view
         "completion_message": request.completion_message,
         "completion_photo_url": request.completion_photo_url,  # Full completion photo
     }
@@ -236,7 +236,7 @@ async def create_request(
         last_name=request_data.last_name,
         email=request_data.email,
         phone=request_data.phone,
-        media_url=request_data.media_url,
+        media_urls=request_data.media_urls[:3] if request_data.media_urls else [],  # Limit to 3 photos
         matched_asset=request_data.matched_asset,
         source="resident_portal"
     )

@@ -797,19 +797,24 @@ export default function StaffDashboard() {
                                             </Card>
                                         )}
 
-                                        {/* Submitted Photo */}
-                                        {selectedRequest.media_url && (
+                                        {/* Submitted Photos */}
+                                        {selectedRequest.media_urls && selectedRequest.media_urls.length > 0 && (
                                             <Card>
                                                 <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
                                                     <Camera className="w-4 h-4 text-primary-400" />
-                                                    Submitted Photo
+                                                    Submitted Photos ({selectedRequest.media_urls.length})
                                                 </h3>
-                                                <img
-                                                    src={selectedRequest.media_url}
-                                                    alt="Report"
-                                                    className="rounded-lg max-h-64 w-full object-cover cursor-pointer"
-                                                    onClick={() => window.open(selectedRequest.media_url!, '_blank')}
-                                                />
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {selectedRequest.media_urls.map((url, index) => (
+                                                        <img
+                                                            key={index}
+                                                            src={url}
+                                                            alt={`Photo ${index + 1}`}
+                                                            className="rounded-lg max-h-48 w-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                                            onClick={() => window.open(url, '_blank')}
+                                                        />
+                                                    ))}
+                                                </div>
                                             </Card>
                                         )}
 

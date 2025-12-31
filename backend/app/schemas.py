@@ -157,7 +157,7 @@ class ServiceRequestCreate(BaseModel):
     last_name: Optional[str] = None
     email: EmailStr
     phone: Optional[str] = None
-    media_url: Optional[str] = None
+    media_urls: Optional[List[str]] = []  # Up to 3 photo URLs/base64
     matched_asset: Optional[Dict[str, Any]] = None  # Nearby asset from map layers
 
 
@@ -217,7 +217,7 @@ class PublicServiceRequestResponse(BaseModel):
     requested_datetime: Optional[datetime] = None
     updated_datetime: Optional[datetime] = None
     closed_substatus: Optional[str] = None
-    media_url: Optional[str] = None
+    media_urls: Optional[List[str]] = []  # Array of photo URLs
     completion_message: Optional[str] = None
     completion_photo_url: Optional[str] = None
 
@@ -230,7 +230,7 @@ class ServiceRequestDetailResponse(ServiceRequestResponse):
     last_name: Optional[str] = None
     email: str
     phone: Optional[str] = None
-    media_url: Optional[str] = None
+    media_urls: Optional[List[str]] = []  # Array of photo URLs
     ai_analysis: Optional[Dict[str, Any]] = None
     flag_reason: Optional[str] = None
     staff_notes: Optional[str] = None

@@ -127,7 +127,7 @@ class ServiceRequest(Base):
     
     # Metadata
     source = Column(String(50), default="resident_portal")  # resident_portal, phone, walk_in, email
-    media_url = Column(String(500))
+    media_urls = Column(JSON, default=[])  # Array of up to 3 photo URLs/base64
     
     # AI Analysis
     ai_analysis = Column(JSON)
