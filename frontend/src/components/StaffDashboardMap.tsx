@@ -481,9 +481,9 @@ export default function StaffDashboardMap({
                 className={`absolute top-0 right-0 bottom-0 w-72 border-l border-white/10 transform transition-all duration-300 z-20 shadow-2xl ${showFilters ? 'translate-x-0' : 'translate-x-full'
                     }`}
                 style={{
-                    backgroundColor: mapType === 'roadmap' ? '#0f0f1a' : 'rgba(15, 15, 26, 0.85)',
-                    backdropFilter: mapType === 'roadmap' ? 'none' : 'blur(20px)',
-                    WebkitBackdropFilter: mapType === 'roadmap' ? 'none' : 'blur(20px)',
+                    backgroundColor: 'rgba(15, 15, 26, 0.85)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
                 }}
             >
                 {/* Panel Header */}
