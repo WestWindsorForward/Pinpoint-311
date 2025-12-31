@@ -16,6 +16,8 @@ import {
     Copy,
     Check,
     ExternalLink,
+    Shield,
+    User,
 } from 'lucide-react';
 import { Card, Input, Button, Textarea } from './ui';
 import { api } from '../services/api';
@@ -249,222 +251,228 @@ export default function TrackRequests({ initialRequestId }: TrackRequestsProps) 
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main Content - Left Column */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Location & Map */}
-                        {selectedRequest.address && (
-                            <Card className="overflow-hidden">
-                                <div className="p-6">
-                                    <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-                                        <div className="p-2 rounded-lg bg-primary-500/20">
-                                            <MapPin className="w-5 h-5 text-primary-400" />
-                                        </div>
-                                        Location
-                                    </h3>
-                                    <p className="text-white/70 text-lg">{selectedRequest.address}</p>
-                                </div>
-
-                                {selectedRequest.lat && selectedRequest.long && (
-                                    <div className="h-72 bg-white/5 border-t border-white/10">
-                                        <iframe
-                                            width="100%"
-                                            height="100%"
-                                            style={{ border: 0 }}
-                                            loading="lazy"
-                                            src={`https://www.google.com/maps/embed/v1/place?key=${(window as any).GOOGLE_MAPS_API_KEY || ''}&q=${selectedRequest.lat},${selectedRequest.long}&zoom=17`}
-                                            allowFullScreen
-                                        />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Location & Map */}
+                    {selectedRequest.address && (
+                        <Card className="overflow-hidden">
+                            <div className="p-5">
+                                <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-primary-500/20">
+                                        <MapPin className="w-5 h-5 text-primary-400" />
                                     </div>
-                                )}
-                            </Card>
-                        )}
-
-                        {/* Description */}
-                        <Card className="p-6">
-                            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                                <div className="p-2 rounded-lg bg-white/10">
-                                    <ExternalLink className="w-5 h-5 text-white/70" />
-                                </div>
-                                Description
-                            </h3>
-                            <p className="text-white/80 text-lg leading-relaxed whitespace-pre-wrap">
-                                {selectedRequest.description}
-                            </p>
-                        </Card>
-
-                        {/* Comments Section */}
-                        <Card className="p-6">
-                            <h3 className="font-semibold text-white mb-6 flex items-center gap-2">
-                                <div className="p-2 rounded-lg bg-primary-500/20">
-                                    <MessageSquare className="w-5 h-5 text-primary-400" />
-                                </div>
-                                Community Discussion
-                                <span className="ml-auto text-sm font-normal text-white/40">
-                                    {comments.length} comment{comments.length !== 1 ? 's' : ''}
-                                </span>
-                            </h3>
-
-                            {/* Add Comment - Moved to top */}
-                            <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
-                                <Textarea
-                                    placeholder="Share your thoughts or updates..."
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    rows={3}
-                                    className="mb-3 bg-transparent border-white/20 focus:border-primary-500"
-                                />
-                                <div className="flex justify-end">
-                                    <Button
-                                        onClick={handleAddComment}
-                                        disabled={!newComment.trim() || isSubmittingComment}
-                                        size="sm"
-                                    >
-                                        <Send className="w-4 h-4 mr-2" />
-                                        {isSubmittingComment ? 'Posting...' : 'Post Comment'}
-                                    </Button>
-                                </div>
+                                    Location
+                                </h3>
+                                <p className="text-white/70">{selectedRequest.address}</p>
                             </div>
 
-                            {/* Comment List */}
-                            <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                                {isLoadingComments ? (
-                                    <div className="flex justify-center py-8">
-                                        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                                    </div>
-                                ) : comments.length === 0 ? (
-                                    <div className="text-center py-8">
-                                        <MessageSquare className="w-12 h-12 mx-auto mb-3 text-white/20" />
-                                        <p className="text-white/40">No comments yet</p>
-                                        <p className="text-white/30 text-sm">Be the first to share an update!</p>
-                                    </div>
-                                ) : (
-                                    comments.map((comment, index) => (
-                                        <motion.div
-                                            key={comment.id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.05 }}
-                                            className="p-4 rounded-xl bg-gradient-to-r from-white/5 to-transparent border border-white/10"
-                                        >
-                                            <div className="flex justify-between items-center mb-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center">
-                                                        <span className="text-primary-300 font-semibold text-sm">
-                                                            {comment.username.charAt(0).toUpperCase()}
-                                                        </span>
-                                                    </div>
-                                                    <span className="font-medium text-white">{comment.username}</span>
-                                                </div>
-                                                <span className="text-white/40 text-xs">{formatDate(comment.created_at)}</span>
-                                            </div>
-                                            <p className="text-white/70 pl-11">{comment.content}</p>
-                                        </motion.div>
-                                    ))
-                                )}
-                            </div>
+                            {selectedRequest.lat && selectedRequest.long && (
+                                <div className="h-48 bg-white/5 border-t border-white/10">
+                                    <iframe
+                                        width="100%"
+                                        height="100%"
+                                        style={{ border: 0 }}
+                                        loading="lazy"
+                                        src={`https://www.google.com/maps/embed/v1/place?key=${(window as any).GOOGLE_MAPS_API_KEY || ''}&q=${selectedRequest.lat},${selectedRequest.long}&zoom=17`}
+                                        allowFullScreen
+                                    />
+                                </div>
+                            )}
                         </Card>
-                    </div>
+                    )}
 
-                    {/* Sidebar - Right Column */}
-                    <div className="space-y-6">
-                        {/* Photo */}
-                        {selectedRequest.media_url && (
+                    {/* Timeline & Status */}
+                    <Card className="p-5">
+                        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-white/50" />
+                            Timeline & Status
+                        </h3>
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 rounded-full bg-primary-500" />
+                                <div className="flex-1">
+                                    <p className="text-white/50 text-xs">Submitted</p>
+                                    <p className="text-white font-medium">{formatShortDate(selectedRequest.requested_datetime)}</p>
+                                </div>
+                            </div>
+                            {selectedRequest.updated_datetime && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                    <div className="flex-1">
+                                        <p className="text-white/50 text-xs">Last Updated</p>
+                                        <p className="text-white font-medium">{formatShortDate(selectedRequest.updated_datetime)}</p>
+                                    </div>
+                                </div>
+                            )}
+                            {selectedRequest.status === 'closed' && (
+                                <div className="mt-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                    <p className="text-emerald-300 font-medium flex items-center gap-2">
+                                        <CheckCircle className="w-4 h-4" />
+                                        {selectedRequest.closed_substatus === 'no_action' ? 'No Action Needed' :
+                                            selectedRequest.closed_substatus === 'resolved' ? 'Issue Resolved' :
+                                                selectedRequest.closed_substatus === 'third_party' ? 'Referred to Third Party' :
+                                                    'Closed'}
+                                    </p>
+                                    {selectedRequest.completion_message && (
+                                        <p className="text-white/60 text-sm mt-2">{selectedRequest.completion_message}</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+                </div>
+
+                {/* Photo if available */}
+                {selectedRequest.media_url && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                        <Card className="overflow-hidden">
+                            <div className="p-4 border-b border-white/10">
+                                <h3 className="font-semibold text-white flex items-center gap-2">
+                                    <Image className="w-5 h-5 text-primary-400" />
+                                    Submitted Photo
+                                </h3>
+                            </div>
+                            <a
+                                href={selectedRequest.media_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block group"
+                            >
+                                <div className="relative overflow-hidden">
+                                    <img
+                                        src={selectedRequest.media_url}
+                                        alt="Submitted photo"
+                                        className="w-full max-h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                        <ExternalLink className="w-8 h-8 text-white" />
+                                    </div>
+                                </div>
+                            </a>
+                        </Card>
+                        {selectedRequest.completion_photo_url && (
                             <Card className="overflow-hidden">
                                 <div className="p-4 border-b border-white/10">
                                     <h3 className="font-semibold text-white flex items-center gap-2">
-                                        <Image className="w-5 h-5 text-primary-400" />
-                                        Photo
+                                        <CheckCircle className="w-5 h-5 text-emerald-400" />
+                                        Completion Photo
                                     </h3>
                                 </div>
                                 <a
-                                    href={selectedRequest.media_url}
+                                    href={selectedRequest.completion_photo_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="block group"
                                 >
                                     <div className="relative overflow-hidden">
                                         <img
-                                            src={selectedRequest.media_url}
-                                            alt="Submitted photo"
-                                            className="w-full transition-transform duration-300 group-hover:scale-105"
+                                            src={selectedRequest.completion_photo_url}
+                                            alt="Completion photo"
+                                            className="w-full max-h-64 object-cover transition-transform duration-300 group-hover:scale-105"
                                         />
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                            <ExternalLink className="w-8 h-8 text-white" />
-                                        </div>
                                     </div>
                                 </a>
                             </Card>
                         )}
-
-                        {/* Resolution Info (if closed) */}
-                        {selectedRequest.status === 'closed' && (
-                            <Card className="p-5 bg-gradient-to-br from-emerald-500/10 to-green-500/5 border-emerald-500/30">
-                                <h3 className="font-semibold text-emerald-300 mb-4 flex items-center gap-2">
-                                    <CheckCircle className="w-5 h-5" />
-                                    Resolution
-                                </h3>
-                                <div className="space-y-4">
-                                    <div className="p-3 rounded-lg bg-white/5">
-                                        <span className="text-white/50 text-xs uppercase tracking-wide">Outcome</span>
-                                        <p className="text-white font-medium mt-1">
-                                            {selectedRequest.closed_substatus === 'no_action' ? 'No Action Needed' :
-                                                selectedRequest.closed_substatus === 'resolved' ? 'Issue Resolved' :
-                                                    selectedRequest.closed_substatus === 'third_party' ? 'Referred to Third Party' :
-                                                        'Closed'}
-                                        </p>
-                                    </div>
-                                    {selectedRequest.completion_message && (
-                                        <div className="p-3 rounded-lg bg-white/5">
-                                            <span className="text-white/50 text-xs uppercase tracking-wide">Staff Notes</span>
-                                            <p className="text-white/80 text-sm mt-1">{selectedRequest.completion_message}</p>
-                                        </div>
-                                    )}
-                                    {selectedRequest.completion_photo_url && (
-                                        <a
-                                            href={selectedRequest.completion_photo_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="block rounded-lg overflow-hidden"
-                                        >
-                                            <img
-                                                src={selectedRequest.completion_photo_url}
-                                                alt="Completion photo"
-                                                className="w-full hover:opacity-90 transition-opacity"
-                                            />
-                                        </a>
-                                    )}
-                                </div>
-                            </Card>
-                        )}
-
-                        {/* Timeline */}
-                        <Card className="p-5">
-                            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-white/50" />
-                                Timeline
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-primary-500" />
-                                    <div className="flex-1">
-                                        <p className="text-white/50 text-xs">Submitted</p>
-                                        <p className="text-white font-medium">{formatShortDate(selectedRequest.requested_datetime)}</p>
-                                    </div>
-                                </div>
-                                {selectedRequest.updated_datetime && (
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                        <div className="flex-1">
-                                            <p className="text-white/50 text-xs">Last Updated</p>
-                                            <p className="text-white font-medium">{formatShortDate(selectedRequest.updated_datetime)}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </Card>
                     </div>
-                </div>
+                )}
+
+                {/* Description - Full Width */}
+                <Card className="p-6 mt-6">
+                    <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-white/10">
+                            <ExternalLink className="w-5 h-5 text-white/70" />
+                        </div>
+                        Description
+                    </h3>
+                    <p className="text-white/80 text-lg leading-relaxed whitespace-pre-wrap">
+                        {selectedRequest.description}
+                    </p>
+                </Card>
+
+                {/* Comments Section - Full Width */}
+                <Card className="p-6 mt-6">
+                    <h3 className="font-semibold text-white mb-6 flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-primary-500/20">
+                            <MessageSquare className="w-5 h-5 text-primary-400" />
+                        </div>
+                        Community Discussion
+                        <span className="ml-auto text-sm font-normal text-white/40">
+                            {comments.length} comment{comments.length !== 1 ? 's' : ''}
+                        </span>
+                    </h3>
+
+                    {/* Add Comment */}
+                    <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
+                        <Textarea
+                            placeholder="Share your thoughts or updates..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            rows={3}
+                            className="mb-3 bg-transparent border-white/20 focus:border-primary-500"
+                        />
+                        <div className="flex justify-end">
+                            <Button
+                                onClick={handleAddComment}
+                                disabled={!newComment.trim() || isSubmittingComment}
+                                size="sm"
+                            >
+                                <Send className="w-4 h-4 mr-2" />
+                                {isSubmittingComment ? 'Posting...' : 'Post Comment'}
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Comment List */}
+                    <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                        {isLoadingComments ? (
+                            <div className="flex justify-center py-8">
+                                <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : comments.length === 0 ? (
+                            <div className="text-center py-8">
+                                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-white/20" />
+                                <p className="text-white/40">No comments yet</p>
+                                <p className="text-white/30 text-sm">Be the first to share an update!</p>
+                            </div>
+                        ) : (
+                            comments.map((comment, index) => {
+                                const isStaff = comment.username !== 'Resident';
+                                return (
+                                    <motion.div
+                                        key={comment.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className={`p-4 rounded-xl border ${isStaff ? 'bg-gradient-to-r from-purple-500/10 to-transparent border-purple-500/20' : 'bg-gradient-to-r from-white/5 to-transparent border-white/10'}`}
+                                    >
+                                        <div className="flex justify-between items-center mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStaff ? 'bg-purple-500/20' : 'bg-primary-500/20'}`}>
+                                                    {isStaff ? (
+                                                        <Shield className="w-4 h-4 text-purple-300" />
+                                                    ) : (
+                                                        <User className="w-4 h-4 text-primary-300" />
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium text-white">{comment.username}</span>
+                                                    {isStaff && (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                                            <Shield className="w-3 h-3" />
+                                                            Staff
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <span className="text-white/40 text-xs">{formatDate(comment.created_at)}</span>
+                                        </div>
+                                        <p className="text-white/70 pl-11">{comment.content}</p>
+                                    </motion.div>
+                                );
+                            })
+                        )}
+                    </div>
+                </Card>
             </motion.div>
         );
     }
