@@ -56,6 +56,14 @@ function AppRoutes() {
                     </ProtectedRoute>
                 }
             />
+            <Route
+                path="/staff/request/:requestId"
+                element={
+                    <ProtectedRoute requiredRole="staff">
+                        <StaffDashboard />
+                    </ProtectedRoute>
+                }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );

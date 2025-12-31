@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
     Menu,
     X,
@@ -39,6 +39,7 @@ type View = 'active' | 'resolved' | 'all' | 'statistics';
 
 export default function StaffDashboard() {
     const navigate = useNavigate();
+    const { requestId: urlRequestId } = useParams<{ requestId?: string }>();
     const { user, logout } = useAuth();
     const { settings } = useSettings();
 
@@ -83,6 +84,13 @@ export default function StaffDashboard() {
     useEffect(() => {
         loadData();
     }, [currentView]);
+
+    // Auto-load request if URL contains requestId
+    useEffect(() => {
+        if (urlRequestId) {
+            loadRequestDetail(urlRequestId);
+        }
+    }, [urlRequestId]);
 
     const loadData = async () => {
         setIsLoading(true);
