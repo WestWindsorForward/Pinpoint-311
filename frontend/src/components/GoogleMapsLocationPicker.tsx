@@ -597,7 +597,7 @@ export default function GoogleMapsLocationPicker({
                     // Store the features ref for proximity detection
                     (window as any).__mapLayerFeatures = layerFeaturesRef;
 
-                    // Add single click listener for polygon info popup - ONLY for blocking polygons
+                    // Add single click listener for polygons
                     map.data.addListener('click', (event: any) => {
                         const layerName = event.feature.getProperty('_layerName');
                         const routingMode = event.feature.getProperty('_routingMode');
@@ -605,8 +605,7 @@ export default function GoogleMapsLocationPicker({
 
                         console.log('Polygon clicked:', { layerName, routingMode, routingConfig });
 
-                        // Only show popup for BLOCKING polygons (excluded areas)
-                        // Log-only polygons should be transparent to the user
+                        // For BLOCKING polygons, show exclusion popup
                         if (layerName && routingMode === 'block') {
                             const message = routingConfig.message || 'This area is handled by a third party.';
 
@@ -652,6 +651,22 @@ export default function GoogleMapsLocationPicker({
                                 position: event.latLng,
                             });
                             infoWindow.open(map);
+                        } else if (layerName) {
+                            // For LOG-ONLY polygons, place the pin at the clicked location (pass through)
+                            const lat = event.latLng.lat();
+                            const lng = event.latLng.lng();
+
+                            // Move the marker to clicked location
+                            if (markerRef.current) {
+                                markerRef.current.setPosition({ lat, lng });
+                            }
+
+                            // Reverse geocode and update
+                            const geocoder = new window.google.maps.Geocoder();
+                            geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
+                                const address = status === 'OK' && results?.[0]?.formatted_address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                                onChange({ address, lat, lng });
+                            });
                         }
                     });
 

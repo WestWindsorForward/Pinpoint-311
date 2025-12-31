@@ -266,8 +266,10 @@ class MapLayerBase(BaseModel):
     fill_opacity: float = 0.3
     stroke_width: int = 2
     show_on_resident_portal: bool = True
+    visible_on_map: bool = True  # Whether to show layer visually on map
+    routing_mode: Optional[str] = "log"  # log, block
     service_codes: Optional[List[str]] = None  # Categories this layer applies to (empty = all)
-    routing_config: Optional[Dict[str, Any]] = None  # { enabled, contact_name, phone, url, message }
+    routing_config: Optional[Dict[str, Any]] = None  # { message, contacts }
 
 
 
@@ -278,12 +280,15 @@ class MapLayerCreate(MapLayerBase):
 class MapLayerUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    layer_type: Optional[str] = None
     fill_color: Optional[str] = None
     stroke_color: Optional[str] = None
     fill_opacity: Optional[float] = None
     stroke_width: Optional[int] = None
     is_active: Optional[bool] = None
     show_on_resident_portal: Optional[bool] = None
+    visible_on_map: Optional[bool] = None
+    routing_mode: Optional[str] = None
     geojson: Optional[Dict[str, Any]] = None
     service_codes: Optional[List[str]] = None
     routing_config: Optional[Dict[str, Any]] = None
@@ -294,6 +299,8 @@ class MapLayerResponse(MapLayerBase):
     id: int
     geojson: Dict[str, Any]
     is_active: bool
+    visible_on_map: Optional[bool] = True
+    routing_mode: Optional[str] = "log"
     service_codes: Optional[List[str]] = None
     routing_config: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
