@@ -217,6 +217,9 @@ class PublicServiceRequestResponse(BaseModel):
     requested_datetime: Optional[datetime] = None
     updated_datetime: Optional[datetime] = None
     closed_substatus: Optional[str] = None
+    media_url: Optional[str] = None
+    completion_message: Optional[str] = None
+    completion_photo_url: Optional[str] = None
 
     class Config:
         from_attributes = True

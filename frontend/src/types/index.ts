@@ -119,6 +119,9 @@ export interface PublicServiceRequest {
     requested_datetime: string;
     updated_datetime: string | null;
     closed_substatus: ClosedSubstatus | null;
+    media_url: string | null;
+    completion_message: string | null;
+    completion_photo_url: string | null;
 }
 
 export interface ServiceRequestDetail extends ServiceRequest {

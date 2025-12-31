@@ -43,13 +43,13 @@ async def list_public_requests(
     result = await db.execute(query)
     requests = result.scalars().all()
     
-    # Return public response without PII, truncate description for privacy
+    # Return public response without PII
     return [
         PublicServiceRequestResponse(
             service_request_id=r.service_request_id,
             service_code=r.service_code,
             service_name=r.service_name,
-            description=r.description[:200] + "..." if len(r.description) > 200 else r.description,
+            description=r.description,
             status=r.status,
             address=r.address,
             lat=r.lat,
@@ -57,9 +57,66 @@ async def list_public_requests(
             requested_datetime=r.requested_datetime,
             updated_datetime=r.updated_datetime,
             closed_substatus=r.closed_substatus,
+            media_url=r.media_url,
+            completion_message=r.completion_message,
+            completion_photo_url=r.completion_photo_url,
         )
         for r in requests
     ]
+
+
+from app.models import RequestComment
+from app.schemas import RequestCommentCreate, RequestCommentResponse
+
+
+@router.get("/public/requests/{request_id}/comments", response_model=List[RequestCommentResponse])
+async def get_public_comments(request_id: str, db: AsyncSession = Depends(get_db)):
+    """Get external/public comments for a request - no auth required"""
+    # Find the request
+    result = await db.execute(
+        select(ServiceRequest).where(ServiceRequest.service_request_id == request_id)
+    )
+    request = result.scalar_one_or_none()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Get only external comments
+    comments_result = await db.execute(
+        select(RequestComment)
+        .where(RequestComment.service_request_id == request.id)
+        .where(RequestComment.visibility == 'external')
+        .order_by(RequestComment.created_at.asc())
+    )
+    return comments_result.scalars().all()
+
+
+@router.post("/public/requests/{request_id}/comments", response_model=RequestCommentResponse)
+async def add_public_comment(
+    request_id: str,
+    content: str = Query(..., min_length=1, max_length=1000),
+    db: AsyncSession = Depends(get_db)
+):
+    """Add a public comment to a request - no auth required, always external visibility"""
+    # Find the request
+    result = await db.execute(
+        select(ServiceRequest).where(ServiceRequest.service_request_id == request_id)
+    )
+    request = result.scalar_one_or_none()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Create external comment (anonymous - "Resident")
+    comment = RequestComment(
+        service_request_id=request.id,
+        username="Resident",
+        content=content,
+        visibility="external"
+    )
+    db.add(comment)
+    await db.commit()
+    await db.refresh(comment)
+    return comment
+
 
 
 @router.get("/services.json")
