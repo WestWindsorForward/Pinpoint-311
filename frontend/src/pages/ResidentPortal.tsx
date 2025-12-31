@@ -76,10 +76,11 @@ export default function ResidentPortal() {
     const [photos, setPhotos] = useState<File[]>([]);
     const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
 
-    // Custom map layers
     const [mapLayers, setMapLayers] = useState<MapLayer[]>([]);
     // Selected asset from map layer (for report logging)
     const [selectedAsset, setSelectedAsset] = useState<{ layerName: string; properties: Record<string, any>; lat: number; lng: number } | null>(null);
+    // Matched polygon layer (for report logging)
+    const [matchedPolygon, setMatchedPolygon] = useState<{ layer_name: string; layer_id: number; routing_mode: string } | null>(null);
 
     // Location/GPS state  
     const [location, setLocation] = useState<{ address: string; lat: number | null; lng: number | null }>({
@@ -243,17 +244,17 @@ export default function ResidentPortal() {
         return inside;
     };
 
-    // Check if location is inside any blocking polygon
+    // Check if location is inside any polygon layer and log/block accordingly
     const checkPolygonContainment = (lat: number, lng: number, serviceCode: string) => {
         console.log('checkPolygonContainment called:', { lat, lng, serviceCode });
 
-        for (const layer of mapLayers) {
-            // Only check polygon layers with routing_mode='block'
-            const layerRoutingMode = (layer as any).routing_mode;
-            if (layerRoutingMode !== 'block') continue;
+        // Reset matched polygon state
+        setMatchedPolygon(null);
 
+        for (const layer of mapLayers) {
             // Check if this layer applies to the current service category
             const layerServiceCodes = layer.service_codes || [];
+            // Layer applies if: no service_codes specified (applies to all) OR includes this category
             if (layerServiceCodes.length > 0 && !layerServiceCodes.includes(serviceCode)) continue;
 
             const geojson = layer.geojson as any;
@@ -265,6 +266,9 @@ export default function ResidentPortal() {
             for (const feature of features) {
                 const geometry = feature.geometry;
                 if (!geometry) continue;
+
+                // Only check polygon geometries
+                if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') continue;
 
                 let isInside = false;
 
@@ -283,17 +287,30 @@ export default function ResidentPortal() {
                 }
 
                 if (isInside) {
-                    console.log('Location is inside blocking polygon:', layer.name);
-                    const routingConfig = (layer as any).routing_config || {};
-                    setIsBlocked(true);
-                    setBlockMessage(routingConfig.message || `This location is within ${layer.name} and is handled by a third party.`);
-                    setBlockContacts(routingConfig.contacts || []);
-                    return true; // Found a blocking polygon
+                    const layerRoutingMode = (layer as any).routing_mode || 'log';
+                    console.log('Location is inside polygon:', layer.name, 'routing_mode:', layerRoutingMode);
+
+                    // Set matched polygon for report logging
+                    setMatchedPolygon({
+                        layer_name: layer.name,
+                        layer_id: layer.id,
+                        routing_mode: layerRoutingMode
+                    });
+
+                    // If blocking mode, show redirect UI
+                    if (layerRoutingMode === 'block') {
+                        const routingConfig = (layer as any).routing_config || {};
+                        setIsBlocked(true);
+                        setBlockMessage(routingConfig.message || `This location is within ${layer.name} and is handled by a third party.`);
+                        setBlockContacts(routingConfig.contacts || []);
+                    }
+
+                    return true; // Found a matching polygon
                 }
             }
         }
 
-        return false; // Not inside any blocking polygon
+        return false; // Not inside any polygon
     };
 
 
@@ -338,6 +355,7 @@ export default function ResidentPortal() {
             const result = await api.createRequest({
                 ...formData,
                 matched_asset: matchedAsset,
+                matched_polygon: matchedPolygon,
             });
             setSubmittedId(result.service_request_id);
             setStep('success');
@@ -659,12 +677,13 @@ export default function ResidentPortal() {
                                                     <GoogleMapsLocationPicker
                                                         apiKey={mapsApiKey}
                                                         townshipBoundary={townshipBoundary}
-                                                        customLayers={mapLayers.filter(layer =>
-                                                            // Layer must have at least one category AND include the selected category
-                                                            layer.service_codes &&
-                                                            layer.service_codes.length > 0 &&
-                                                            layer.service_codes.includes(selectedService.service_code)
-                                                        )}
+                                                        customLayers={mapLayers.filter(layer => {
+                                                            // Check if layer is visible
+                                                            if ((layer as any).visible_on_map === false) return false;
+                                                            // Layer applies if: no service_codes (applies to all) OR includes current category
+                                                            const codes = layer.service_codes || [];
+                                                            return codes.length === 0 || codes.includes(selectedService.service_code);
+                                                        })}
                                                         value={location}
                                                         onOutOfBounds={() => setIsLocationOutOfBounds(true)}
                                                         onAssetSelect={(asset) => {

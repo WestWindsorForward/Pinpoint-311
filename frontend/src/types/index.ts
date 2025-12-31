@@ -131,6 +131,11 @@ export interface ServiceRequestCreate {
         properties: Record<string, any>;
         distance_meters?: number;
     };
+    matched_polygon?: {
+        layer_name: string;
+        layer_id: number;
+        routing_mode: string;
+    } | null;
 }
 
 
