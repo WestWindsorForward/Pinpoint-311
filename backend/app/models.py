@@ -199,8 +199,12 @@ class MapLayer(Base):
     # Category association - which service categories this layer applies to
     service_codes = Column(JSON, default=list)  # ["streetlight", "pothole", etc.] - empty = all categories
     
+    # Polygon routing behavior
+    routing_mode = Column(String(20), default="none")  # none, log, block
+    visible_on_map = Column(Boolean, default=True)  # Whether to render the layer visually
+    
     # Routing for polygons (redirect requests within polygon to third-party)
-    routing_config = Column(JSON)  # { "enabled": true, "contact_name": "...", "phone": "...", "url": "...", "message": "..." }
+    routing_config = Column(JSON)  # { "message": "...", "contacts": [{ "name": "...", "phone": "...", "url": "..." }] }
     
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -210,6 +210,10 @@ export default function AdminConsole() {
         show_on_resident_portal: true,
         service_codes: [] as string[],
         geojson: null as object | null,
+        // Polygon routing options
+        routing_mode: 'none' as 'none' | 'log' | 'block', // none=normal, log=log in report, block=redirect to third party
+        routing_config: null as { message?: string; contacts?: { name: string; phone: string; url: string }[] } | null,
+        visible_on_map: true, // Whether to show the layer visually on the map
     });
 
 
@@ -1734,6 +1738,9 @@ export default function AdminConsole() {
                                                             show_on_resident_portal: true,
                                                             service_codes: [],
                                                             geojson: null,
+                                                            routing_mode: 'none',
+                                                            routing_config: null,
+                                                            visible_on_map: true,
                                                         });
                                                         // Always load services for category selection
                                                         api.getServices().then(setServices).catch(console.error);
@@ -1817,6 +1824,9 @@ export default function AdminConsole() {
                                                                             show_on_resident_portal: layer.show_on_resident_portal,
                                                                             service_codes: layer.service_codes || [],
                                                                             geojson: layer.geojson,
+                                                                            routing_mode: (layer as any).routing_mode || 'none',
+                                                                            routing_config: (layer as any).routing_config || null,
+                                                                            visible_on_map: (layer as any).visible_on_map ?? true,
                                                                         });
                                                                         // Always load services for category selection
                                                                         api.getServices().then(setServices).catch(console.error);
@@ -2630,6 +2640,131 @@ export default function AdminConsole() {
                                     : `Layer visible for ${newLayer.service_codes.length} ${newLayer.service_codes.length === 1 ? 'category' : 'categories'}`
                             }
                         </p>
+                    </div>
+
+                    {/* Polygon Routing Configuration */}
+                    <div className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                        <label className="block text-sm font-medium text-white/70">
+                            Polygon Behavior (for polygon/boundary layers)
+                        </label>
+                        <div className="flex gap-4">
+                            <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="routing_mode"
+                                    value="none"
+                                    checked={newLayer.routing_mode === 'none'}
+                                    onChange={() => setNewLayer(p => ({ ...p, routing_mode: 'none' }))}
+                                    className="text-primary-500"
+                                />
+                                Normal (no special behavior)
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="routing_mode"
+                                    value="log"
+                                    checked={newLayer.routing_mode === 'log'}
+                                    onChange={() => setNewLayer(p => ({ ...p, routing_mode: 'log' }))}
+                                    className="text-primary-500"
+                                />
+                                Log Only (record in report)
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-amber-400 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="routing_mode"
+                                    value="block"
+                                    checked={newLayer.routing_mode === 'block'}
+                                    onChange={() => setNewLayer(p => ({ ...p, routing_mode: 'block', routing_config: p.routing_config || { message: '', contacts: [] } }))}
+                                    className="text-amber-500"
+                                />
+                                Block &amp; Redirect
+                            </label>
+                        </div>
+
+                        {newLayer.routing_mode === 'block' && (
+                            <div className="space-y-3 pt-3 border-t border-white/10">
+                                <Input
+                                    label="Block Message"
+                                    placeholder="e.g., This location is on university property..."
+                                    value={newLayer.routing_config?.message || ''}
+                                    onChange={(e) => setNewLayer(p => ({
+                                        ...p,
+                                        routing_config: {
+                                            ...p.routing_config,
+                                            message: e.target.value,
+                                            contacts: p.routing_config?.contacts || []
+                                        }
+                                    }))}
+                                />
+                                <div>
+                                    <label className="block text-sm font-medium text-white/70 mb-2">
+                                        Redirect Contact
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <Input
+                                            placeholder="Contact Name"
+                                            value={newLayer.routing_config?.contacts?.[0]?.name || ''}
+                                            onChange={(e) => setNewLayer(p => ({
+                                                ...p,
+                                                routing_config: {
+                                                    ...p.routing_config,
+                                                    message: p.routing_config?.message || '',
+                                                    contacts: [{
+                                                        name: e.target.value,
+                                                        phone: p.routing_config?.contacts?.[0]?.phone || '',
+                                                        url: p.routing_config?.contacts?.[0]?.url || ''
+                                                    }]
+                                                }
+                                            }))}
+                                        />
+                                        <Input
+                                            placeholder="Phone"
+                                            value={newLayer.routing_config?.contacts?.[0]?.phone || ''}
+                                            onChange={(e) => setNewLayer(p => ({
+                                                ...p,
+                                                routing_config: {
+                                                    ...p.routing_config,
+                                                    message: p.routing_config?.message || '',
+                                                    contacts: [{
+                                                        name: p.routing_config?.contacts?.[0]?.name || '',
+                                                        phone: e.target.value,
+                                                        url: p.routing_config?.contacts?.[0]?.url || ''
+                                                    }]
+                                                }
+                                            }))}
+                                        />
+                                        <Input
+                                            placeholder="Website URL"
+                                            value={newLayer.routing_config?.contacts?.[0]?.url || ''}
+                                            onChange={(e) => setNewLayer(p => ({
+                                                ...p,
+                                                routing_config: {
+                                                    ...p.routing_config,
+                                                    message: p.routing_config?.message || '',
+                                                    contacts: [{
+                                                        name: p.routing_config?.contacts?.[0]?.name || '',
+                                                        phone: p.routing_config?.contacts?.[0]?.phone || '',
+                                                        url: e.target.value
+                                                    }]
+                                                }
+                                            }))}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer pt-2">
+                            <input
+                                type="checkbox"
+                                checked={newLayer.visible_on_map}
+                                onChange={(e) => setNewLayer(p => ({ ...p, visible_on_map: e.target.checked }))}
+                                className="rounded"
+                            />
+                            Show layer boundary on map (uncheck to keep invisible)
+                        </label>
                     </div>
 
                     <label className="flex items-center gap-2 text-white/70">

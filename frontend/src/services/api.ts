@@ -406,12 +406,11 @@ export interface MapLayer {
     is_active: boolean;
     show_on_resident_portal: boolean;
     service_codes?: string[];  // Categories this layer applies to (empty = all)
+    routing_mode?: 'none' | 'log' | 'block';  // Polygon behavior
+    visible_on_map?: boolean;  // Whether to render the layer visually
     routing_config?: {
-        enabled: boolean;
-        contact_name?: string;
-        phone?: string;
-        url?: string;
         message?: string;
+        contacts?: { name: string; phone: string; url: string }[];
     };
     created_at?: string;
     updated_at?: string;

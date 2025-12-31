@@ -136,10 +136,11 @@ export default function ResidentPortal() {
         setSelectedService(service);
         setFormData((prev) => ({ ...prev, service_code: service.service_code }));
 
-        // Clear any previous blocking state
+        // Clear any previous blocking state and selected asset
         setIsBlocked(false);
         setBlockMessage('');
         setBlockContacts([]);
+        setSelectedAsset(null); // Reset asset selection for new category
 
         // Check if third-party only service - block immediately
         if (service.routing_mode === 'third_party') {
@@ -251,7 +252,7 @@ export default function ResidentPortal() {
 
         setIsSubmitting(true);
         try {
-            // Matched asset: Use user-selected asset first, fallback to proximity detection
+            // Matched asset: ONLY use user-selected asset (no automatic proximity detection)
             let matchedAsset: typeof formData.matched_asset = undefined;
 
             // User explicitly clicked "Select this..." on an asset marker
@@ -265,41 +266,8 @@ export default function ResidentPortal() {
                     distance_meters: 0, // Exact selection, no distance
                 };
                 console.log('User selected asset:', matchedAsset);
-            } else if (location.lat && location.lng) {
-                // Fallback to proximity detection if no explicit selection
-                const layerFeatures = (window as any).__mapLayerFeatures || [];
-                const PROXIMITY_THRESHOLD_METERS = 50; // 50 meters for point proximity
-
-                for (const feature of layerFeatures) {
-                    const geom = feature.geometry;
-                    const props = feature.properties || {};
-                    const layer = feature.layer;
-
-                    if (!geom) continue;
-
-                    // Point proximity check (Haversine distance)
-                    if (geom.lat !== undefined && geom.lng !== undefined) {
-                        const distance = calculateDistance(
-                            location.lat, location.lng,
-                            geom.lat, geom.lng
-                        );
-
-                        if (distance <= PROXIMITY_THRESHOLD_METERS) {
-                            matchedAsset = {
-                                layer_name: layer.name,
-                                layer_id: layer.id,
-                                asset_id: props.asset_id,
-                                asset_type: props.asset_type,
-                                properties: props,
-                                distance_meters: Math.round(distance),
-                            };
-                            console.log('Matched nearby asset:', matchedAsset);
-                            break;
-                        }
-                    }
-                    // Polygon containment check would go here (already stored in data layer)
-                }
             }
+            // Note: No automatic proximity detection - user must explicitly select an asset
 
             const result = await api.createRequest({
                 ...formData,
