@@ -382,12 +382,12 @@ export default function StaffDashboardMap({
                             position: latLng,
                             map,
                             icon: {
-                                path: window.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+                                path: window.google.maps.SymbolPath.CIRCLE,
                                 fillColor: layer.fill_color,
-                                fillOpacity: 1,
-                                strokeColor: layer.stroke_color,
-                                strokeWeight: 2,
-                                scale: 6,
+                                fillOpacity: 0.95,
+                                strokeColor: '#ffffff',
+                                strokeWeight: 2.5,
+                                scale: 10,
                             },
                             title: (props as any).name || layer.name,
                         });
@@ -397,13 +397,16 @@ export default function StaffDashboardMap({
                             if (infoWindowRef.current) {
                                 const propsHtml = Object.entries(props)
                                     .filter(([k]) => k !== 'name')
-                                    .map(([k, v]) => `<p style="margin: 4px 0; font-size: 12px;"><strong>${k}:</strong> ${v}</p>`)
+                                    .map(([k, v]) => `<p style="margin: 6px 0; font-size: 13px; color: #e5e7eb;"><span style="color: #9ca3af;">${k}:</span> ${v}</p>`)
                                     .join('');
 
                                 infoWindowRef.current.setContent(`
-                                    <div style="padding: 12px; font-family: system-ui;">
-                                        <h4 style="margin: 0 0 8px 0; color: ${layer.fill_color};">${(props as any).name || layer.name}</h4>
-                                        ${propsHtml || '<p style="color: #666; font-size: 12px;">No additional properties</p>'}
+                                    <div style="padding: 16px; font-family: system-ui, -apple-system, sans-serif; background: #1f2937; border-radius: 12px; min-width: 180px;">
+                                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                            <span style="width: 14px; height: 14px; border-radius: 50%; background: ${layer.fill_color}; box-shadow: 0 0 8px ${layer.fill_color}80;"></span>
+                                            <h4 style="margin: 0; color: #f9fafb; font-size: 15px; font-weight: 600;">${(props as any).name || layer.name}</h4>
+                                        </div>
+                                        ${propsHtml || '<p style="color: #9ca3af; font-size: 13px; margin: 0;">No additional properties</p>'}
                                     </div>
                                 `);
                                 infoWindowRef.current.open(map, marker);
