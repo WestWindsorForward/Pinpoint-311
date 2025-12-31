@@ -64,13 +64,14 @@ async def list_public_requests(
     result = await db.execute(query)
     requests = result.scalars().all()
     
-    # Build response
+    # Build response - EXCLUDE large base64 media data for performance
+    # Use has_media flags instead so frontend knows if media exists
     response_data = [
         {
             "service_request_id": r.service_request_id,
             "service_code": r.service_code,
             "service_name": r.service_name,
-            "description": r.description,
+            "description": r.description[:500] if r.description else None,  # Truncate long descriptions
             "status": r.status,
             "address": r.address,
             "lat": r.lat,
@@ -78,9 +79,9 @@ async def list_public_requests(
             "requested_datetime": r.requested_datetime.isoformat() if r.requested_datetime else None,
             "updated_datetime": r.updated_datetime.isoformat() if r.updated_datetime else None,
             "closed_substatus": r.closed_substatus,
-            "media_url": r.media_url,
-            "completion_message": r.completion_message,
-            "completion_photo_url": r.completion_photo_url,
+            "media_url": bool(r.media_url),  # Just indicate if media exists
+            "completion_message": r.completion_message[:200] if r.completion_message else None,
+            "completion_photo_url": bool(r.completion_photo_url),  # Just indicate if photo exists
         }
         for r in requests
     ]
