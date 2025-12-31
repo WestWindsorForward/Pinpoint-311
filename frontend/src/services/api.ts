@@ -201,7 +201,7 @@ class ApiClient {
 
     // Request Comments
     async getComments(requestId: number): Promise<RequestComment[]> {
-        return this.request<RequestComment[]>(`/api/requests/${requestId}/comments`);
+        return this.request<RequestComment[]>(`/requests/${requestId}/comments`);
     }
 
     async createComment(
@@ -209,14 +209,14 @@ class ApiClient {
         content: string,
         visibility: 'internal' | 'external' = 'internal'
     ): Promise<RequestComment> {
-        return this.request<RequestComment>(`/api/requests/${requestId}/comments`, {
+        return this.request<RequestComment>(`/requests/${requestId}/comments`, {
             method: 'POST',
             body: JSON.stringify({ content, visibility }),
         });
     }
 
     async deleteComment(requestId: number, commentId: number): Promise<void> {
-        return this.request<void>(`/api/requests/${requestId}/comments/${commentId}`, {
+        return this.request<void>(`/requests/${requestId}/comments/${commentId}`, {
             method: 'DELETE',
         });
     }
