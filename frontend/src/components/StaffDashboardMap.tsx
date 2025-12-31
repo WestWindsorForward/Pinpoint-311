@@ -479,10 +479,12 @@ export default function StaffDashboardMap({
             {/* Filter Panel - Right Side */}
             <div
                 className={`absolute top-0 right-0 bottom-0 w-72 border-l border-white/10 transform transition-all duration-300 z-20 shadow-2xl ${showFilters ? 'translate-x-0' : 'translate-x-full'
-                    } ${mapType === 'roadmap'
-                        ? 'bg-[#0f0f1a]'
-                        : 'bg-[#0f0f1a]/95 backdrop-blur-xl'
                     }`}
+                style={{
+                    backgroundColor: mapType === 'roadmap' ? '#0f0f1a' : 'rgba(15, 15, 26, 0.85)',
+                    backdropFilter: mapType === 'roadmap' ? 'none' : 'blur(20px)',
+                    WebkitBackdropFilter: mapType === 'roadmap' ? 'none' : 'blur(20px)',
+                }}
             >
                 {/* Panel Header */}
                 <div className="p-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-primary-500/10 to-transparent">
