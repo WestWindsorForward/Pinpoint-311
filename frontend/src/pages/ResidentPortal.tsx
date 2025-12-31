@@ -533,6 +533,7 @@ export default function ResidentPortal() {
                                             services={services}
                                             departments={[]}
                                             users={[]}
+                                            townshipBoundary={townshipBoundary}
                                             onRequestSelect={() => { }}
                                         />
                                     </div>

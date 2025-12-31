@@ -563,7 +563,7 @@ export default function TrackRequests({ initialRequestId }: TrackRequestsProps) 
                                 key={request.service_request_id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.03 }}
+                                transition={{ delay: Math.min(index * 0.01, 0.2) }}
                                 onClick={() => handleSelectRequest(request)}
                                 className="cursor-pointer group"
                             >
