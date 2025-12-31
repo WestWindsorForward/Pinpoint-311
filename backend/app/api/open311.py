@@ -23,6 +23,15 @@ def generate_request_id() -> str:
     return f"REQ-{timestamp}-{unique}"
 
 
+from app.core.config import settings
+import redis.asyncio as redis
+import json
+
+# Redis cache for public requests (60s TTL)
+redis_client = redis.from_url(settings.redis_url, decode_responses=True)
+CACHE_TTL = 60  # seconds
+
+
 @router.get("/public/requests", response_model=List[PublicServiceRequestResponse])
 async def list_public_requests(
     status: Optional[str] = Query(None, description="Filter by status"),
@@ -31,7 +40,18 @@ async def list_public_requests(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
-    """Public endpoint - List all requests WITHOUT personal information"""
+    """Public endpoint - List all requests WITHOUT personal information (cached)"""
+    # Build cache key
+    cache_key = f"public_requests:{status or 'all'}:{service_code or 'all'}:{limit}:{offset}"
+    
+    # Try cache first
+    try:
+        cached = await redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass  # Redis unavailable, proceed without cache
+    
     query = select(ServiceRequest).where(ServiceRequest.deleted_at.is_(None))
     
     if status:
@@ -43,26 +63,34 @@ async def list_public_requests(
     result = await db.execute(query)
     requests = result.scalars().all()
     
-    # Return public response without PII
-    return [
-        PublicServiceRequestResponse(
-            service_request_id=r.service_request_id,
-            service_code=r.service_code,
-            service_name=r.service_name,
-            description=r.description,
-            status=r.status,
-            address=r.address,
-            lat=r.lat,
-            long=r.long,
-            requested_datetime=r.requested_datetime,
-            updated_datetime=r.updated_datetime,
-            closed_substatus=r.closed_substatus,
-            media_url=r.media_url,
-            completion_message=r.completion_message,
-            completion_photo_url=r.completion_photo_url,
-        )
+    # Build response
+    response_data = [
+        {
+            "service_request_id": r.service_request_id,
+            "service_code": r.service_code,
+            "service_name": r.service_name,
+            "description": r.description,
+            "status": r.status,
+            "address": r.address,
+            "lat": r.lat,
+            "long": r.long,
+            "requested_datetime": r.requested_datetime.isoformat() if r.requested_datetime else None,
+            "updated_datetime": r.updated_datetime.isoformat() if r.updated_datetime else None,
+            "closed_substatus": r.closed_substatus,
+            "media_url": r.media_url,
+            "completion_message": r.completion_message,
+            "completion_photo_url": r.completion_photo_url,
+        }
         for r in requests
     ]
+    
+    # Cache the response
+    try:
+        await redis_client.setex(cache_key, CACHE_TTL, json.dumps(response_data))
+    except Exception:
+        pass  # Redis unavailable, continue without caching
+    
+    return response_data
 
 
 from app.models import RequestComment
