@@ -152,7 +152,7 @@ class ServiceRequest(Base):
     completion_photo_url = Column(String(500))  # Photo proof of resolution
     
     # Soft delete support
-    deleted_at = Column(DateTime(timezone=True))
+    deleted_at = Column(DateTime(timezone=True), index=True)
     deleted_by = Column(String(100))  # Username who deleted
     delete_justification = Column(Text)
     

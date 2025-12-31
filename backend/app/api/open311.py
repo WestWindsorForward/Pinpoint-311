@@ -27,7 +27,7 @@ def generate_request_id() -> str:
 async def list_public_requests(
     status: Optional[str] = Query(None, description="Filter by status"),
     service_code: Optional[str] = Query(None, description="Filter by service category"),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
