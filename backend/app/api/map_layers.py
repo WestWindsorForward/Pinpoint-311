@@ -75,6 +75,8 @@ async def create_layer(
         stroke_width=layer_data.stroke_width,
         geojson=layer_data.geojson,
         show_on_resident_portal=layer_data.show_on_resident_portal,
+        visible_on_map=layer_data.visible_on_map if hasattr(layer_data, 'visible_on_map') else True,
+        routing_mode=layer_data.routing_mode if hasattr(layer_data, 'routing_mode') else 'log',
         service_codes=layer_data.service_codes or [],
         routing_config=layer_data.routing_config,
     )
@@ -117,6 +119,8 @@ async def update_layer(
         layer.name = layer_data.name
     if layer_data.description is not None:
         layer.description = layer_data.description
+    if layer_data.layer_type is not None:
+        layer.layer_type = layer_data.layer_type
     if layer_data.fill_color is not None:
         layer.fill_color = layer_data.fill_color
     if layer_data.stroke_color is not None:
@@ -129,6 +133,10 @@ async def update_layer(
         layer.is_active = layer_data.is_active
     if layer_data.show_on_resident_portal is not None:
         layer.show_on_resident_portal = layer_data.show_on_resident_portal
+    if layer_data.visible_on_map is not None:
+        layer.visible_on_map = layer_data.visible_on_map
+    if layer_data.routing_mode is not None:
+        layer.routing_mode = layer_data.routing_mode
     if layer_data.geojson is not None:
         layer.geojson = layer_data.geojson
     if layer_data.service_codes is not None:

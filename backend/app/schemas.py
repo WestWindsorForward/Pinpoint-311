@@ -148,6 +148,7 @@ class ServiceRequestCreate(BaseModel):
     phone: Optional[str] = None
     media_url: Optional[str] = None
     matched_asset: Optional[Dict[str, Any]] = None  # Nearby asset from map layers
+    matched_polygon: Optional[Dict[str, Any]] = None  # Polygon layer containing the location
 
 
 
@@ -174,6 +175,7 @@ class ServiceRequestResponse(BaseModel):
     source: str
     flagged: bool = False
     matched_asset: Optional[Dict[str, Any]] = None
+    matched_polygon: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

@@ -145,6 +145,9 @@ class ServiceRequest(Base):
     
     # Matched asset from map layers (detected on submit)
     matched_asset = Column(JSON)  # { layer_name, asset_id, asset_type, properties, distance_meters }
+    
+    # Matched polygon layer (if location is inside a polygon)
+    matched_polygon = Column(JSON)  # { layer_name, layer_id, routing_mode }
 
 
 

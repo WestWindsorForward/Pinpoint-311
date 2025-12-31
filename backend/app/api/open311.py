@@ -78,6 +78,7 @@ async def create_request(
         phone=request_data.phone,
         media_url=request_data.media_url,
         matched_asset=request_data.matched_asset,
+        matched_polygon=request_data.matched_polygon,
         source="resident_portal"
     )
     
