@@ -548,43 +548,8 @@ export default function GoogleMapsLocationPicker({
                                         properties: props,
                                     });
                                 } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
-                                    // Render polygon with layer styling
-                                    // Use red/orange for blocking layers to show exclusion
-                                    const routingMode = (layer as any).routing_mode || 'log';
-                                    const isBlocking = routingMode === 'block';
-
-                                    console.log('Rendering polygon layer:', layer.name, 'routing_mode:', routingMode, 'isBlocking:', isBlocking);
-
-                                    const addedFeatures = map.data.addGeoJson({
-                                        type: 'Feature',
-                                        geometry: feature.geometry,
-                                        properties: {
-                                            ...props,
-                                            _layerName: layer.name,
-                                            _layerId: layer.id,
-                                            _routingMode: routingMode,
-                                            _routingConfig: (layer as any).routing_config || {},
-                                        },
-                                    });
-
-                                    // Style polygon - use red for blocking zones, otherwise layer colors
-                                    addedFeatures.forEach(f => {
-                                        map.data.overrideStyle(f, {
-                                            fillColor: isBlocking ? '#ef4444' : (layer.fill_color || '#3b82f6'),
-                                            fillOpacity: isBlocking ? 0.35 : (layer.fill_opacity ?? 0.3),
-                                            strokeColor: isBlocking ? '#dc2626' : (layer.stroke_color || '#1d4ed8'),
-                                            strokeWeight: isBlocking ? 3 : (layer.stroke_width ?? 2),
-                                            clickable: true,
-                                        });
-
-                                        // Store for containment detection
-                                        layerFeaturesRef.push({
-                                            layer,
-                                            feature: f,
-                                            geometry: feature.geometry,
-                                            properties: props,
-                                        });
-                                    });
+                                    // Skip polygon layers - only point layers are supported
+                                    console.log(`Skipping polygon geometry in layer: ${layer.name}`);
                                 }
                             });
 
@@ -596,95 +561,6 @@ export default function GoogleMapsLocationPicker({
 
                     // Store the features ref for proximity detection
                     (window as any).__mapLayerFeatures = layerFeaturesRef;
-
-                    // Add single click listener for polygons
-                    map.data.addListener('click', (event: any) => {
-                        const layerName = event.feature.getProperty('_layerName');
-                        const routingMode = event.feature.getProperty('_routingMode');
-                        const routingConfig = event.feature.getProperty('_routingConfig') || {};
-
-                        console.log('Polygon clicked:', { layerName, routingMode, routingConfig });
-
-                        // For BLOCKING polygons, show exclusion popup AND trigger onChange
-                        if (layerName && routingMode === 'block') {
-                            const message = routingConfig.message || 'This area is handled by a third party.';
-
-                            // Also place the pin and trigger onChange so ResidentPortal can set isBlocked
-                            const lat = event.latLng.lat();
-                            const lng = event.latLng.lng();
-
-                            // Move the marker to clicked location
-                            if (markerRef.current) {
-                                markerRef.current.setPosition({ lat, lng });
-                            }
-
-                            // Reverse geocode and update - this triggers ResidentPortal's checkPolygonContainment
-                            const geocoder = new window.google.maps.Geocoder();
-                            geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
-                                const address = status === 'OK' && results?.[0]?.formatted_address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                                onChange({ address, lat, lng });
-                            });
-
-                            const infoWindow = new window.google.maps.InfoWindow({
-                                content: `
-                                    <div style="
-                                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                                        padding: 12px;
-                                        min-width: 200px;
-                                        max-width: 300px;
-                                    ">
-                                        <div style="
-                                            display: flex;
-                                            align-items: center;
-                                            gap: 8px;
-                                            margin-bottom: 8px;
-                                        ">
-                                            <span style="font-size: 20px;">🚫</span>
-                                            <div style="
-                                                font-size: 14px;
-                                                font-weight: 700;
-                                                color: #dc2626;
-                                            ">${layerName}</div>
-                                        </div>
-                                        <div style="
-                                            background: #fef2f2;
-                                            border: 1px solid #fecaca;
-                                            border-radius: 6px;
-                                            padding: 8px 10px;
-                                            font-size: 12px;
-                                            color: #991b1b;
-                                        ">
-                                            <strong>EXCLUDED AREA</strong><br/>
-                                            ${message}
-                                        </div>
-                                        ${routingConfig.contacts && routingConfig.contacts.length > 0 ? `
-                                            <div style="margin-top: 8px; font-size: 12px; color: #64748b;">
-                                                <strong>Contact:</strong> ${routingConfig.contacts[0].name || ''} ${routingConfig.contacts[0].phone || ''}
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                `,
-                                position: event.latLng,
-                            });
-                            infoWindow.open(map);
-                        } else if (layerName) {
-                            // For LOG-ONLY polygons, place the pin at the clicked location (pass through)
-                            const lat = event.latLng.lat();
-                            const lng = event.latLng.lng();
-
-                            // Move the marker to clicked location
-                            if (markerRef.current) {
-                                markerRef.current.setPosition({ lat, lng });
-                            }
-
-                            // Reverse geocode and update
-                            const geocoder = new window.google.maps.Geocoder();
-                            geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
-                                const address = status === 'OK' && results?.[0]?.formatted_address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                                onChange({ address, lat, lng });
-                            });
-                        }
-                    });
 
                     // Create marker clusterer for dense point areas
                     if (layerMarkersRef.length > 0) {

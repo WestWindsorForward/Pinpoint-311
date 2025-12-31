@@ -582,36 +582,6 @@ export default function StaffDashboard() {
                                             </Card>
                                         )}
 
-                                        {/* Matched Polygon (from polygon layers) */}
-                                        {(selectedRequest as any).matched_polygon && (
-                                            <Card>
-                                                <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                                                    <MapPin className="w-4 h-4 text-amber-400" />
-                                                    Location in Polygon
-                                                </h3>
-                                                <div className={`p-4 rounded-xl border ${(selectedRequest as any).matched_polygon.routing_mode === 'block'
-                                                        ? 'bg-red-500/10 border-red-500/20'
-                                                        : 'bg-blue-500/10 border-blue-500/20'
-                                                    }`}>
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-white/50">Polygon Layer:</span>
-                                                            <span className="text-white font-medium">{(selectedRequest as any).matched_polygon.layer_name}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-white/50">Mode:</span>
-                                                            <span className={`font-medium ${(selectedRequest as any).matched_polygon.routing_mode === 'block'
-                                                                    ? 'text-red-400'
-                                                                    : 'text-blue-400'
-                                                                }`}>
-                                                                {(selectedRequest as any).matched_polygon.routing_mode === 'block' ? '🚫 Blocked' : '📋 Logged'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </Card>
-                                        )}
-
                                         {/* Timeline */}
                                         <Card>
                                             <h3 className="font-semibold text-white mb-4">Timeline</h3>

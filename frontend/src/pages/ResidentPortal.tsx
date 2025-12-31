@@ -79,8 +79,6 @@ export default function ResidentPortal() {
     const [mapLayers, setMapLayers] = useState<MapLayer[]>([]);
     // Selected asset from map layer (for report logging)
     const [selectedAsset, setSelectedAsset] = useState<{ layerName: string; properties: Record<string, any>; lat: number; lng: number } | null>(null);
-    // Matched polygon layer (for report logging)
-    const [matchedPolygon, setMatchedPolygon] = useState<{ layer_name: string; layer_id: number; routing_mode: string } | null>(null);
 
     // Location/GPS state  
     const [location, setLocation] = useState<{ address: string; lat: number | null; lng: number | null }>({
@@ -231,125 +229,6 @@ export default function ResidentPortal() {
         }
     };
 
-    // Ray-casting algorithm for point-in-polygon check
-    // Input polygon is in [lat, lng] format (already converted from GeoJSON [lng, lat])
-    const isPointInPolygon = (lat: number, lng: number, polygon: number[][]): boolean => {
-        let inside = false;
-        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-            // polygon coords: [latitude, longitude] - converted format
-            const lati = polygon[i][0];
-            const lngi = polygon[i][1];
-            const latj = polygon[j][0];
-            const lngj = polygon[j][1];
-
-            const intersect = ((lati > lat) !== (latj > lat)) &&
-                (lng < (lngj - lngi) * (lat - lati) / (latj - lati) + lngi);
-            if (intersect) {
-                inside = !inside;
-            }
-        }
-        return inside;
-    };
-
-    // Check if location is inside any polygon layer and log/block accordingly
-    const checkPolygonContainment = (lat: number, lng: number, serviceCode: string) => {
-        console.log('checkPolygonContainment called:', { lat, lng, serviceCode });
-        console.log('mapLayers count:', mapLayers.length, 'layers:', mapLayers.map(l => ({ name: l.name, layer_type: (l as any).layer_type, routing_mode: (l as any).routing_mode })));
-
-        // Reset matched polygon state
-        setMatchedPolygon(null);
-        setIsBlocked(false); // Also reset blocking state
-
-        for (const layer of mapLayers) {
-            console.log('Checking layer:', layer.name, 'layer_type:', (layer as any).layer_type, 'service_codes:', layer.service_codes);
-
-            // Check if this layer applies to the current service category
-            const layerServiceCodes = layer.service_codes || [];
-            // Layer applies if: no service_codes specified (applies to all) OR includes this category
-            if (layerServiceCodes.length > 0 && !layerServiceCodes.includes(serviceCode)) {
-                console.log('  Skipped: service_codes filter');
-                continue;
-            }
-
-            const geojson = layer.geojson as any;
-            if (!geojson) {
-                console.log('  Skipped: no geojson');
-                continue;
-            }
-
-            console.log('  GeoJSON type:', geojson.type);
-
-            // Handle both FeatureCollection and single Feature
-            const features = geojson.type === 'FeatureCollection' ? geojson.features :
-                geojson.type === 'Feature' ? [geojson] :
-                    geojson.type === 'Polygon' || geojson.type === 'MultiPolygon' ? [{ geometry: geojson }] : [];
-
-            console.log('  Features count:', features.length);
-
-            for (const feature of features) {
-                const geometry = feature.geometry;
-                if (!geometry) {
-                    console.log('    Feature has no geometry');
-                    continue;
-                }
-
-                console.log('    Geometry type:', geometry.type);
-
-                // Only check polygon geometries
-                if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') {
-                    console.log('    Skipped: not polygon type');
-                    continue;
-                }
-
-                let isInside = false;
-
-                if (geometry.type === 'Polygon') {
-                    // Check outer ring (first ring) - GeoJSON uses [lng, lat]
-                    const coords = geometry.coordinates[0].map((c: number[]) => [c[1], c[0]]); // Convert to [lat, lng]
-                    console.log('    Checking Polygon with', coords.length, 'coords, first coord:', coords[0]);
-                    isInside = isPointInPolygon(lat, lng, coords);
-                    console.log('    isPointInPolygon result:', isInside);
-                } else if (geometry.type === 'MultiPolygon') {
-                    for (const polygon of geometry.coordinates) {
-                        const coords = polygon[0].map((c: number[]) => [c[1], c[0]]);
-                        if (isPointInPolygon(lat, lng, coords)) {
-                            isInside = true;
-                            break;
-                        }
-                    }
-                    console.log('    MultiPolygon isInside:', isInside);
-                }
-
-                if (isInside) {
-                    const layerRoutingMode = (layer as any).routing_mode || 'log';
-                    console.log('Location is inside polygon:', layer.name, 'routing_mode:', layerRoutingMode);
-
-                    // Set matched polygon for report logging
-                    setMatchedPolygon({
-                        layer_name: layer.name,
-                        layer_id: layer.id,
-                        routing_mode: layerRoutingMode
-                    });
-
-                    // If blocking mode, show redirect UI
-                    if (layerRoutingMode === 'block') {
-                        const routingConfig = (layer as any).routing_config || {};
-                        setIsBlocked(true);
-                        setBlockMessage(routingConfig.message || `This location is within ${layer.name} and is handled by a third party.`);
-                        setBlockContacts(routingConfig.contacts || []);
-                        console.log('BLOCKING ENABLED for polygon:', layer.name);
-                    }
-
-                    return true; // Found a matching polygon
-                }
-            }
-        }
-
-        console.log('No polygon containment found');
-        return false; // Not inside any polygon
-    };
-
-
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {};
 
@@ -391,7 +270,6 @@ export default function ResidentPortal() {
             const result = await api.createRequest({
                 ...formData,
                 matched_asset: matchedAsset,
-                matched_polygon: matchedPolygon,
             });
             setSubmittedId(result.service_request_id);
             setStep('success');
@@ -688,59 +566,6 @@ export default function ResidentPortal() {
                                 </motion.div>
                             )}
 
-                            {/* Polygon Blocking Notice - shown when location is inside a blocking polygon */}
-                            {isBlocked && matchedPolygon?.routing_mode === 'block' && selectedService.routing_mode !== 'third_party' && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="p-6 rounded-2xl bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-red-500/30"
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                                            <AlertCircle className="w-6 h-6 text-red-400" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="text-lg font-semibold text-red-300 mb-2">
-                                                🚫 Excluded Area
-                                            </h3>
-                                            <p className="text-white/70 mb-4">
-                                                {blockMessage || `This location is within ${matchedPolygon.layer_name} and is handled by a third party.`}
-                                            </p>
-
-                                            {blockContacts.length > 0 && (
-                                                <div className="space-y-3 p-4 rounded-xl bg-white/5">
-                                                    <p className="text-sm text-white/50 font-medium">Please contact:</p>
-                                                    {blockContacts.map((contact, idx) => (
-                                                        <div key={idx} className="flex flex-wrap gap-4 text-sm">
-                                                            {contact.name && (
-                                                                <span className="text-white font-semibold">{contact.name}</span>
-                                                            )}
-                                                            {contact.phone && (
-                                                                <a href={`tel:${contact.phone}`} className="inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 font-medium">
-                                                                    <Phone className="w-4 h-4" />
-                                                                    {contact.phone}
-                                                                </a>
-                                                            )}
-                                                            {contact.url && (
-                                                                <a
-                                                                    href={contact.url.startsWith('http') ? contact.url : `https://${contact.url}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 font-medium underline"
-                                                                >
-                                                                    <ExternalLink className="w-4 h-4" />
-                                                                    Visit Website
-                                                                </a>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-
                             {/* Form - only show if NOT blocked OR if road-based (need address first) */}
                             {(!isBlocked || selectedService.routing_mode === 'road_based') && (
                                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -792,10 +617,6 @@ export default function ResidentPortal() {
                                                             // Check road-based blocking when address changes
                                                             if (selectedService.routing_mode === 'road_based') {
                                                                 checkRoadBasedBlocking(newLocation.address, selectedService);
-                                                            }
-                                                            // Check polygon containment blocking when coordinates are available
-                                                            if (newLocation.lat && newLocation.lng) {
-                                                                checkPolygonContainment(newLocation.lat, newLocation.lng, selectedService.service_code);
                                                             }
                                                         }}
                                                         placeholder="Search for an address or click on the map..."
