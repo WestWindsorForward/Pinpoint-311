@@ -605,9 +605,25 @@ export default function GoogleMapsLocationPicker({
 
                         console.log('Polygon clicked:', { layerName, routingMode, routingConfig });
 
-                        // For BLOCKING polygons, show exclusion popup
+                        // For BLOCKING polygons, show exclusion popup AND trigger onChange
                         if (layerName && routingMode === 'block') {
                             const message = routingConfig.message || 'This area is handled by a third party.';
+
+                            // Also place the pin and trigger onChange so ResidentPortal can set isBlocked
+                            const lat = event.latLng.lat();
+                            const lng = event.latLng.lng();
+
+                            // Move the marker to clicked location
+                            if (markerRef.current) {
+                                markerRef.current.setPosition({ lat, lng });
+                            }
+
+                            // Reverse geocode and update - this triggers ResidentPortal's checkPolygonContainment
+                            const geocoder = new window.google.maps.Geocoder();
+                            geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
+                                const address = status === 'OK' && results?.[0]?.formatted_address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                                onChange({ address, lat, lng });
+                            });
 
                             const infoWindow = new window.google.maps.InfoWindow({
                                 content: `
