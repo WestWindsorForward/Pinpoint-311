@@ -549,19 +549,29 @@ export default function GoogleMapsLocationPicker({
                                     });
                                 } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
                                     // Render polygon with layer styling
+                                    // Use red/orange for blocking layers to show exclusion
+                                    const routingMode = (layer as any).routing_mode || 'log';
+                                    const isBlocking = routingMode === 'block';
+
                                     const addedFeatures = map.data.addGeoJson({
                                         type: 'Feature',
                                         geometry: feature.geometry,
-                                        properties: { ...props, _layerName: layer.name, _layerId: layer.id },
+                                        properties: {
+                                            ...props,
+                                            _layerName: layer.name,
+                                            _layerId: layer.id,
+                                            _routingMode: routingMode,
+                                            _routingConfig: (layer as any).routing_config || {},
+                                        },
                                     });
 
-                                    // Style polygon based on layer settings
+                                    // Style polygon - use red for blocking zones, otherwise layer colors
                                     addedFeatures.forEach(f => {
                                         map.data.overrideStyle(f, {
-                                            fillColor: layer.fill_color || '#3b82f6',
-                                            fillOpacity: layer.fill_opacity ?? 0.3,
-                                            strokeColor: layer.stroke_color || '#1d4ed8',
-                                            strokeWeight: layer.stroke_width ?? 2,
+                                            fillColor: isBlocking ? '#ef4444' : (layer.fill_color || '#3b82f6'),
+                                            fillOpacity: isBlocking ? 0.35 : (layer.fill_opacity ?? 0.3),
+                                            strokeColor: isBlocking ? '#dc2626' : (layer.stroke_color || '#1d4ed8'),
+                                            strokeWeight: isBlocking ? 3 : (layer.stroke_width ?? 2),
                                             clickable: true,
                                         });
 
@@ -572,14 +582,6 @@ export default function GoogleMapsLocationPicker({
                                             geometry: feature.geometry,
                                             properties: props,
                                         });
-                                    });
-
-                                    // Add click listener for polygon info
-                                    map.data.addListener('click', (event: any) => {
-                                        const polygonProps = event.feature.getProperty('_layerName');
-                                        if (polygonProps) {
-                                            console.log('Clicked polygon layer:', polygonProps);
-                                        }
                                     });
                                 }
                             });
@@ -592,6 +594,63 @@ export default function GoogleMapsLocationPicker({
 
                     // Store the features ref for proximity detection
                     (window as any).__mapLayerFeatures = layerFeaturesRef;
+
+                    // Add single click listener for polygon info popup
+                    map.data.addListener('click', (event: any) => {
+                        const layerName = event.feature.getProperty('_layerName');
+                        const routingMode = event.feature.getProperty('_routingMode');
+                        const routingConfig = event.feature.getProperty('_routingConfig') || {};
+
+                        if (layerName) {
+                            const isBlocking = routingMode === 'block';
+                            const message = routingConfig.message || (isBlocking
+                                ? 'This area is handled by a third party.'
+                                : 'Your report will be logged for this area.');
+
+                            const infoWindow = new window.google.maps.InfoWindow({
+                                content: `
+                                    <div style="
+                                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                        padding: 12px;
+                                        min-width: 200px;
+                                        max-width: 300px;
+                                    ">
+                                        <div style="
+                                            display: flex;
+                                            align-items: center;
+                                            gap: 8px;
+                                            margin-bottom: 8px;
+                                        ">
+                                            <span style="font-size: 20px;">${isBlocking ? '🚫' : '📋'}</span>
+                                            <div style="
+                                                font-size: 14px;
+                                                font-weight: 700;
+                                                color: ${isBlocking ? '#dc2626' : '#0f172a'};
+                                            ">${layerName}</div>
+                                        </div>
+                                        <div style="
+                                            background: ${isBlocking ? '#fef2f2' : '#f0f9ff'};
+                                            border: 1px solid ${isBlocking ? '#fecaca' : '#bae6fd'};
+                                            border-radius: 6px;
+                                            padding: 8px 10px;
+                                            font-size: 12px;
+                                            color: ${isBlocking ? '#991b1b' : '#0369a1'};
+                                        ">
+                                            <strong>${isBlocking ? 'EXCLUDED AREA' : 'LOGGED AREA'}</strong><br/>
+                                            ${message}
+                                        </div>
+                                        ${routingConfig.contacts && routingConfig.contacts.length > 0 ? `
+                                            <div style="margin-top: 8px; font-size: 12px; color: #64748b;">
+                                                <strong>Contact:</strong> ${routingConfig.contacts[0].name || ''} ${routingConfig.contacts[0].phone || ''}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `,
+                                position: event.latLng,
+                            });
+                            infoWindow.open(map);
+                        }
+                    });
 
                     // Create marker clusterer for dense point areas
                     if (layerMarkersRef.length > 0) {
