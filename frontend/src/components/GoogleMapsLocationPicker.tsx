@@ -553,6 +553,8 @@ export default function GoogleMapsLocationPicker({
                                     const routingMode = (layer as any).routing_mode || 'log';
                                     const isBlocking = routingMode === 'block';
 
+                                    console.log('Rendering polygon layer:', layer.name, 'routing_mode:', routingMode, 'isBlocking:', isBlocking);
+
                                     const addedFeatures = map.data.addGeoJson({
                                         type: 'Feature',
                                         geometry: feature.geometry,
@@ -595,17 +597,18 @@ export default function GoogleMapsLocationPicker({
                     // Store the features ref for proximity detection
                     (window as any).__mapLayerFeatures = layerFeaturesRef;
 
-                    // Add single click listener for polygon info popup
+                    // Add single click listener for polygon info popup - ONLY for blocking polygons
                     map.data.addListener('click', (event: any) => {
                         const layerName = event.feature.getProperty('_layerName');
                         const routingMode = event.feature.getProperty('_routingMode');
                         const routingConfig = event.feature.getProperty('_routingConfig') || {};
 
-                        if (layerName) {
-                            const isBlocking = routingMode === 'block';
-                            const message = routingConfig.message || (isBlocking
-                                ? 'This area is handled by a third party.'
-                                : 'Your report will be logged for this area.');
+                        console.log('Polygon clicked:', { layerName, routingMode, routingConfig });
+
+                        // Only show popup for BLOCKING polygons (excluded areas)
+                        // Log-only polygons should be transparent to the user
+                        if (layerName && routingMode === 'block') {
+                            const message = routingConfig.message || 'This area is handled by a third party.';
 
                             const infoWindow = new window.google.maps.InfoWindow({
                                 content: `
@@ -621,22 +624,22 @@ export default function GoogleMapsLocationPicker({
                                             gap: 8px;
                                             margin-bottom: 8px;
                                         ">
-                                            <span style="font-size: 20px;">${isBlocking ? '🚫' : '📋'}</span>
+                                            <span style="font-size: 20px;">🚫</span>
                                             <div style="
                                                 font-size: 14px;
                                                 font-weight: 700;
-                                                color: ${isBlocking ? '#dc2626' : '#0f172a'};
+                                                color: #dc2626;
                                             ">${layerName}</div>
                                         </div>
                                         <div style="
-                                            background: ${isBlocking ? '#fef2f2' : '#f0f9ff'};
-                                            border: 1px solid ${isBlocking ? '#fecaca' : '#bae6fd'};
+                                            background: #fef2f2;
+                                            border: 1px solid #fecaca;
                                             border-radius: 6px;
                                             padding: 8px 10px;
                                             font-size: 12px;
-                                            color: ${isBlocking ? '#991b1b' : '#0369a1'};
+                                            color: #991b1b;
                                         ">
-                                            <strong>${isBlocking ? 'EXCLUDED AREA' : 'LOGGED AREA'}</strong><br/>
+                                            <strong>EXCLUDED AREA</strong><br/>
                                             ${message}
                                         </div>
                                         ${routingConfig.contacts && routingConfig.contacts.length > 0 ? `
