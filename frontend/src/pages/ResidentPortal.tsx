@@ -20,17 +20,15 @@ import {
     X,
     Phone,
     ExternalLink,
-    Map,
-    FileText,
     ClipboardList,
 } from 'lucide-react';
 import { Button, Input, Textarea, Card } from '../components/ui';
 import GoogleMapsLocationPicker from '../components/GoogleMapsLocationPicker';
 import TrackRequests from '../components/TrackRequests';
-import ResidentMapView from '../components/ResidentMapView';
+import StaffDashboardMap from '../components/StaffDashboardMap';
 import { useSettings } from '../context/SettingsContext';
 import { api, MapLayer } from '../services/api';
-import { ServiceDefinition, ServiceRequestCreate, PublicServiceRequest } from '../types';
+import { ServiceDefinition, ServiceRequestCreate, ServiceRequest } from '../types';
 
 // Icon mapping for service categories
 const iconMap: Record<string, React.FC<{ className?: string }>> = {
@@ -46,16 +44,13 @@ const iconMap: Record<string, React.FC<{ className?: string }>> = {
 };
 
 type Step = 'categories' | 'form' | 'success';
-type PortalView = 'home' | 'report' | 'track';
 
 export default function ResidentPortal() {
     const { settings } = useSettings();
     const { requestId: urlRequestId } = useParams<{ requestId?: string }>();
     const pathname = window.location.pathname;
     const isTrackRoute = pathname.startsWith('/track');
-    const [currentView, setCurrentView] = useState<PortalView>(
-        urlRequestId || isTrackRoute ? 'track' : 'home'
-    );
+    const [showTrackingView, setShowTrackingView] = useState(urlRequestId || isTrackRoute ? true : false);
     const [step, setStep] = useState<Step>('categories');
     const [services, setServices] = useState<ServiceDefinition[]>([]);
     const [selectedService, setSelectedService] = useState<ServiceDefinition | null>(null);
@@ -64,8 +59,8 @@ export default function ResidentPortal() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submittedId, setSubmittedId] = useState<string | null>(null);
 
-    // Public requests for map
-    const [publicRequests, setPublicRequests] = useState<PublicServiceRequest[]>([]);
+    // Requests for staff map
+    const [allRequests, setAllRequests] = useState<ServiceRequest[]>([]);
 
     // Form state
     const [formData, setFormData] = useState<ServiceRequestCreate>({
@@ -140,9 +135,11 @@ export default function ResidentPortal() {
         }
     };
 
-    // Load public requests for the map
+    // Load requests for the map
     useEffect(() => {
-        api.getPublicRequests().then(setPublicRequests).catch(() => { });
+        api.getPublicRequests().then((requests) => {
+            setAllRequests(requests as unknown as ServiceRequest[]);
+        }).catch(() => { });
     }, []);
 
     const filteredServices = services.filter(
@@ -383,40 +380,6 @@ export default function ResidentPortal() {
                     </h1>
                 </div>
 
-                {/* Navigation Tabs */}
-                <div className="flex gap-1 bg-white/5 rounded-xl p-1">
-                    <button
-                        onClick={() => { setCurrentView('home'); setStep('categories'); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentView === 'home'
-                            ? 'bg-primary-500 text-white shadow-lg'
-                            : 'text-white/60 hover:text-white hover:bg-white/10'
-                            }`}
-                    >
-                        <span className="hidden sm:inline">Home</span>
-                        <MapPin className="w-4 h-4 sm:hidden" />
-                    </button>
-                    <button
-                        onClick={() => { setCurrentView('report'); setStep('categories'); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentView === 'report'
-                            ? 'bg-primary-500 text-white shadow-lg'
-                            : 'text-white/60 hover:text-white hover:bg-white/10'
-                            }`}
-                    >
-                        <span className="hidden sm:inline">Report Issue</span>
-                        <Send className="w-4 h-4 sm:hidden" />
-                    </button>
-                    <button
-                        onClick={() => setCurrentView('track')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentView === 'track'
-                            ? 'bg-primary-500 text-white shadow-lg'
-                            : 'text-white/60 hover:text-white hover:bg-white/10'
-                            }`}
-                    >
-                        <span className="hidden sm:inline">My Requests</span>
-                        <ClipboardList className="w-4 h-4 sm:hidden" />
-                    </button>
-                </div>
-
                 <Link
                     to="/login"
                     className="text-white/60 hover:text-white text-sm font-medium transition-colors"
@@ -426,116 +389,20 @@ export default function ResidentPortal() {
             </nav>
 
             {/* Main Content */}
-            <main className="flex-1 px-4 py-8 md:px-8 max-w-7xl mx-auto w-full">
-                {/* Home View - Map + Categories */}
-                {currentView === 'home' && (
-                    <div className="space-y-10">
-                        {/* Hero Section */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-center space-y-4"
+            <main className="flex-1 px-4 py-8 md:px-8 max-w-6xl mx-auto w-full">
+                {/* Tracking View */}
+                {showTrackingView ? (
+                    <div className="space-y-6">
+                        <button
+                            onClick={() => setShowTrackingView(false)}
+                            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
                         >
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/20 border border-primary-500/30">
-                                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                                <span className="text-sm font-medium text-primary-200">
-                                    Community Support Active
-                                </span>
-                            </div>
-                            <h1 className="text-4xl md:text-5xl font-bold text-gradient">
-                                {settings?.hero_text || 'How can we help?'}
-                            </h1>
-                            <p className="text-lg text-white/60 max-w-xl mx-auto">
-                                View community requests on the map or report a new issue below.
-                            </p>
-                        </motion.div>
-
-                        {/* Live Map Section */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="h-[450px]"
-                        >
-                            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                                <Map className="w-5 h-5 text-primary-400" />
-                                Community Requests Map
-                            </h2>
-                            <ResidentMapView
-                                apiKey={mapsApiKey || ''}
-                                requests={publicRequests}
-                                townshipBoundary={townshipBoundary}
-                            />
-                        </motion.div>
-
-                        {/* Quick Action Button */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="text-center"
-                        >
-                            <Button
-                                onClick={() => setCurrentView('report')}
-                                size="lg"
-                                className="px-8 py-4 text-lg"
-                            >
-                                <Send className="w-5 h-5 mr-2" />
-                                Report an Issue
-                            </Button>
-                        </motion.div>
-
-                        {/* Service Categories Preview */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                        >
-                            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                                <FileText className="w-5 h-5 text-primary-400" />
-                                Quick Report Categories
-                            </h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                                {services.slice(0, 5).map((service) => (
-                                    <Card
-                                        key={service.id}
-                                        hover
-                                        onClick={() => {
-                                            setCurrentView('report');
-                                            handleSelectService(service);
-                                        }}
-                                        className="p-4"
-                                    >
-                                        <div className="flex flex-col items-center text-center gap-2">
-                                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500/30 to-primary-600/30 flex items-center justify-center text-primary-300">
-                                                {getIcon(service.icon)}
-                                            </div>
-                                            <span className="text-sm font-medium text-white line-clamp-1">
-                                                {service.service_name}
-                                            </span>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                            {services.length > 5 && (
-                                <button
-                                    onClick={() => setCurrentView('report')}
-                                    className="mt-4 text-primary-400 hover:text-primary-300 text-sm font-medium"
-                                >
-                                    View all {services.length} categories →
-                                </button>
-                            )}
-                        </motion.div>
+                            <ArrowLeft className="w-5 h-5" />
+                            <span>Back to Home</span>
+                        </button>
+                        <TrackRequests initialRequestId={urlRequestId} />
                     </div>
-                )}
-
-                {/* Track View */}
-                {currentView === 'track' && (
-                    <TrackRequests initialRequestId={urlRequestId} />
-                )}
-
-                {/* Report View */}
-                {currentView === 'report' && (
+                ) : (
                     <AnimatePresence mode="wait">
                         {step === 'categories' && (
                             <motion.div
@@ -644,6 +511,50 @@ export default function ResidentPortal() {
                                         <p className="text-white/60">No services found matching your search.</p>
                                     </div>
                                 )}
+
+                                {/* Community Map Section */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.6 }}
+                                    className="space-y-4"
+                                >
+                                    <h2 className="text-2xl font-bold text-white text-center">
+                                        Community Requests Map
+                                    </h2>
+                                    <p className="text-white/60 text-center mb-6">
+                                        View all reported issues and service requests in our community
+                                    </p>
+                                    <div className="h-[500px] rounded-2xl overflow-hidden">
+                                        <StaffDashboardMap
+                                            apiKey={mapsApiKey || ''}
+                                            requests={allRequests}
+                                            mapLayers={mapLayers}
+                                            services={services}
+                                            departments={[]}
+                                            users={[]}
+                                            onRequestSelect={() => { }}
+                                        />
+                                    </div>
+                                </motion.div>
+
+                                {/* Track Requests Button */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.7 }}
+                                    className="text-center pt-8"
+                                >
+                                    <Button
+                                        onClick={() => setShowTrackingView(true)}
+                                        variant="secondary"
+                                        size="lg"
+                                        className="px-8 py-4"
+                                    >
+                                        <ClipboardList className="w-5 h-5 mr-2" />
+                                        Track My Requests
+                                    </Button>
+                                </motion.div>
                             </motion.div>
                         )}
 
