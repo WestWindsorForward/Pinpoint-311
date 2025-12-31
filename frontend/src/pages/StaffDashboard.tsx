@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -27,15 +27,17 @@ import {
     Camera,
     Link,
     Brain,
+    LayoutDashboard,
 } from 'lucide-react';
 import { Button, Card, Modal, Input, Textarea, Select, StatusBadge, Badge } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { api } from '../services/api';
-import { ServiceRequest, ServiceRequestDetail, ServiceDefinition, Statistics, RequestComment, ClosedSubstatus } from '../types';
+import { api, MapLayer } from '../services/api';
+import { ServiceRequest, ServiceRequestDetail, ServiceDefinition, Statistics, RequestComment, ClosedSubstatus, User as UserType, Department } from '../types';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import StaffDashboardMap from '../components/StaffDashboardMap';
 
-type View = 'active' | 'resolved' | 'all' | 'statistics';
+type View = 'dashboard' | 'active' | 'in_progress' | 'resolved' | 'statistics';
 
 export default function StaffDashboard() {
     const navigate = useNavigate();
@@ -44,14 +46,21 @@ export default function StaffDashboard() {
     const { settings } = useSettings();
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [currentView, setCurrentView] = useState<View>('active');
+    const [currentView, setCurrentView] = useState<View>('dashboard');
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
+    const [allRequests, setAllRequests] = useState<ServiceRequest[]>([]); // For dashboard map
     const [selectedRequest, setSelectedRequest] = useState<ServiceRequestDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showIntakeModal, setShowIntakeModal] = useState(false);
     const [services, setServices] = useState<ServiceDefinition[]>([]);
     const [statistics, setStatistics] = useState<Statistics | null>(null);
+
+    // Dashboard-specific state
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [users, setUsers] = useState<UserType[]>([]);
+    const [mapLayers, setMapLayers] = useState<MapLayer[]>([]);
+    const [mapsConfig, setMapsConfig] = useState<{ google_maps_api_key: string | null; township_boundary: object | null; default_center?: { lat: number; lng: number } } | null>(null);
 
     // Intake form state
     const [intakeData, setIntakeData] = useState({
@@ -95,16 +104,39 @@ export default function StaffDashboard() {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const [requestsData, servicesData] = await Promise.all([
-                api.getRequests(currentView === 'active' ? 'open' : currentView === 'resolved' ? 'closed' : undefined),
+            // Determine what status to filter by
+            let statusFilter: string | undefined;
+            if (currentView === 'active') statusFilter = 'open';
+            else if (currentView === 'in_progress') statusFilter = 'in_progress';
+            else if (currentView === 'resolved') statusFilter = 'closed';
+            // dashboard and statistics load all
+
+            const [requestsData, servicesData, allRequestsData] = await Promise.all([
+                api.getRequests(statusFilter),
                 api.getServices(),
+                api.getRequests(), // All requests for dashboard map
             ]);
             setRequests(requestsData);
             setServices(servicesData);
+            setAllRequests(allRequestsData);
 
             if (currentView === 'statistics') {
                 const statsData = await api.getStatistics();
                 setStatistics(statsData);
+            }
+
+            // Load dashboard-specific data
+            if (currentView === 'dashboard' && !mapsConfig) {
+                const [depts, usersData, layers, config] = await Promise.all([
+                    api.getDepartments(),
+                    api.getUsers().catch(() => []), // May fail for non-admin
+                    api.getMapLayers(),
+                    api.getMapsConfig(),
+                ]);
+                setDepartments(depts);
+                setUsers(usersData);
+                setMapLayers(layers);
+                setMapsConfig(config);
             }
         } catch (err) {
             console.error('Failed to load data:', err);
@@ -246,11 +278,51 @@ export default function StaffDashboard() {
     const counts = getCounts();
 
     const menuItems = [
-        { id: 'active', icon: AlertCircle, label: 'Active Incidents', count: counts.open + counts.inProgress },
-        { id: 'resolved', icon: CheckCircle, label: 'Resolved', count: counts.closed },
-        { id: 'all', icon: FileText, label: 'All Records', count: counts.total },
+        { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', count: null },
+        { id: 'active', icon: AlertCircle, label: 'Open', count: counts.open },
+        { id: 'in_progress', icon: Clock, label: 'In Progress', count: counts.inProgress },
+        { id: 'resolved', icon: CheckCircle, label: 'Completed', count: counts.closed },
         { id: 'statistics', icon: BarChart3, label: 'Statistics', count: null },
     ];
+
+    const sortedRequests = useMemo(() => {
+        if (!user) return filteredRequests;
+
+        // Note: userDeptIds could be used for department-based sorting if requests had department_id
+
+        return [...filteredRequests].sort((a, b) => {
+            // Priority 1: Assigned to current user
+            const aAssignedToMe = (a as any).assigned_to === user.username;
+            const bAssignedToMe = (b as any).assigned_to === user.username;
+            if (aAssignedToMe && !bAssignedToMe) return -1;
+            if (!aAssignedToMe && bAssignedToMe) return 1;
+
+            // Priority 2: Could add department-based sorting here if requests had department_id
+            // For now, sort by date (newest first)
+            return new Date(b.requested_datetime).getTime() - new Date(a.requested_datetime).getTime();
+        });
+    }, [filteredRequests, user]);
+
+    // Calculate dashboard stats
+    const dashboardStats = useMemo(() => {
+        const myRequests = allRequests.filter(r => (r as any).assigned_to === user?.username);
+        const myActive = myRequests.filter(r => r.status === 'open').length;
+        const myInProgress = myRequests.filter(r => r.status === 'in_progress').length;
+
+        // Department requests would need department_id on requests - using total for now
+        return {
+            myActive,
+            myInProgress,
+            deptActive: counts.open, // Would filter by department if available
+            totalActive: counts.open,
+            totalInProgress: counts.inProgress,
+        };
+    }, [allRequests, user, counts]);
+
+    const handleMapRequestSelect = (requestId: string) => {
+        loadRequestDetail(requestId);
+        setCurrentView('active'); // Switch to list view to see details
+    };
 
     const COLORS = ['#ef4444', '#f59e0b', '#22c55e'];
 
@@ -385,6 +457,56 @@ export default function StaffDashboard() {
                     <div className="w-10" />
                 </header>
 
+                {/* Dashboard View */}
+                {currentView === 'dashboard' && (
+                    <div className="flex-1 flex flex-col p-4 lg:p-6 overflow-auto">
+                        {/* Map Section */}
+                        <div className="flex-1 min-h-[400px] lg:min-h-[500px] mb-6 rounded-xl overflow-hidden">
+                            {mapsConfig?.google_maps_api_key ? (
+                                <StaffDashboardMap
+                                    apiKey={mapsConfig.google_maps_api_key}
+                                    requests={allRequests}
+                                    services={services}
+                                    departments={departments}
+                                    users={users}
+                                    mapLayers={mapLayers}
+                                    townshipBoundary={mapsConfig.township_boundary}
+                                    defaultCenter={mapsConfig.default_center}
+                                    onRequestSelect={handleMapRequestSelect}
+                                />
+                            ) : (
+                                <div className="h-full flex items-center justify-center bg-white/5 rounded-xl border border-white/10">
+                                    <div className="text-center p-8">
+                                        <Map className="w-12 h-12 mx-auto mb-4 text-white/30" />
+                                        <p className="text-white/60">Google Maps API key not configured</p>
+                                        <p className="text-white/40 text-sm mt-2">Configure in Admin Console → API Keys</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card className="text-center border-primary-500/30">
+                                <p className="text-3xl font-bold text-primary-400">{dashboardStats.myActive}</p>
+                                <p className="text-white/60 text-sm">Assigned to You</p>
+                            </Card>
+                            <Card className="text-center border-blue-500/30">
+                                <p className="text-3xl font-bold text-blue-400">{dashboardStats.deptActive}</p>
+                                <p className="text-white/60 text-sm">Your Department</p>
+                            </Card>
+                            <Card className="text-center border-red-500/30">
+                                <p className="text-3xl font-bold text-red-400">{dashboardStats.totalActive}</p>
+                                <p className="text-white/60 text-sm">All Open</p>
+                            </Card>
+                            <Card className="text-center border-amber-500/30">
+                                <p className="text-3xl font-bold text-amber-400">{dashboardStats.totalInProgress}</p>
+                                <p className="text-white/60 text-sm">In Progress</p>
+                            </Card>
+                        </div>
+                    </div>
+                )}
+
                 {/* Statistics View */}
                 {currentView === 'statistics' && (
                     <div className="flex-1 p-6 overflow-auto">
@@ -477,7 +599,7 @@ export default function StaffDashboard() {
                 )}
 
                 {/* List/Detail View */}
-                {currentView !== 'statistics' && (
+                {currentView !== 'statistics' && currentView !== 'dashboard' && (
                     <div className="flex-1 flex min-h-0">
                         {/* Request List Panel */}
                         <div className="w-full lg:w-96 flex flex-col border-r border-white/10">
@@ -511,13 +633,13 @@ export default function StaffDashboard() {
                                     <div className="flex justify-center py-12">
                                         <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
                                     </div>
-                                ) : filteredRequests.length === 0 ? (
+                                ) : sortedRequests.length === 0 ? (
                                     <div className="text-center py-12 text-white/50">
                                         No incidents found
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-white/5">
-                                        {filteredRequests.map((request) => (
+                                        {sortedRequests.map((request) => (
                                             <motion.button
                                                 key={request.id}
                                                 onClick={() => loadRequestDetail(request.service_request_id)}
