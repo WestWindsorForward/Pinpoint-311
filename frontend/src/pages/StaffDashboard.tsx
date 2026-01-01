@@ -887,482 +887,119 @@ export default function StaffDashboard() {
                             </div>
                         </div>
 
-                        {/* Detail Panel */}
+                        {/* Detail Panel - Simplified Unified Layout */}
                         <div className="hidden lg:flex flex-1 flex-col">
                             {selectedRequest ? (
-                                <div className="flex-1 overflow-auto p-6">
-                                    <div className="max-w-2xl mx-auto space-y-6">
-                                        {/* Header */}
-                                        <div className="flex items-start justify-between">
-                                            <div>
-                                                <Badge variant="info" size="md">
-                                                    {selectedRequest.service_request_id}
-                                                </Badge>
-                                                <h1 className="text-2xl font-bold text-white mt-2">
-                                                    {selectedRequest.service_name}
-                                                </h1>
-                                                {selectedRequest.address && (
-                                                    <div className="flex items-center gap-2 mt-2 text-white/60">
-                                                        <MapPin className="w-4 h-4" />
-                                                        <span>{selectedRequest.address}</span>
-                                                    </div>
+                                <div className="flex-1 flex flex-col">
+                                    {/* Sticky Header with Actions */}
+                                    <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm border-b border-white/10 p-4">
+                                        <div className="flex items-center justify-between gap-4 mb-3">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="font-mono text-xs text-white/50">{selectedRequest.service_request_id}</span>
+                                                    <StatusBadge status={selectedRequest.status} />
+                                                </div>
+                                                <h1 className="text-lg font-semibold text-white truncate">{selectedRequest.service_name}</h1>
+                                            </div>
+                                        </div>
+                                        {/* Status Actions */}
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleStatusChange('open')} className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${selectedRequest.status === 'open' ? 'bg-yellow-500 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}>Open</button>
+                                            <button onClick={() => handleStatusChange('in_progress')} className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${selectedRequest.status === 'in_progress' ? 'bg-blue-500 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}>In Progress</button>
+                                            <button onClick={() => handleStatusChange('closed')} className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${selectedRequest.status === 'closed' ? 'bg-green-500 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}>Closed</button>
+                                        </div>
+                                    </div>
+
+                                    {/* Scrollable Content */}
+                                    <div className="flex-1 overflow-auto p-4 space-y-4">
+                                        {/* Description */}
+                                        <p className="text-white/80 leading-relaxed">{selectedRequest.description}</p>
+
+                                        {/* Location & Photos Row */}
+                                        <div className="flex gap-3 flex-wrap">
+                                            {selectedRequest.address && (
+                                                <div className="flex-1 min-w-[200px] p-3 rounded-lg bg-white/5 flex items-center gap-2">
+                                                    <MapPin className="w-4 h-4 text-primary-400 flex-shrink-0" />
+                                                    <span className="text-sm text-white/70 truncate">{selectedRequest.address}</span>
+                                                </div>
+                                            )}
+                                            {selectedRequest.media_urls && selectedRequest.media_urls.length > 0 && (
+                                                <button onClick={() => setLightboxUrl(selectedRequest.media_urls![0])} className="p-3 rounded-lg bg-white/5 flex items-center gap-2 hover:bg-white/10">
+                                                    <Camera className="w-4 h-4 text-primary-400" />
+                                                    <span className="text-sm text-white/70">{selectedRequest.media_urls.length} photo{selectedRequest.media_urls.length > 1 ? 's' : ''}</span>
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Photos Grid */}
+                                        {selectedRequest.media_urls && selectedRequest.media_urls.length > 0 && (
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {selectedRequest.media_urls.map((url, i) => (
+                                                    <img key={i} src={url} alt={`Photo ${i + 1}`} className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80" onClick={() => setLightboxUrl(url)} />
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Assignment Section */}
+                                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <span className="text-sm font-medium text-white/70">Assignment</span>
+                                                {editAssignment && (
+                                                    <button onClick={async () => { setIsSavingAssignment(true); try { const updated = await api.updateRequest(selectedRequest.service_request_id, { assigned_department_id: editAssignment.departmentId ?? undefined, assigned_to: editAssignment.assignedTo ?? undefined }); setSelectedRequest(updated); setEditAssignment(null); } catch (err) { console.error(err); } finally { setIsSavingAssignment(false); } }} disabled={isSavingAssignment} className="px-4 py-1.5 rounded-lg bg-primary-500 text-white text-sm font-medium disabled:opacity-50">{isSavingAssignment ? 'Saving...' : 'Save'}</button>
                                                 )}
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <select value={editAssignment?.departmentId ?? selectedRequest.assigned_department_id ?? ''} onChange={(e) => { const val = e.target.value ? Number(e.target.value) : null; setEditAssignment(prev => ({ departmentId: val, assignedTo: prev?.assignedTo ?? selectedRequest.assigned_to ?? null })); }} className="w-full py-2.5 px-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm appearance-none cursor-pointer">
+                                                    <option value="">Department...</option>
+                                                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                                </select>
+                                                <select value={editAssignment?.assignedTo ?? selectedRequest.assigned_to ?? ''} onChange={(e) => { const val = e.target.value || null; setEditAssignment(prev => ({ departmentId: prev?.departmentId ?? selectedRequest.assigned_department_id ?? null, assignedTo: val })); }} className="w-full py-2.5 px-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm appearance-none cursor-pointer">
+                                                    <option value="">All Staff</option>
+                                                    {(() => { const deptId = editAssignment?.departmentId ?? selectedRequest.assigned_department_id; return (deptId ? users.filter(u => u.departments?.some(d => d.id === deptId)) : users).map(u => <option key={u.id} value={u.username}>{u.full_name || u.username}</option>); })()}
+                                                </select>
                                             </div>
                                         </div>
 
-                                        {/* Premium Assignment Card */}
-                                        <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-white/10 overflow-hidden">
-                                            <div className="relative">
-                                                {/* Subtle glow effect */}
-                                                <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary-500/10 rounded-full blur-3xl" />
-                                                <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
+                                        {/* Reporter Info */}
+                                        <div className="flex flex-wrap gap-3 text-sm">
+                                            {(selectedRequest.first_name || selectedRequest.last_name) && (<div className="flex items-center gap-2 text-white/60"><User className="w-4 h-4" /><span>{selectedRequest.first_name} {selectedRequest.last_name}</span></div>)}
+                                            <a href={`mailto:${selectedRequest.email}`} className="flex items-center gap-2 text-white/60 hover:text-primary-400"><Mail className="w-4 h-4" /><span>{selectedRequest.email}</span></a>
+                                            {selectedRequest.phone && (<a href={`tel:${selectedRequest.phone}`} className="flex items-center gap-2 text-white/60 hover:text-primary-400"><Phone className="w-4 h-4" /><span>{selectedRequest.phone}</span></a>)}
+                                        </div>
 
-                                                <div className="relative">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                                            <Users className="w-5 h-5 text-primary-400" />
-                                                            Assignment
-                                                        </h3>
-                                                        {editAssignment && (
-                                                            <button
-                                                                onClick={async () => {
-                                                                    setIsSavingAssignment(true);
-                                                                    try {
-                                                                        const updated = await api.updateRequest(selectedRequest.service_request_id, {
-                                                                            assigned_department_id: editAssignment.departmentId ?? undefined,
-                                                                            assigned_to: editAssignment.assignedTo ?? undefined
-                                                                        });
-                                                                        setSelectedRequest(updated);
-                                                                        setEditAssignment(null);
-                                                                    } catch (err) {
-                                                                        console.error('Failed to save assignment:', err);
-                                                                    } finally {
-                                                                        setIsSavingAssignment(false);
-                                                                    }
-                                                                }}
-                                                                disabled={isSavingAssignment}
-                                                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 via-primary-500 to-purple-500 hover:from-blue-600 hover:via-primary-600 hover:to-purple-600 text-white font-semibold transition-all shadow-xl shadow-primary-500/30 disabled:opacity-50 animate-pulse hover:animate-none ring-2 ring-primary-400/50 ring-offset-2 ring-offset-slate-900"
-                                                            >
-                                                                {isSavingAssignment ? (
-                                                                    <>
-                                                                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                                                        </svg>
-                                                                        Saving...
-                                                                    </>
-                                                                ) : 'Save Changes'}
-                                                            </button>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        {/* Department Select */}
-                                                        <div className="space-y-2">
-                                                            <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Department</label>
-                                                            <div className="relative">
-                                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                                    <Users className="w-4 h-4 text-primary-400" />
-                                                                </div>
-                                                                <select
-                                                                    value={editAssignment?.departmentId ?? selectedRequest.assigned_department_id ?? ''}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value ? Number(e.target.value) : null;
-                                                                        setEditAssignment(prev => ({
-                                                                            departmentId: val,
-                                                                            assignedTo: prev?.assignedTo ?? selectedRequest.assigned_to ?? null
-                                                                        }));
-                                                                    }}
-                                                                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all appearance-none cursor-pointer hover:bg-white/10"
-                                                                >
-                                                                    {departments.length > 0 && (
-                                                                        <option value="" className="bg-gray-900">Select Department...</option>
-                                                                    )}
-                                                                    {departments.map(dept => (
-                                                                        <option key={dept.id} value={dept.id} className="bg-gray-900">{dept.name}</option>
-                                                                    ))}
-                                                                </select>
-                                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                                    <svg className="w-4 h-4 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Staff Select */}
-                                                        <div className="space-y-2">
-                                                            <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Assigned Staff</label>
-                                                            <div className="relative">
-                                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                                    <User className="w-4 h-4 text-blue-400" />
-                                                                </div>
-                                                                <select
-                                                                    value={editAssignment?.assignedTo ?? selectedRequest.assigned_to ?? ''}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value || null;
-                                                                        setEditAssignment(prev => ({
-                                                                            departmentId: prev?.departmentId ?? selectedRequest.assigned_department_id ?? null,
-                                                                            assignedTo: val
-                                                                        }));
-                                                                    }}
-                                                                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all appearance-none cursor-pointer hover:bg-white/10"
-                                                                >
-                                                                    <option value="" className="bg-gray-900">All Department Staff</option>
-                                                                    {(() => {
-                                                                        const selectedDeptId = editAssignment?.departmentId ?? selectedRequest.assigned_department_id;
-                                                                        const filteredUsers = selectedDeptId
-                                                                            ? users.filter(u => u.departments?.some(d => d.id === selectedDeptId))
-                                                                            : users;
-                                                                        return filteredUsers.length > 0 ? filteredUsers.map(u => (
-                                                                            <option key={u.id} value={u.username} className="bg-gray-900">
-                                                                                {u.full_name || u.username} (@{u.username})
-                                                                            </option>
-                                                                        )) : (
-                                                                            <option disabled className="bg-gray-900">No staff in this department</option>
-                                                                        );
-                                                                    })()}
-                                                                </select>
-                                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                                    <svg className="w-4 h-4 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </Card>
-
-                                        {/* Status Actions */}
-                                        <Card>
-                                            <div className="flex flex-wrap gap-3">
-                                                <Button
-                                                    variant={selectedRequest.status === 'open' ? 'primary' : 'secondary'}
-                                                    size="sm"
-                                                    onClick={() => handleStatusChange('open')}
-                                                    className="min-h-[48px] px-4"
-                                                >
-                                                    Open
-                                                </Button>
-                                                <Button
-                                                    variant={selectedRequest.status === 'in_progress' ? 'primary' : 'secondary'}
-                                                    size="sm"
-                                                    onClick={() => handleStatusChange('in_progress')}
-                                                    className="min-h-[48px] px-4"
-                                                >
-                                                    In Progress
-                                                </Button>
-                                                <Button
-                                                    variant={selectedRequest.status === 'closed' ? 'primary' : 'secondary'}
-                                                    size="sm"
-                                                    onClick={() => handleStatusChange('closed')}
-                                                    className="min-h-[48px] px-4"
-                                                >
-                                                    {selectedRequest.status === 'closed' && selectedRequest.closed_substatus
-                                                        ? `Closed - ${selectedRequest.closed_substatus === 'no_action' ? 'No Action' : selectedRequest.closed_substatus === 'resolved' ? 'Resolved' : 'Third Party'}`
-                                                        : 'Closed'}
-                                                </Button>
-                                            </div>
-
-                                            {/* Completion info if closed */}
-                                            {selectedRequest.status === 'closed' && selectedRequest.completion_message && (
-                                                <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                                                    <p className="text-sm text-white/70">{selectedRequest.completion_message}</p>
-                                                    {selectedRequest.completion_photo_url && (
-                                                        <img
-                                                            src={selectedRequest.completion_photo_url}
-                                                            alt="Completion"
-                                                            className="mt-2 rounded-lg max-h-48 object-cover"
-                                                        />
-                                                    )}
-                                                </div>
-                                            )}
-                                        </Card>
-
-                                        {/* Shareable Link */}
-                                        <Card>
-                                            <div className="flex items-center gap-3">
-                                                <Link className="w-5 h-5 text-primary-400" />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm text-white/50">Shareable Report Link</p>
-                                                    <code className="text-xs text-primary-400 truncate block">
-                                                        {window.location.origin}/staff/request/{selectedRequest.service_request_id}
-                                                    </code>
-                                                </div>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/staff/request/${selectedRequest.service_request_id}`)}
-                                                >
-                                                    Copy
-                                                </Button>
-                                            </div>
-                                        </Card>
-
-                                        {/* Google Maps Embed */}
-                                        {selectedRequest.lat && selectedRequest.long && (
-                                            <Card>
-                                                <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-                                                    <MapPin className="w-4 h-4 text-primary-400" />
-                                                    Location Map
-                                                </h3>
-                                                <div className="rounded-lg overflow-hidden h-48 md:h-64 bg-white/5">
-                                                    <iframe
-                                                        width="100%"
-                                                        height="100%"
-                                                        style={{ border: 0 }}
-                                                        loading="lazy"
-                                                        src={`https://www.google.com/maps/embed/v1/place?key=${(window as any).GOOGLE_MAPS_API_KEY || ''}&q=${selectedRequest.lat},${selectedRequest.long}&zoom=17`}
-                                                        allowFullScreen
-                                                    />
-                                                </div>
-                                            </Card>
-                                        )}
-
-                                        {/* Submitted Photos */}
-                                        {selectedRequest.media_urls && selectedRequest.media_urls.length > 0 && (
-                                            <Card>
-                                                <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-                                                    <Camera className="w-4 h-4 text-primary-400" />
-                                                    Submitted Photos ({selectedRequest.media_urls.length})
-                                                </h3>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {selectedRequest.media_urls.map((url, index) => (
-                                                        <img
-                                                            key={index}
-                                                            src={url}
-                                                            alt={`Photo ${index + 1}`}
-                                                            className="rounded-lg max-h-48 w-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                                            onClick={() => setLightboxUrl(url)}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </Card>
-                                        )}
-
-                                        {/* Description */}
-                                        <Card>
-                                            <h3 className="font-semibold text-white mb-3">Description</h3>
-                                            <p className="text-white/70 whitespace-pre-wrap">
-                                                {selectedRequest.description}
-                                            </p>
-                                        </Card>
-
-                                        {/* Vertex AI Analysis Placeholder */}
-                                        <Card>
-                                            <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-                                                <Brain className="w-4 h-4 text-purple-400" />
-                                                AI Analysis
-                                            </h3>
-                                            {selectedRequest.vertex_ai_summary ? (
-                                                <div className="space-y-3">
-                                                    <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                                                        <p className="text-sm font-medium text-white/70 mb-1">Summary</p>
-                                                        <p className="text-white/90">{selectedRequest.vertex_ai_summary}</p>
-                                                    </div>
-                                                    {selectedRequest.vertex_ai_classification && (
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-white/50">Classification</span>
-                                                            <Badge variant="info">{selectedRequest.vertex_ai_classification}</Badge>
-                                                        </div>
-                                                    )}
-                                                    {selectedRequest.vertex_ai_priority_score && (
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-white/50">AI Priority Score</span>
-                                                            <span className="text-white font-medium">{selectedRequest.vertex_ai_priority_score.toFixed(1)}/10</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className="p-4 rounded-lg bg-white/5 border border-white/10 text-center">
-                                                    <Sparkles className="w-6 h-6 mx-auto mb-2 text-white/30" />
-                                                    <p className="text-white/40 text-sm">AI analysis pending</p>
-                                                </div>
-                                            )}
-                                        </Card>
+                                        {/* Timestamps */}
+                                        <div className="flex gap-4 text-xs text-white/40">
+                                            <span>Created: {new Date(selectedRequest.requested_datetime).toLocaleDateString()}</span>
+                                            {selectedRequest.updated_datetime && (<span>Updated: {new Date(selectedRequest.updated_datetime).toLocaleDateString()}</span>)}
+                                        </div>
 
                                         {/* Comments Section */}
-                                        <Card>
-                                            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                                                <MessageSquare className="w-4 h-4 text-blue-400" />
-                                                Comments ({comments.length})
-                                            </h3>
-
-                                            {/* Comments List */}
-                                            <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
-                                                {comments.length === 0 ? (
-                                                    <p className="text-white/40 text-sm text-center py-4">No comments yet</p>
-                                                ) : comments.map((comment) => (
-                                                    <div key={comment.id} className="p-3 rounded-lg bg-white/5 border border-white/10">
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-medium text-white text-sm">{comment.username}</span>
-                                                                <Badge variant={comment.visibility === 'internal' ? 'default' : 'success'}>
-                                                                    {comment.visibility === 'internal' ? <><EyeOff className="w-3 h-3 mr-1" />Internal</> : <><Eye className="w-3 h-3 mr-1" />External</>}
-                                                                </Badge>
-                                                            </div>
-                                                            <span className="text-xs text-white/40">
-                                                                {comment.created_at ? new Date(comment.created_at).toLocaleString() : ''}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-white/70 text-sm">{comment.content}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            {/* Add Comment */}
-                                            <div className="space-y-2">
-                                                <Textarea
-                                                    placeholder="Add a comment..."
-                                                    value={newComment}
-                                                    onChange={(e) => setNewComment(e.target.value)}
-                                                    className="min-h-[80px]"
-                                                />
-                                                <div className="flex justify-between items-center gap-3">
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setCommentVisibility('internal')}
-                                                            className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${commentVisibility === 'internal' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/50'}`}
-                                                        >
-                                                            <EyeOff className="w-3 h-3 inline mr-1" />Internal
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setCommentVisibility('external')}
-                                                            className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${commentVisibility === 'external' ? 'bg-primary-500/20 text-primary-400' : 'bg-white/5 text-white/50'}`}
-                                                        >
-                                                            <Eye className="w-3 h-3 inline mr-1" />External
-                                                        </button>
-                                                    </div>
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={handleAddComment}
-                                                        disabled={!newComment.trim() || isSubmittingComment}
-                                                        className="min-h-[44px]"
-                                                    >
-                                                        <Send className="w-4 h-4 mr-1" />
-                                                        {isSubmittingComment ? 'Sending...' : 'Send'}
-                                                    </Button>
+                                        <div className="border-t border-white/10 pt-4">
+                                            <span className="text-sm font-medium text-white/70 block mb-3">Comments ({comments.length})</span>
+                                            {comments.length > 0 && (
+                                                <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
+                                                    {comments.map(c => (<div key={c.id} className="p-2 rounded-lg bg-white/5 text-sm"><div className="flex items-center gap-2 mb-1"><span className="font-medium text-white/80">{c.username}</span><span className="text-xs text-white/40">{c.visibility === 'internal' ? '🔒' : '🌐'}</span></div><p className="text-white/60">{c.content}</p></div>))}
                                                 </div>
+                                            )}
+                                            <div className="flex gap-2">
+                                                <input type="text" placeholder="Add comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="flex-1 py-2 px-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm" />
+                                                <button onClick={() => setCommentVisibility(commentVisibility === 'internal' ? 'external' : 'internal')} className="px-3 rounded-lg bg-white/5 text-white/50 text-sm" title={commentVisibility === 'internal' ? 'Internal only' : 'Visible to reporter'}>{commentVisibility === 'internal' ? '🔒' : '🌐'}</button>
+                                                <button onClick={handleAddComment} disabled={!newComment.trim() || isSubmittingComment} className="px-4 rounded-lg bg-primary-500 text-white text-sm font-medium disabled:opacity-50">Send</button>
                                             </div>
-                                        </Card>
+                                        </div>
 
-                                        {/* Reporter Info */}
-                                        <Card>
-                                            <h3 className="font-semibold text-white mb-4">Reporter Information</h3>
-                                            <div className="space-y-3">
-                                                {(selectedRequest.first_name || selectedRequest.last_name) && (
-                                                    <div className="flex items-center gap-3 text-white/70">
-                                                        <User className="w-4 h-4 text-white/40" />
-                                                        <span>
-                                                            {selectedRequest.first_name} {selectedRequest.last_name}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                <div className="flex items-center gap-3 text-white/70">
-                                                    <Mail className="w-4 h-4 text-white/40" />
-                                                    <span>{selectedRequest.email}</span>
-                                                </div>
-                                                {selectedRequest.phone && (
-                                                    <div className="flex items-center gap-3 text-white/70">
-                                                        <Phone className="w-4 h-4 text-white/40" />
-                                                        <span>{selectedRequest.phone}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </Card>
-
-                                        {/* Matched Asset (from map layers) */}
-                                        {(selectedRequest as any).matched_asset && (
-                                            <Card>
-                                                <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                                                    <MapPin className="w-4 h-4 text-primary-400" />
-                                                    Matched Asset
-                                                </h3>
-                                                <div className="p-4 rounded-xl bg-primary-500/10 border border-primary-500/20">
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-white/50">Layer:</span>
-                                                            <span className="text-white font-medium">{(selectedRequest as any).matched_asset.layer_name}</span>
-                                                        </div>
-                                                        {(selectedRequest as any).matched_asset.asset_id && (
-                                                            <div className="flex justify-between">
-                                                                <span className="text-white/50">Asset ID:</span>
-                                                                <span className="text-white font-mono">{(selectedRequest as any).matched_asset.asset_id}</span>
-                                                            </div>
-                                                        )}
-                                                        {(selectedRequest as any).matched_asset.asset_type && (
-                                                            <div className="flex justify-between">
-                                                                <span className="text-white/50">Type:</span>
-                                                                <span className="text-white">{(selectedRequest as any).matched_asset.asset_type}</span>
-                                                            </div>
-                                                        )}
-                                                        {(selectedRequest as any).matched_asset.distance_meters !== undefined && (
-                                                            <div className="flex justify-between">
-                                                                <span className="text-white/50">Distance:</span>
-                                                                <span className="text-white">{(selectedRequest as any).matched_asset.distance_meters}m away</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    {/* Additional properties */}
-                                                    {Object.keys((selectedRequest as any).matched_asset.properties || {}).filter(k => !['asset_id', 'asset_type', 'name'].includes(k)).length > 0 && (
-                                                        <div className="mt-4 pt-3 border-t border-white/10">
-                                                            <p className="text-xs text-white/40 mb-2">Additional Properties:</p>
-                                                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                                                {Object.entries((selectedRequest as any).matched_asset.properties || {})
-                                                                    .filter(([k]) => !['asset_id', 'asset_type', 'name'].includes(k))
-                                                                    .map(([key, value]) => (
-                                                                        <div key={key} className="flex justify-between gap-2">
-                                                                            <span className="text-white/50 capitalize">{key.replace(/_/g, ' ')}:</span>
-                                                                            <span className="text-white truncate">{String(value)}</span>
-                                                                        </div>
-                                                                    ))
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </Card>
-                                        )}
-
-                                        {/* Timeline */}
-                                        <Card>
-                                            <h3 className="font-semibold text-white mb-4">Timeline</h3>
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-3 text-white/70">
-                                                    <Calendar className="w-4 h-4 text-white/40" />
-                                                    <span>Created: {new Date(selectedRequest.requested_datetime).toLocaleString()}</span>
-                                                </div>
-                                                {selectedRequest.updated_datetime && (
-                                                    <div className="flex items-center gap-3 text-white/70">
-                                                        <Clock className="w-4 h-4 text-white/40" />
-                                                        <span>Updated: {new Date(selectedRequest.updated_datetime).toLocaleString()}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </Card>
-
-                                        {/* Delete Button */}
-                                        <Card>
-                                            <Button
-                                                variant="danger"
-                                                onClick={() => setShowDeleteModal(true)}
-                                                className="w-full min-h-[48px] flex items-center justify-center gap-2"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                Delete Request
-                                            </Button>
-                                        </Card>
+                                        {/* Quick Actions Footer */}
+                                        <div className="flex gap-2 pt-4 border-t border-white/10">
+                                            <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/staff/request/${selectedRequest.service_request_id}`)} className="flex-1 py-2 px-3 rounded-lg bg-white/5 text-white/60 text-sm hover:bg-white/10 flex items-center justify-center gap-2"><Link className="w-4 h-4" /> Copy Link</button>
+                                            <button onClick={() => setShowDeleteModal(true)} className="py-2 px-4 rounded-lg bg-red-500/10 text-red-400 text-sm hover:bg-red-500/20 flex items-center gap-2"><Trash2 className="w-4 h-4" /> Delete</button>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="flex-1 flex items-center justify-center text-white/40">
                                     <div className="text-center">
-                                        <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                                        <p>Select an incident to view details</p>
+                                        <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                        <p className="text-sm">Select an incident</p>
                                     </div>
                                 </div>
                             )}
