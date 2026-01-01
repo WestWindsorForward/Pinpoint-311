@@ -286,6 +286,7 @@ export default function ResidentPortal() {
 
             const result = await api.createRequest({
                 ...formData,
+                media_urls: photoPreviewUrls.slice(0, 3),  // Include photos (max 3)
                 matched_asset: matchedAsset,
             });
             setSubmittedId(result.service_request_id);
