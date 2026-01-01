@@ -739,7 +739,7 @@ export default function StaffDashboard() {
                                                         </select>
                                                     </div>
 
-                                                    {/* Staff Select */}
+                                                    {/* Staff Select - Premium */}
                                                     <div className="flex items-center gap-2 px-1 py-0.5 rounded-full bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
                                                         <User className="w-3.5 h-3.5 text-blue-400 ml-2" />
                                                         <select
@@ -754,11 +754,11 @@ export default function StaffDashboard() {
                                                             className="bg-transparent border-none text-sm text-white/80 focus:outline-none cursor-pointer pr-2 py-1"
                                                         >
                                                             <option value="" className="bg-gray-900">No Staff</option>
-                                                            {users.length > 0 ? users
-                                                                .filter(u => u.role === 'staff' || u.role === 'admin')
-                                                                .map(u => (
-                                                                    <option key={u.id} value={u.username} className="bg-gray-900">{u.full_name || u.username}</option>
-                                                                )) : (
+                                                            {users.length > 0 ? users.map(u => (
+                                                                <option key={u.id} value={u.username} className="bg-gray-900">
+                                                                    {u.full_name || u.username} (@{u.username})
+                                                                </option>
+                                                            )) : (
                                                                 <option disabled className="bg-gray-900">Loading staff...</option>
                                                             )}
                                                         </select>
