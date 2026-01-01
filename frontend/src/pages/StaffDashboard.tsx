@@ -749,7 +749,7 @@ export default function StaffDashboard() {
                                                                     }
                                                                 }}
                                                                 disabled={isSavingAssignment}
-                                                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm font-medium transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                                                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:via-emerald-600 hover:to-teal-600 text-white font-semibold transition-all shadow-xl shadow-emerald-500/30 disabled:opacity-50 animate-pulse hover:animate-none ring-2 ring-emerald-400/50 ring-offset-2 ring-offset-slate-900"
                                                             >
                                                                 {isSavingAssignment ? (
                                                                     <>
@@ -783,7 +783,9 @@ export default function StaffDashboard() {
                                                                     }}
                                                                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all appearance-none cursor-pointer hover:bg-white/10"
                                                                 >
-                                                                    <option value="" className="bg-gray-900">No Department</option>
+                                                                    {departments.length > 0 && (
+                                                                        <option value="" className="bg-gray-900">Select Department...</option>
+                                                                    )}
                                                                     {departments.map(dept => (
                                                                         <option key={dept.id} value={dept.id} className="bg-gray-900">{dept.name}</option>
                                                                     ))}
