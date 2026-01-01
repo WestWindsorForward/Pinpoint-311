@@ -102,7 +102,9 @@ async def list_public_requests(
 async def get_public_request_detail(request_id: str, db: AsyncSession = Depends(get_db)):
     """Get full public request details including media - for detail view"""
     result = await db.execute(
-        select(ServiceRequest).where(
+        select(ServiceRequest).options(
+            selectinload(ServiceRequest.assigned_department)
+        ).where(
             ServiceRequest.service_request_id == request_id,
             ServiceRequest.deleted_at.is_(None)
         )
@@ -111,7 +113,7 @@ async def get_public_request_detail(request_id: str, db: AsyncSession = Depends(
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
     
-    # Return full details including media (but still excluding PII)
+    # Return full details including media and assignment (but still excluding PII)
     return {
         "service_request_id": request.service_request_id,
         "service_code": request.service_code,
@@ -127,6 +129,8 @@ async def get_public_request_detail(request_id: str, db: AsyncSession = Depends(
         "media_urls": request.media_urls or [],  # Full array of photo data for detail view
         "completion_message": request.completion_message,
         "completion_photo_url": request.completion_photo_url,  # Full completion photo
+        "assigned_to": request.assigned_to,
+        "assigned_department_name": request.assigned_department.name if request.assigned_department else None,
     }
 
 
@@ -224,7 +228,26 @@ async def create_request(
             detail="Invalid service code"
         )
     
-    # Create request
+    # Auto-assignment based on service routing config
+    assigned_department_id = service.assigned_department_id
+    assigned_to = None
+    
+    if service.routing_config:
+        config = service.routing_config
+        # If routing to specific staff, pick the first one
+        if config.get('route_to') == 'specific_staff' and config.get('staff_ids'):
+            from app.models import User
+            staff_ids = config.get('staff_ids', [])
+            if staff_ids:
+                # Get the first available staff member
+                staff_result = await db.execute(
+                    select(User).where(User.id == staff_ids[0])
+                )
+                staff = staff_result.scalar_one_or_none()
+                if staff:
+                    assigned_to = staff.username
+    
+    # Create request with auto-assignment
     service_request = ServiceRequest(
         service_request_id=generate_request_id(),
         service_code=request_data.service_code,
@@ -239,7 +262,9 @@ async def create_request(
         phone=request_data.phone,
         media_urls=request_data.media_urls[:3] if request_data.media_urls else [],  # Limit to 3 photos
         matched_asset=request_data.matched_asset,
-        source="resident_portal"
+        source="resident_portal",
+        assigned_department_id=assigned_department_id,
+        assigned_to=assigned_to
     )
     
     db.add(service_request)

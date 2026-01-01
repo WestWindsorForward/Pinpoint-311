@@ -123,6 +123,8 @@ export interface PublicServiceRequest {
     photo_count?: number;  // Number of photos (from list response)
     completion_message: string | null;
     completion_photo_url: string | null;
+    assigned_to: string | null;
+    assigned_department_name: string | null;
 }
 
 export interface ServiceRequestDetail extends ServiceRequest {
