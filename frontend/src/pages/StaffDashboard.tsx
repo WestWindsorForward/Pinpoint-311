@@ -749,7 +749,7 @@ export default function StaffDashboard() {
                                                                     }
                                                                 }}
                                                                 disabled={isSavingAssignment}
-                                                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:via-emerald-600 hover:to-teal-600 text-white font-semibold transition-all shadow-xl shadow-emerald-500/30 disabled:opacity-50 animate-pulse hover:animate-none ring-2 ring-emerald-400/50 ring-offset-2 ring-offset-slate-900"
+                                                                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 via-primary-500 to-purple-500 hover:from-blue-600 hover:via-primary-600 hover:to-purple-600 text-white font-semibold transition-all shadow-xl shadow-primary-500/30 disabled:opacity-50 animate-pulse hover:animate-none ring-2 ring-primary-400/50 ring-offset-2 ring-offset-slate-900"
                                                             >
                                                                 {isSavingAssignment ? (
                                                                     <>
