@@ -7,9 +7,36 @@ from typing import List
 from app.db.session import get_db
 from app.models import User
 from app.schemas import UserCreate, UserResponse, UserUpdate
-from app.core.auth import get_password_hash, get_current_admin
+from app.core.auth import get_password_hash, get_current_admin, get_current_staff
 
 router = APIRouter()
+
+
+# Minimal response schema for staff assignment dropdown
+from pydantic import BaseModel
+
+class StaffMemberResponse(BaseModel):
+    id: int
+    username: str
+    full_name: str | None
+    role: str
+    
+    class Config:
+        from_attributes = True
+
+
+@router.get("/staff", response_model=List[StaffMemberResponse])
+async def list_staff_members(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_staff)
+):
+    """List staff and admin users for assignment (accessible by any staff user)"""
+    result = await db.execute(
+        select(User)
+        .where(User.role.in_(['staff', 'admin']), User.is_active == True)
+        .order_by(User.full_name, User.username)
+    )
+    return result.scalars().all()
 
 
 @router.get("/", response_model=List[UserResponse])

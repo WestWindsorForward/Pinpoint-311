@@ -124,7 +124,7 @@ export default function StaffDashboard() {
                 api.getRequests(), // Fetch ALL requests once
                 api.getServices(),
                 api.getDepartments(),
-                api.getUsers().catch(() => []), // May fail for non-admin
+                api.getStaffMembers(), // Staff-accessible endpoint
                 api.getMapLayers(),
                 api.getMapsConfig(),
             ]);

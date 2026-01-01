@@ -231,6 +231,11 @@ class ApiClient {
         return this.request<User[]>('/users/');
     }
 
+    // Staff members (accessible by any staff user)
+    async getStaffMembers(): Promise<User[]> {
+        return this.request<User[]>('/users/staff');
+    }
+
     async createUser(data: UserCreate): Promise<User> {
         return this.request<User>('/users/', {
             method: 'POST',
