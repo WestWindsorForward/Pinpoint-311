@@ -94,6 +94,10 @@ export default function StaffDashboard() {
     // Lightbox modal state
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
+    // Assignment editing state
+    const [editAssignment, setEditAssignment] = useState<{ departmentId: number | null; assignedTo: string | null } | null>(null);
+    const [isSavingAssignment, setIsSavingAssignment] = useState(false);
+
     useEffect(() => {
         // Initial load - only fetch once
         loadInitialData();
@@ -129,6 +133,7 @@ export default function StaffDashboard() {
             setServices(servicesData);
             setDepartments(depts);
             setUsers(usersData);
+            console.log('Loaded users:', usersData.length, usersData);  // Debug log
             setMapLayers(layers);
             setMapsConfig(config);
         } catch (err) {
@@ -717,17 +722,13 @@ export default function StaffDashboard() {
                                                     <div className="flex items-center gap-2 px-1 py-0.5 rounded-full bg-gradient-to-r from-primary-500/10 to-purple-500/10 border border-primary-500/20">
                                                         <Users className="w-3.5 h-3.5 text-primary-400 ml-2" />
                                                         <select
-                                                            value={selectedRequest.assigned_department_id || ''}
-                                                            onChange={async (e) => {
-                                                                const departmentId = e.target.value ? Number(e.target.value) : null;
-                                                                try {
-                                                                    const updated = await api.updateRequest(selectedRequest.service_request_id, {
-                                                                        assigned_department_id: departmentId ?? undefined
-                                                                    });
-                                                                    setSelectedRequest(updated);
-                                                                } catch (err) {
-                                                                    console.error('Failed to update department:', err);
-                                                                }
+                                                            value={editAssignment?.departmentId ?? selectedRequest.assigned_department_id ?? ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value ? Number(e.target.value) : null;
+                                                                setEditAssignment(prev => ({
+                                                                    departmentId: val,
+                                                                    assignedTo: prev?.assignedTo ?? selectedRequest.assigned_to ?? null
+                                                                }));
                                                             }}
                                                             className="bg-transparent border-none text-sm text-white/80 focus:outline-none cursor-pointer pr-2 py-1"
                                                         >
@@ -742,28 +743,51 @@ export default function StaffDashboard() {
                                                     <div className="flex items-center gap-2 px-1 py-0.5 rounded-full bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
                                                         <User className="w-3.5 h-3.5 text-blue-400 ml-2" />
                                                         <select
-                                                            value={selectedRequest.assigned_to || ''}
-                                                            onChange={async (e) => {
-                                                                const assignedTo = e.target.value || null;
-                                                                try {
-                                                                    const updated = await api.updateRequest(selectedRequest.service_request_id, {
-                                                                        assigned_to: assignedTo ?? undefined
-                                                                    });
-                                                                    setSelectedRequest(updated);
-                                                                } catch (err) {
-                                                                    console.error('Failed to update staff:', err);
-                                                                }
+                                                            value={editAssignment?.assignedTo ?? selectedRequest.assigned_to ?? ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value || null;
+                                                                setEditAssignment(prev => ({
+                                                                    departmentId: prev?.departmentId ?? selectedRequest.assigned_department_id ?? null,
+                                                                    assignedTo: val
+                                                                }));
                                                             }}
                                                             className="bg-transparent border-none text-sm text-white/80 focus:outline-none cursor-pointer pr-2 py-1"
                                                         >
                                                             <option value="" className="bg-gray-900">No Staff</option>
-                                                            {users
+                                                            {users.length > 0 ? users
                                                                 .filter(u => u.role === 'staff' || u.role === 'admin')
                                                                 .map(u => (
                                                                     <option key={u.id} value={u.username} className="bg-gray-900">{u.full_name || u.username}</option>
-                                                                ))}
+                                                                )) : (
+                                                                <option disabled className="bg-gray-900">Loading staff...</option>
+                                                            )}
                                                         </select>
                                                     </div>
+
+                                                    {/* Save Button - only show when changes made */}
+                                                    {editAssignment && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                setIsSavingAssignment(true);
+                                                                try {
+                                                                    const updated = await api.updateRequest(selectedRequest.service_request_id, {
+                                                                        assigned_department_id: editAssignment.departmentId ?? undefined,
+                                                                        assigned_to: editAssignment.assignedTo ?? undefined
+                                                                    });
+                                                                    setSelectedRequest(updated);
+                                                                    setEditAssignment(null);
+                                                                } catch (err) {
+                                                                    console.error('Failed to save assignment:', err);
+                                                                } finally {
+                                                                    setIsSavingAssignment(false);
+                                                                }
+                                                            }}
+                                                            disabled={isSavingAssignment}
+                                                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                                                        >
+                                                            {isSavingAssignment ? 'Saving...' : 'Save'}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
