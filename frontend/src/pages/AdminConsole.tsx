@@ -2125,9 +2125,37 @@ export default function AdminConsole() {
                                         </button>
                                     </div>
                                     {serviceRouting.routing_config.route_to === 'specific_staff' && (
-                                        <p className="text-xs text-white/40 bg-white/5 p-2 rounded">
-                                            Staff member selection coming soon. Currently routes to all staff.
-                                        </p>
+                                        <div className="space-y-2 mt-3">
+                                            <label className="block text-xs text-white/50">Select staff members:</label>
+                                            <div className="max-h-32 overflow-y-auto p-2 rounded-lg bg-white/5 border border-white/10">
+                                                {users
+                                                    .filter(u => u.role === 'staff' || u.role === 'admin')
+                                                    .map(u => (
+                                                        <label key={u.id} className="flex items-center gap-2 p-1.5 hover:bg-white/5 rounded cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={(serviceRouting.routing_config.staff_ids || []).includes(u.id)}
+                                                                onChange={(e) => {
+                                                                    const currentIds = serviceRouting.routing_config.staff_ids || [];
+                                                                    const newIds = e.target.checked
+                                                                        ? [...currentIds, u.id]
+                                                                        : currentIds.filter((id: number) => id !== u.id);
+                                                                    setServiceRouting(p => ({
+                                                                        ...p,
+                                                                        routing_config: { ...p.routing_config, staff_ids: newIds }
+                                                                    }));
+                                                                }}
+                                                                className="w-4 h-4 rounded border-white/20 bg-white/10 text-primary-500"
+                                                            />
+                                                            <span className="text-sm text-white/80">{u.full_name || u.username}</span>
+                                                            <span className="text-xs text-white/40">@{u.username}</span>
+                                                        </label>
+                                                    ))}
+                                            </div>
+                                            {(serviceRouting.routing_config.staff_ids || []).length === 0 && (
+                                                <p className="text-xs text-amber-400">No staff selected - will route to all staff</p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             )}

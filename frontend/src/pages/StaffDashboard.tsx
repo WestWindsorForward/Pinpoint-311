@@ -712,6 +712,75 @@ export default function StaffDashboard() {
                                                         <span>{selectedRequest.address}</span>
                                                     </div>
                                                 )}
+
+                                                {/* Premium Inline Assignment */}
+                                                <div className="flex flex-wrap items-center gap-3 mt-4">
+                                                    {/* Department Badge with Dropdown */}
+                                                    <div className="relative group">
+                                                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary-500/20 to-purple-500/20 border border-primary-500/30 hover:border-primary-400/50 transition-all">
+                                                            <Users className="w-3.5 h-3.5 text-primary-400" />
+                                                            <span className="text-sm text-white/80">
+                                                                {selectedRequest.assigned_department?.name || 'No Department'}
+                                                            </span>
+                                                        </button>
+                                                        <div className="absolute top-full left-0 mt-1 z-20 hidden group-hover:block">
+                                                            <select
+                                                                value={selectedRequest.assigned_department_id || ''}
+                                                                onChange={async (e) => {
+                                                                    const departmentId = e.target.value ? Number(e.target.value) : null;
+                                                                    try {
+                                                                        const updated = await api.updateRequest(selectedRequest.service_request_id, {
+                                                                            assigned_department_id: departmentId ?? undefined
+                                                                        });
+                                                                        setSelectedRequest(updated);
+                                                                    } catch (err) {
+                                                                        console.error('Failed to update department:', err);
+                                                                    }
+                                                                }}
+                                                                className="min-w-[180px] px-3 py-2 rounded-lg bg-gray-900 border border-white/20 text-white text-sm shadow-xl"
+                                                            >
+                                                                <option value="">-- Not Assigned --</option>
+                                                                {departments.map(dept => (
+                                                                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Staff Badge with Dropdown */}
+                                                    <div className="relative group">
+                                                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 hover:border-blue-400/50 transition-all">
+                                                            <User className="w-3.5 h-3.5 text-blue-400" />
+                                                            <span className="text-sm text-white/80">
+                                                                {selectedRequest.assigned_to
+                                                                    ? users.find(u => u.username === selectedRequest.assigned_to)?.full_name || selectedRequest.assigned_to
+                                                                    : 'No Staff'}
+                                                            </span>
+                                                        </button>
+                                                        <div className="absolute top-full left-0 mt-1 z-20 hidden group-hover:block">
+                                                            <select
+                                                                value={selectedRequest.assigned_to || ''}
+                                                                onChange={async (e) => {
+                                                                    const assignedTo = e.target.value || null;
+                                                                    try {
+                                                                        const updated = await api.updateRequest(selectedRequest.service_request_id, {
+                                                                            assigned_to: assignedTo ?? undefined
+                                                                        });
+                                                                        setSelectedRequest(updated);
+                                                                    } catch (err) {
+                                                                        console.error('Failed to update staff:', err);
+                                                                    }
+                                                                }}
+                                                                className="min-w-[180px] px-3 py-2 rounded-lg bg-gray-900 border border-white/20 text-white text-sm shadow-xl"
+                                                            >
+                                                                <option value="">-- Not Assigned --</option>
+                                                                {users.map(u => (
+                                                                    <option key={u.id} value={u.username}>{u.full_name || u.username}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -861,70 +930,6 @@ export default function StaffDashboard() {
                                                     <p className="text-white/40 text-sm">AI analysis pending</p>
                                                 </div>
                                             )}
-                                        </Card>
-
-                                        {/* Assignment Section */}
-                                        <Card>
-                                            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                                                <Users className="w-4 h-4 text-primary-400" />
-                                                Assignment
-                                            </h3>
-                                            <div className="space-y-4">
-                                                {/* Assigned Department */}
-                                                <div>
-                                                    <label className="block text-white/50 text-sm mb-2">Department</label>
-                                                    <select
-                                                        value={selectedRequest.assigned_department_id || ''}
-                                                        onChange={async (e) => {
-                                                            const departmentId = e.target.value ? Number(e.target.value) : null;
-                                                            try {
-                                                                const updated = await api.updateRequest(selectedRequest.service_request_id, {
-                                                                    assigned_department_id: departmentId ?? undefined
-                                                                });
-                                                                setSelectedRequest(updated);
-                                                            } catch (err) {
-                                                                console.error('Failed to update department:', err);
-                                                            }
-                                                        }}
-                                                        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                                                    >
-                                                        <option value="">-- Not Assigned --</option>
-                                                        {departments.map(dept => (
-                                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
-                                                        ))}
-                                                    </select>
-                                                    {selectedRequest.assigned_department && (
-                                                        <p className="text-white/40 text-xs mt-1">
-                                                            {selectedRequest.assigned_department.name}
-                                                        </p>
-                                                    )}
-                                                </div>
-
-                                                {/* Assigned Staff */}
-                                                <div>
-                                                    <label className="block text-white/50 text-sm mb-2">Staff Member</label>
-                                                    <select
-                                                        value={selectedRequest.assigned_to || ''}
-                                                        onChange={async (e) => {
-                                                            const assignedTo = e.target.value || null;
-                                                            try {
-                                                                const updated = await api.updateRequest(selectedRequest.service_request_id, {
-                                                                    assigned_to: assignedTo ?? undefined
-                                                                });
-                                                                setSelectedRequest(updated);
-                                                            } catch (err) {
-                                                                console.error('Failed to update assigned staff:', err);
-                                                            }
-                                                        }}
-                                                        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                                                    >
-                                                        <option value="">-- Not Assigned --</option>
-                                                        {users.map(u => (
-                                                            <option key={u.id} value={u.username}>{u.full_name || u.username}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
                                         </Card>
 
                                         {/* Comments Section */}
