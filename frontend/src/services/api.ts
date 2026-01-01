@@ -177,6 +177,7 @@ class ApiClient {
             status?: string;
             staff_notes?: string;
             priority?: number;
+            assigned_department_id?: number;
             assigned_to?: string;
             closed_substatus?: string;
             completion_message?: string;

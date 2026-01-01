@@ -485,6 +485,46 @@ export default function TrackRequests({ initialRequestId }: TrackRequestsProps) 
                         )}
                     </div>
                 </Card>
+
+                {/* Premium Photo Lightbox Modal */}
+                {lightboxUrl && (
+                    <div
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+                        onClick={() => setLightboxUrl(null)}
+                    >
+                        {/* Backdrop with blur */}
+                        <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" />
+
+                        {/* Close button */}
+                        <button
+                            onClick={() => setLightboxUrl(null)}
+                            className="absolute top-4 right-4 md:top-6 md:right-6 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 transition-all duration-300 group"
+                        >
+                            <X className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
+                        </button>
+
+                        {/* Image container with premium styling */}
+                        <div
+                            className="relative z-10 max-w-[90vw] max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Gradient glow effect behind image */}
+                            <div className="absolute -inset-1 bg-gradient-to-r from-primary-500/30 via-purple-500/30 to-primary-500/30 blur-xl opacity-50" />
+
+                            {/* Image */}
+                            <img
+                                src={lightboxUrl}
+                                alt="Full size preview"
+                                className="relative max-w-full max-h-[85vh] object-contain bg-gray-900/50 rounded-2xl"
+                            />
+                        </div>
+
+                        {/* Instructions */}
+                        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-sm">
+                            Click anywhere to close
+                        </p>
+                    </div>
+                )}
             </motion.div>
         );
     }

@@ -28,6 +28,7 @@ import {
     Link,
     Brain,
     LayoutDashboard,
+    Users,
 } from 'lucide-react';
 import { Button, Card, Modal, Input, Textarea, Select, StatusBadge, Badge } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
@@ -860,6 +861,70 @@ export default function StaffDashboard() {
                                                     <p className="text-white/40 text-sm">AI analysis pending</p>
                                                 </div>
                                             )}
+                                        </Card>
+
+                                        {/* Assignment Section */}
+                                        <Card>
+                                            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                                                <Users className="w-4 h-4 text-primary-400" />
+                                                Assignment
+                                            </h3>
+                                            <div className="space-y-4">
+                                                {/* Assigned Department */}
+                                                <div>
+                                                    <label className="block text-white/50 text-sm mb-2">Department</label>
+                                                    <select
+                                                        value={selectedRequest.assigned_department_id || ''}
+                                                        onChange={async (e) => {
+                                                            const departmentId = e.target.value ? Number(e.target.value) : null;
+                                                            try {
+                                                                const updated = await api.updateRequest(selectedRequest.service_request_id, {
+                                                                    assigned_department_id: departmentId ?? undefined
+                                                                });
+                                                                setSelectedRequest(updated);
+                                                            } catch (err) {
+                                                                console.error('Failed to update department:', err);
+                                                            }
+                                                        }}
+                                                        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                                                    >
+                                                        <option value="">-- Not Assigned --</option>
+                                                        {departments.map(dept => (
+                                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    {selectedRequest.assigned_department && (
+                                                        <p className="text-white/40 text-xs mt-1">
+                                                            {selectedRequest.assigned_department.name}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Assigned Staff */}
+                                                <div>
+                                                    <label className="block text-white/50 text-sm mb-2">Staff Member</label>
+                                                    <select
+                                                        value={selectedRequest.assigned_to || ''}
+                                                        onChange={async (e) => {
+                                                            const assignedTo = e.target.value || null;
+                                                            try {
+                                                                const updated = await api.updateRequest(selectedRequest.service_request_id, {
+                                                                    assigned_to: assignedTo ?? undefined
+                                                                });
+                                                                setSelectedRequest(updated);
+                                                            } catch (err) {
+                                                                console.error('Failed to update assigned staff:', err);
+                                                            }
+                                                        }}
+                                                        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                                                    >
+                                                        <option value="">-- Not Assigned --</option>
+                                                        {users.map(u => (
+                                                            <option key={u.id} value={u.username}>{u.full_name || u.username}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </Card>
 
                                         {/* Comments Section */}

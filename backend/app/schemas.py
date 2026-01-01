@@ -166,7 +166,8 @@ class ServiceRequestUpdate(BaseModel):
     status: Optional[RequestStatus] = None
     priority: Optional[int] = Field(None, ge=1, le=10)
     staff_notes: Optional[str] = None
-    assigned_to: Optional[str] = None
+    assigned_department_id: Optional[int] = None  # Assign to department
+    assigned_to: Optional[str] = None  # Assign to specific staff
     # Closed sub-status fields (when status = closed)
     closed_substatus: Optional[ClosedSubstatus] = None
     completion_message: Optional[str] = None
@@ -234,6 +235,8 @@ class ServiceRequestDetailResponse(ServiceRequestResponse):
     ai_analysis: Optional[Dict[str, Any]] = None
     flag_reason: Optional[str] = None
     staff_notes: Optional[str] = None
+    assigned_department_id: Optional[int] = None
+    assigned_department: Optional[DepartmentResponse] = None  # Full department info
     assigned_to: Optional[str] = None
     closed_datetime: Optional[datetime] = None
     # Completion fields

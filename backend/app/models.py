@@ -141,6 +141,8 @@ class ServiceRequest(Base):
     
     # Staff notes
     staff_notes = Column(Text)
+    assigned_department_id = Column(Integer, ForeignKey("departments.id"))
+    assigned_department = relationship("Department", foreign_keys=[assigned_department_id])
     assigned_to = Column(String(100))
     
     # Matched asset from map layers (detected on submit)

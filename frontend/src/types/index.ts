@@ -134,6 +134,8 @@ export interface ServiceRequestDetail extends ServiceRequest {
     ai_analysis: Record<string, unknown> | null;
     flag_reason: string | null;
     staff_notes: string | null;
+    assigned_department_id: number | null;
+    assigned_department: Department | null;  // Full department info
     assigned_to: string | null;
     closed_datetime: string | null;
     // Completion fields

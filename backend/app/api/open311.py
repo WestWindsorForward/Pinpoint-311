@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from datetime import datetime
 import uuid
@@ -293,7 +294,9 @@ async def get_request(
 ):
     """Get service request details (staff only)"""
     result = await db.execute(
-        select(ServiceRequest).where(ServiceRequest.service_request_id == request_id)
+        select(ServiceRequest)
+        .options(selectinload(ServiceRequest.assigned_department))
+        .where(ServiceRequest.service_request_id == request_id)
     )
     request = result.scalar_one_or_none()
     if not request:
@@ -331,7 +334,11 @@ async def update_request_status(
     request.updated_datetime = datetime.utcnow()
     
     await db.commit()
+    # Reload with relationship for response
     await db.refresh(request)
+    # Reload the relationship if department was set
+    if request.assigned_department_id:
+        await db.refresh(request, ['assigned_department'])
     return request
 
 
