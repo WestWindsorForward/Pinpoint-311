@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import List
 import subprocess
 import os
+import uuid
+import aiofiles
 
 from app.db.session import get_db
 from app.models import SystemSettings, SystemSecret, ServiceRequest, User
@@ -383,3 +385,51 @@ async def get_domain_status(
         "custom_domain": settings.custom_domain if settings else None,
         "server_ip": "132.226.32.116"
     }
+
+
+# ============ Image Upload ============
+
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "/project/uploads")
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+@router.post("/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    _: User = Depends(get_current_staff)
+):
+    """Upload an image file (staff only). Returns the URL to access it."""
+    # Validate file extension
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Read and validate file size
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"
+        )
+    
+    # Generate unique filename
+    unique_filename = f"{uuid.uuid4().hex}{ext}"
+    
+    # Ensure upload directory exists
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    # Save file
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    async with aiofiles.open(file_path, 'wb') as f:
+        await f.write(content)
+    
+    # Return URL (relative to API)
+    return {
+        "url": f"/api/uploads/{unique_filename}",
+        "filename": unique_filename
+    }
+

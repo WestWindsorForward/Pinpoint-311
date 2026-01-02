@@ -440,6 +440,14 @@ export default function TrackRequests({ initialRequestId }: TrackRequestsProps) 
                                 {selectedRequest.completion_message && (
                                     <p className="text-white/60 text-sm mt-2">{selectedRequest.completion_message}</p>
                                 )}
+                                {selectedRequest.completion_photo_url && (
+                                    <img
+                                        src={selectedRequest.completion_photo_url}
+                                        alt="Completion photo"
+                                        className="mt-3 rounded-lg max-h-48 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                        onClick={() => selectedRequest.completion_photo_url && window.open(selectedRequest.completion_photo_url, '_blank')}
+                                    />
+                                )}
                             </div>
                         )}
                     </Card>

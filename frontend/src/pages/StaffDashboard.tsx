@@ -1025,10 +1025,20 @@ export default function StaffDashboard() {
                                             )}
 
                                             {/* Completion info */}
-                                            {selectedRequest.status === 'closed' && selectedRequest.completion_message && (
+                                            {selectedRequest.status === 'closed' && (selectedRequest.completion_message || selectedRequest.completion_photo_url) && (
                                                 <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 mb-4">
                                                     <p className="text-green-400 font-medium text-sm mb-1">✓ {selectedRequest.closed_substatus === 'resolved' ? 'Resolved' : selectedRequest.closed_substatus === 'no_action' ? 'No Action Needed' : 'Referred'}</p>
-                                                    <p className="text-white/70 text-sm">{selectedRequest.completion_message}</p>
+                                                    {selectedRequest.completion_message && (
+                                                        <p className="text-white/70 text-sm mb-2">{selectedRequest.completion_message}</p>
+                                                    )}
+                                                    {selectedRequest.completion_photo_url && (
+                                                        <img
+                                                            src={selectedRequest.completion_photo_url}
+                                                            alt="Completion photo"
+                                                            className="rounded-lg max-h-64 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                                            onClick={() => selectedRequest.completion_photo_url && window.open(selectedRequest.completion_photo_url, '_blank')}
+                                                        />
+                                                    )}
                                                 </div>
                                             )}
 
@@ -1493,12 +1503,47 @@ export default function StaffDashboard() {
                     />
 
                     {closedSubstatus === 'resolved' && (
-                        <Input
-                            label="Completion Photo URL (optional)"
-                            placeholder="URL to photo showing completed work..."
-                            value={completionPhotoUrl}
-                            onChange={(e) => setCompletionPhotoUrl(e.target.value)}
-                        />
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-white/70">Completion Photo (optional)</label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    id="completion-photo-upload"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            try {
+                                                const result = await api.uploadImage(file);
+                                                setCompletionPhotoUrl(result.url);
+                                            } catch (err) {
+                                                console.error('Upload failed:', err);
+                                                alert('Failed to upload image');
+                                            }
+                                        }
+                                    }}
+                                />
+                                <label
+                                    htmlFor="completion-photo-upload"
+                                    className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-2"
+                                >
+                                    <Camera className="w-4 h-4" />
+                                    {completionPhotoUrl ? 'Change Photo' : 'Upload Photo'}
+                                </label>
+                                {completionPhotoUrl && (
+                                    <div className="flex items-center gap-2">
+                                        <img src={completionPhotoUrl} alt="Completion" className="h-12 w-12 object-cover rounded-lg" />
+                                        <button
+                                            onClick={() => setCompletionPhotoUrl('')}
+                                            className="text-red-400 hover:text-red-300 text-sm"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     )}
 
                     <div className="flex justify-end gap-3 pt-4">

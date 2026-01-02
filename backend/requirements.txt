@@ -16,3 +16,4 @@ redis==5.0.1
 httpx==0.26.0
 google-cloud-aiplatform==1.38.1
 alembic==1.13.1
+aiofiles==23.2.1

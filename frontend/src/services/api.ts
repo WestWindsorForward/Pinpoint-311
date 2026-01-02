@@ -469,6 +469,25 @@ class ApiClient {
             method: 'DELETE',
         });
     }
+
+    // Image Upload
+    async uploadImage(file: File): Promise<{ url: string; filename: string }> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${API_BASE}/system/upload/image`, {
+            method: 'POST',
+            headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || 'Upload failed');
+        }
+
+        return response.json();
+    }
 }
 
 export const api = new ApiClient();

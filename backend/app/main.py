@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+import os
 
 from app.api import auth, users, departments, services, system, open311, gis, map_layers, comments
 from app.db.init_db import seed_database
@@ -45,8 +48,10 @@ app.include_router(gis.router, prefix="/api/gis", tags=["GIS"])
 app.include_router(map_layers.router, prefix="/api/map-layers", tags=["Map Layers"])
 app.include_router(comments.router, tags=["Comments"])
 
-
-
+# Mount uploads directory for serving uploaded files
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "/project/uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
