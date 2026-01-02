@@ -758,31 +758,31 @@ export default function StaffDashboard() {
                                     </div>
                                 </div>
 
-                                {/* Assignment Filter Buttons - Large and Clear */}
+                                {/* Assignment Filter Buttons - Premium Styling */}
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => setFilterAssignment('me')}
-                                        className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${filterAssignment === 'me'
-                                            ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 ring-2 ring-primary-400/50'
-                                            : 'bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white'
+                                        className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${filterAssignment === 'me'
+                                            ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/40 ring-2 ring-primary-400/60'
+                                            : 'bg-white/5 border border-white/15 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/25'
                                             }`}
                                     >
                                         My Requests ({quickStats.assignedToMe})
                                     </button>
                                     <button
                                         onClick={() => setFilterAssignment('department')}
-                                        className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${filterAssignment === 'department'
-                                            ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30 ring-2 ring-purple-400/50'
-                                            : 'bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white'
+                                        className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${filterAssignment === 'department'
+                                            ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/40 ring-2 ring-purple-400/60'
+                                            : 'bg-white/5 border border-white/15 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/25'
                                             }`}
                                     >
-                                        Department ({quickStats.inMyDepartment})
+                                        My Department ({quickStats.inMyDepartment})
                                     </button>
                                     <button
                                         onClick={() => setFilterAssignment('all')}
-                                        className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${filterAssignment === 'all'
-                                            ? 'bg-slate-600 text-white shadow-lg shadow-slate-500/30 ring-2 ring-slate-400/50'
-                                            : 'bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white'
+                                        className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${filterAssignment === 'all'
+                                            ? 'bg-gradient-to-r from-slate-500 to-slate-600 text-white shadow-lg shadow-slate-500/40 ring-2 ring-slate-400/60'
+                                            : 'bg-white/5 border border-white/15 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/25'
                                             }`}
                                     >
                                         All Requests ({quickStats.total})
@@ -940,7 +940,7 @@ export default function StaffDashboard() {
                                                 onChange={(e) => { const val = e.target.value || null; setEditAssignment(prev => ({ departmentId: prev?.departmentId ?? selectedRequest.assigned_department_id ?? null, assignedTo: val })); }}
                                                 className="flex-1 py-2 px-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/25 transition-all [&>option]:bg-slate-800 [&>option]:text-white"
                                             >
-                                                <option value="" className="text-white/50">Select staff member...</option>
+                                                <option value="">All staff in department</option>
                                                 {(() => {
                                                     const deptId = editAssignment?.departmentId ?? selectedRequest.assigned_department_id;
                                                     const filteredUsers = deptId ? users.filter(u => u.departments?.some(d => d.id === deptId)) : users;
@@ -1198,26 +1198,22 @@ export default function StaffDashboard() {
                                                     ) : (
                                                         // Fallback: Static display for older requests without audit log
                                                         <>
-                                                            <div className="relative flex items-start gap-3 pl-1">
-                                                                <div className="relative z-10 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[8px] shadow-lg">
-                                                                    <span className="text-white">📝</span>
-                                                                </div>
-                                                                <div className="flex-1 min-w-0 pb-1">
-                                                                    <div className="flex items-baseline gap-2 flex-wrap">
+                                                            <div className="relative flex items-start gap-3 pl-0">
+                                                                <div className="relative z-10 w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm" />
+                                                                <div className="flex-1 min-w-0 -mt-0.5">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
                                                                         <span className="text-white/90 text-sm font-medium">Request submitted</span>
                                                                         <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-300">Resident</span>
                                                                     </div>
-                                                                    <span className="text-white/40 text-xs">{new Date(selectedRequest.requested_datetime).toLocaleString()}</span>
+                                                                    <div className="text-white/40 text-xs mt-0.5">{new Date(selectedRequest.requested_datetime).toLocaleString()}</div>
                                                                 </div>
                                                             </div>
 
                                                             {selectedRequest.assigned_department_id && (
-                                                                <div className="relative flex items-start gap-3 pl-1">
-                                                                    <div className="relative z-10 w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center text-[8px] shadow-lg">
-                                                                        <span className="text-white">🏢</span>
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0 pb-1">
-                                                                        <div className="flex items-baseline gap-2 flex-wrap">
+                                                                <div className="relative flex items-start gap-3 pl-0">
+                                                                    <div className="relative z-10 w-3.5 h-3.5 rounded-full bg-purple-500 shadow-sm" />
+                                                                    <div className="flex-1 min-w-0 -mt-0.5">
+                                                                        <div className="flex items-center gap-2 flex-wrap">
                                                                             <span className="text-white/90 text-sm font-medium">Assigned to {departments.find(d => d.id === selectedRequest.assigned_department_id)?.name || 'department'}</span>
                                                                             <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300">Staff</span>
                                                                         </div>
@@ -1226,12 +1222,10 @@ export default function StaffDashboard() {
                                                             )}
 
                                                             {selectedRequest.assigned_to && (
-                                                                <div className="relative flex items-start gap-3 pl-1">
-                                                                    <div className="relative z-10 w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] shadow-lg">
-                                                                        <span className="text-white">👤</span>
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0 pb-1">
-                                                                        <div className="flex items-baseline gap-2 flex-wrap">
+                                                                <div className="relative flex items-start gap-3 pl-0">
+                                                                    <div className="relative z-10 w-3.5 h-3.5 rounded-full bg-indigo-500 shadow-sm" />
+                                                                    <div className="flex-1 min-w-0 -mt-0.5">
+                                                                        <div className="flex items-center gap-2 flex-wrap">
                                                                             <span className="text-white/90 text-sm font-medium">Assigned to {selectedRequest.assigned_to}</span>
                                                                             <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300">Staff</span>
                                                                         </div>
@@ -1240,12 +1234,10 @@ export default function StaffDashboard() {
                                                             )}
 
                                                             {(selectedRequest.status === 'in_progress' || selectedRequest.status === 'closed') && (
-                                                                <div className="relative flex items-start gap-3 pl-1">
-                                                                    <div className="relative z-10 w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[8px] shadow-lg">
-                                                                        <span className="text-white">🔄</span>
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0 pb-1">
-                                                                        <div className="flex items-baseline gap-2 flex-wrap">
+                                                                <div className="relative flex items-start gap-3 pl-0">
+                                                                    <div className="relative z-10 w-3.5 h-3.5 rounded-full bg-blue-500 shadow-sm" />
+                                                                    <div className="flex-1 min-w-0 -mt-0.5">
+                                                                        <div className="flex items-center gap-2 flex-wrap">
                                                                             <span className="text-white/90 text-sm font-medium">Marked as In Progress</span>
                                                                             <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300">Staff</span>
                                                                         </div>
@@ -1254,20 +1246,18 @@ export default function StaffDashboard() {
                                                             )}
 
                                                             {selectedRequest.status === 'closed' && (
-                                                                <div className="relative flex items-start gap-3 pl-1">
-                                                                    <div className="relative z-10 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-[8px] shadow-lg ring-2 ring-white/20">
-                                                                        <span className="text-white">✅</span>
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0 pb-1">
-                                                                        <div className="flex items-baseline gap-2 flex-wrap">
+                                                                <div className="relative flex items-start gap-3 pl-0">
+                                                                    <div className="relative z-10 w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm ring-2 ring-white/30" />
+                                                                    <div className="flex-1 min-w-0 -mt-0.5">
+                                                                        <div className="flex items-center gap-2 flex-wrap">
                                                                             <span className="text-white/90 text-sm font-medium">
                                                                                 Closed {selectedRequest.closed_substatus === 'resolved' ? '- Resolved' : selectedRequest.closed_substatus === 'no_action' ? '- No Action Needed' : selectedRequest.closed_substatus === 'third_party' ? '- Third Party Contacted' : ''}
                                                                             </span>
                                                                             <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300">Staff</span>
                                                                         </div>
-                                                                        <span className="text-white/40 text-xs">
+                                                                        <div className="text-white/40 text-xs mt-0.5">
                                                                             {selectedRequest.closed_datetime ? new Date(selectedRequest.closed_datetime).toLocaleString() : ''}
-                                                                        </span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             )}
