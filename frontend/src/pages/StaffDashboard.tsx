@@ -288,7 +288,10 @@ export default function StaffDashboard() {
         try {
             const updated = await api.updateRequest(selectedRequest.service_request_id, { status });
             setSelectedRequest(updated);
-            loadInitialData();
+            // Optimistic update: update list immediately without full reload
+            setAllRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
+            setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
+            loadAuditLog(selectedRequest.service_request_id);
         } catch (err) {
             console.error('Failed to update status:', err);
         }
@@ -304,11 +307,14 @@ export default function StaffDashboard() {
                 completion_photo_url: closedSubstatus === 'resolved' ? completionPhotoUrl || undefined : undefined,
             });
             setSelectedRequest(updated);
+            // Optimistic update: update list immediately without full reload
+            setAllRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
+            setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
             setShowClosedModal(false);
             setClosedSubstatus('resolved');
             setCompletionMessage('');
             setCompletionPhotoUrl('');
-            loadInitialData();
+            loadAuditLog(selectedRequest.service_request_id);
         } catch (err) {
             console.error('Failed to close request:', err);
         }
