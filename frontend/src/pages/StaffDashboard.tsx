@@ -37,6 +37,7 @@ import { api, MapLayer } from '../services/api';
 import { ServiceRequest, ServiceRequestDetail, ServiceDefinition, Statistics, RequestComment, ClosedSubstatus, User as UserType, Department } from '../types';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import StaffDashboardMap from '../components/StaffDashboardMap';
+import RequestDetailMap from '../components/RequestDetailMap';
 
 type View = 'dashboard' | 'active' | 'in_progress' | 'resolved' | 'statistics';
 
@@ -1001,8 +1002,20 @@ export default function StaffDashboard() {
                                                 {selectedRequest.address && (
                                                     <p className="text-white/80 mb-3">{selectedRequest.address}</p>
                                                 )}
-                                                {/* Google Maps with GeoJSON - use the existing map component or simple embed */}
-                                                {selectedRequest.lat && selectedRequest.long && (
+                                                {/* Interactive Google Maps with Asset Overlay */}
+                                                {selectedRequest.lat && selectedRequest.long && mapsConfig?.google_maps_api_key && (
+                                                    <div className="rounded-lg overflow-hidden h-64 bg-slate-900">
+                                                        <RequestDetailMap
+                                                            lat={selectedRequest.lat}
+                                                            lng={selectedRequest.long}
+                                                            matchedAsset={(selectedRequest as any).matched_asset}
+                                                            mapLayers={mapLayers}
+                                                            apiKey={mapsConfig.google_maps_api_key}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {/* Fallback for no API key */}
+                                                {selectedRequest.lat && selectedRequest.long && !mapsConfig?.google_maps_api_key && (
                                                     <div className="rounded-lg overflow-hidden h-48 bg-slate-900">
                                                         <iframe
                                                             width="100%"
@@ -1011,16 +1024,6 @@ export default function StaffDashboard() {
                                                             loading="lazy"
                                                             src={`https://www.google.com/maps?q=${selectedRequest.lat},${selectedRequest.long}&z=17&output=embed`}
                                                         />
-                                                    </div>
-                                                )}
-                                                {/* Matched Asset */}
-                                                {(selectedRequest as any).matched_asset && (
-                                                    <div className="mt-3 p-3 rounded-lg bg-green-500/5 border border-green-500/20">
-                                                        <p className="text-xs text-green-400 font-medium mb-1">Matched Asset</p>
-                                                        <div className="flex flex-wrap gap-4 text-sm text-white/70">
-                                                            <span>{(selectedRequest as any).matched_asset.layer_name}</span>
-                                                            {(selectedRequest as any).matched_asset.asset_id && <span className="font-mono">ID: {(selectedRequest as any).matched_asset.asset_id}</span>}
-                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -1033,40 +1036,91 @@ export default function StaffDashboard() {
                                                 <Clock className="w-4 h-4 text-blue-400" />
                                                 <span className="font-medium text-white">Timeline</span>
                                             </div>
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex items-center gap-3 text-white/60">
-                                                    <div className="w-2 h-2 rounded-full bg-green-400" />
+                                            <div className="space-y-2.5 text-sm">
+                                                {/* Request Submitted */}
+                                                <div className="flex items-center gap-3 text-white/70">
+                                                    <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
                                                     <span className="flex-1">Request submitted</span>
-                                                    <span className="text-white/40">{new Date(selectedRequest.requested_datetime).toLocaleString()}</span>
+                                                    <span className="text-white/40 text-xs">{new Date(selectedRequest.requested_datetime).toLocaleString()}</span>
                                                 </div>
+
+                                                {/* Department Assignment */}
                                                 {selectedRequest.assigned_department_id && (
-                                                    <div className="flex items-center gap-3 text-white/60">
-                                                        <div className="w-2 h-2 rounded-full bg-blue-400" />
+                                                    <div className="flex items-center gap-3 text-white/70">
+                                                        <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
                                                         <span className="flex-1">Assigned to {departments.find(d => d.id === selectedRequest.assigned_department_id)?.name || 'department'}</span>
+                                                        <span className="text-white/40 text-xs">
+                                                            {selectedRequest.updated_datetime
+                                                                ? new Date(selectedRequest.updated_datetime).toLocaleString()
+                                                                : ''}
+                                                        </span>
                                                     </div>
                                                 )}
+
+                                                {/* Staff Assignment */}
                                                 {selectedRequest.assigned_to && (
-                                                    <div className="flex items-center gap-3 text-white/60">
-                                                        <div className="w-2 h-2 rounded-full bg-blue-400" />
+                                                    <div className="flex items-center gap-3 text-white/70">
+                                                        <div className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
                                                         <span className="flex-1">Assigned to {selectedRequest.assigned_to}</span>
+                                                        <span className="text-white/40 text-xs">
+                                                            {selectedRequest.updated_datetime
+                                                                ? new Date(selectedRequest.updated_datetime).toLocaleString()
+                                                                : ''}
+                                                        </span>
                                                     </div>
                                                 )}
+
+                                                {/* In Progress Status */}
                                                 {selectedRequest.status === 'in_progress' && (
-                                                    <div className="flex items-center gap-3 text-white/60">
-                                                        <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                                                    <div className="flex items-center gap-3 text-white/70">
+                                                        <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
                                                         <span className="flex-1">Marked as In Progress</span>
+                                                        <span className="text-white/40 text-xs">
+                                                            {selectedRequest.updated_datetime
+                                                                ? new Date(selectedRequest.updated_datetime).toLocaleString()
+                                                                : ''}
+                                                        </span>
                                                     </div>
                                                 )}
+
+                                                {/* Closed Status */}
                                                 {selectedRequest.status === 'closed' && (
-                                                    <div className="flex items-center gap-3 text-white/60">
-                                                        <div className="w-2 h-2 rounded-full bg-green-400" />
-                                                        <span className="flex-1">Closed - {selectedRequest.closed_substatus === 'resolved' ? 'Resolved' : selectedRequest.closed_substatus}</span>
+                                                    <div className="flex items-center gap-3 text-white/70">
+                                                        <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+                                                        <span className="flex-1">
+                                                            Closed - {selectedRequest.closed_substatus === 'resolved'
+                                                                ? 'Resolved'
+                                                                : selectedRequest.closed_substatus === 'no_action'
+                                                                    ? 'No Action Needed'
+                                                                    : selectedRequest.closed_substatus === 'third_party'
+                                                                        ? 'Third Party Contacted'
+                                                                        : selectedRequest.closed_substatus}
+                                                        </span>
+                                                        <span className="text-white/40 text-xs">
+                                                            {selectedRequest.closed_datetime
+                                                                ? new Date(selectedRequest.closed_datetime).toLocaleString()
+                                                                : selectedRequest.updated_datetime
+                                                                    ? new Date(selectedRequest.updated_datetime).toLocaleString()
+                                                                    : ''}
+                                                        </span>
                                                     </div>
                                                 )}
-                                                {selectedRequest.updated_datetime && selectedRequest.updated_datetime !== selectedRequest.requested_datetime && (
-                                                    <div className="flex items-center gap-3 text-white/40 text-xs">
-                                                        <div className="w-2 h-2 rounded-full bg-white/20" />
-                                                        <span>Last updated: {new Date(selectedRequest.updated_datetime).toLocaleString()}</span>
+
+                                                {/* Comments in Timeline */}
+                                                {comments.length > 0 && comments.slice(0, 3).map((c, _i) => (
+                                                    <div key={c.id} className="flex items-center gap-3 text-white/60">
+                                                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.visibility === 'internal' ? 'bg-orange-400' : 'bg-teal-400'}`} />
+                                                        <span className="flex-1 truncate">
+                                                            {c.visibility === 'internal' ? '🔒' : '💬'} {c.username}: "{c.content.substring(0, 40)}{c.content.length > 40 ? '...' : ''}"
+                                                        </span>
+                                                        <span className="text-white/40 text-xs flex-shrink-0">
+                                                            {c.created_at ? new Date(c.created_at).toLocaleString() : ''}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                {comments.length > 3 && (
+                                                    <div className="text-white/40 text-xs pl-5">
+                                                        +{comments.length - 3} more comments
                                                     </div>
                                                 )}
                                             </div>

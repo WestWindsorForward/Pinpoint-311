@@ -139,6 +139,63 @@ body {
         color: #86efac;
         border: 1px solid rgba(34, 197, 94, 0.3);
     }
+
+    /* Professional Government Glassmorphism - Refined Sections */
+    .glass-section {
+        background: rgba(30, 41, 59, 0.65);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .glass-section:hover {
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Premium Header Bar */
+    .glass-header {
+        background: rgba(30, 41, 59, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Refined Status Buttons */
+    .status-btn {
+        transition: all 0.2s ease;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+    .status-btn:hover:not(.status-btn-active) {
+        transform: translateY(-1px);
+    }
+
+    .status-btn-active {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Timeline Dot Animation */
+    .timeline-dot {
+        position: relative;
+    }
+
+    .timeline-dot::after {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.3;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 0.3; }
+        50% { transform: scale(1.5); opacity: 0; }
+    }
 }
 
 /* Scrollbar styling */
