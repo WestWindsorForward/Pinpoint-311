@@ -952,7 +952,7 @@ export default function StaffDashboard() {
                                                 })()}
                                             </select>
                                             {editAssignment && (
-                                                <button onClick={async () => { setIsSavingAssignment(true); try { const updated = await api.updateRequest(selectedRequest.service_request_id, { assigned_department_id: editAssignment.departmentId ?? undefined, assigned_to: editAssignment.assignedTo ?? undefined }); setSelectedRequest(updated); setEditAssignment(null); loadAuditLog(selectedRequest.service_request_id); } catch (err) { console.error(err); } finally { setIsSavingAssignment(false); } }} disabled={isSavingAssignment} className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium disabled:opacity-50 transition-all shadow-lg shadow-primary-500/20">{isSavingAssignment ? 'Saving...' : 'Save'}</button>
+                                                <button onClick={async () => { setIsSavingAssignment(true); try { const updated = await api.updateRequest(selectedRequest.service_request_id, { assigned_department_id: editAssignment.departmentId ?? undefined, assigned_to: editAssignment.assignedTo === null ? '' : editAssignment.assignedTo }); setSelectedRequest(updated); setEditAssignment(null); loadAuditLog(selectedRequest.service_request_id); } catch (err) { console.error(err); } finally { setIsSavingAssignment(false); } }} disabled={isSavingAssignment} className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium disabled:opacity-50 transition-all shadow-lg shadow-primary-500/20">{isSavingAssignment ? 'Saving...' : 'Save'}</button>
                                             )}
                                         </div>
 
@@ -1128,11 +1128,8 @@ export default function StaffDashboard() {
                                                 )}
                                             </div>
 
-                                            {/* Premium Vertical Timeline */}
-                                            <div className="relative pl-4">
-                                                {/* Vertical connecting line - centered on circles */}
-                                                <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-emerald-500/50 via-blue-500/30 to-purple-500/50" />
-
+                                            {/* Timeline */}
+                                            <div className="relative">
                                                 <div className="space-y-3">
                                                     {/* Always show submitted event first, even if not in audit log */}
                                                     {(() => {

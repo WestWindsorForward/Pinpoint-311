@@ -336,10 +336,7 @@ export default function TrackRequests({ initialRequestId }: TrackRequestsProps) 
                         </h3>
 
                         {/* Full Audit Log Timeline */}
-                        <div className="relative pl-5">
-                            {/* Vertical connecting line - centered with circles */}
-                            <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-emerald-500/50 via-blue-500/30 to-purple-500/50" />
-
+                        <div className="relative">
                             <div className="space-y-3">
                                 {/* Always show submitted event first, even if not in audit log */}
                                 {(() => {
