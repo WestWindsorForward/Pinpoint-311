@@ -952,7 +952,25 @@ export default function StaffDashboard() {
                                                 })()}
                                             </select>
                                             {editAssignment && (
-                                                <button onClick={async () => { setIsSavingAssignment(true); try { const updated = await api.updateRequest(selectedRequest.service_request_id, { assigned_department_id: editAssignment.departmentId ?? undefined, assigned_to: editAssignment.assignedTo === null ? '' : editAssignment.assignedTo }); setSelectedRequest(updated); setEditAssignment(null); loadAuditLog(selectedRequest.service_request_id); } catch (err) { console.error(err); } finally { setIsSavingAssignment(false); } }} disabled={isSavingAssignment} className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium disabled:opacity-50 transition-all shadow-lg shadow-primary-500/20">{isSavingAssignment ? 'Saving...' : 'Save'}</button>
+                                                <button onClick={async () => {
+                                                    setIsSavingAssignment(true);
+                                                    try {
+                                                        const updated = await api.updateRequest(selectedRequest.service_request_id, {
+                                                            assigned_department_id: editAssignment.departmentId ?? undefined,
+                                                            assigned_to: editAssignment.assignedTo === null ? '' : editAssignment.assignedTo
+                                                        });
+                                                        setSelectedRequest(updated);
+                                                        // Optimistic update: update the request in both lists
+                                                        setAllRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
+                                                        setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
+                                                        setEditAssignment(null);
+                                                        loadAuditLog(selectedRequest.service_request_id);
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                    } finally {
+                                                        setIsSavingAssignment(false);
+                                                    }
+                                                }} disabled={isSavingAssignment} className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium disabled:opacity-50 transition-all shadow-lg shadow-primary-500/20">{isSavingAssignment ? 'Saving...' : 'Save'}</button>
                                             )}
                                         </div>
 
