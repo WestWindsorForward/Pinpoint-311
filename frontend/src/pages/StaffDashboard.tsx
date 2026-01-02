@@ -29,6 +29,9 @@ import {
     Brain,
     LayoutDashboard,
     Users,
+    ChevronDown,
+    Check,
+    ExternalLink,
 } from 'lucide-react';
 import { Button, Card, Modal, Input, Textarea, Select, StatusBadge, Badge } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
@@ -104,6 +107,10 @@ export default function StaffDashboard() {
     const [filterService, setFilterService] = useState<string | null>(null);
     const [filterAssignment, setFilterAssignment] = useState<'all' | 'me' | 'department'>('all');
     const [showFilters, setShowFilters] = useState(false);
+
+    // Share link state
+    const [showShareMenu, setShowShareMenu] = useState(false);
+    const [copiedLink, setCopiedLink] = useState<'staff' | 'resident' | null>(null);
 
     // Get current user's department IDs
     const userDepartmentIds = useMemo(() => {
@@ -1026,6 +1033,54 @@ export default function StaffDashboard() {
                                                         />
                                                     </div>
                                                 )}
+
+                                                {/* Matched Asset Info - Below Map */}
+                                                {(selectedRequest as any).matched_asset && (
+                                                    <div className="mt-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <div className="w-3 h-3 rounded bg-emerald-500" />
+                                                            <span className="text-sm font-medium text-emerald-400">
+                                                                {(selectedRequest as any).matched_asset.layer_name}
+                                                            </span>
+                                                            {(selectedRequest as any).matched_asset.distance_meters && (
+                                                                <span className="text-xs text-white/40 ml-auto">
+                                                                    {(selectedRequest as any).matched_asset.distance_meters < 1
+                                                                        ? '<1m away'
+                                                                        : `${Math.round((selectedRequest as any).matched_asset.distance_meters)}m away`}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                                                            {(selectedRequest as any).matched_asset.asset_id && (
+                                                                <>
+                                                                    <span className="text-white/40">Asset ID</span>
+                                                                    <span className="text-white/80 font-mono">{(selectedRequest as any).matched_asset.asset_id}</span>
+                                                                </>
+                                                            )}
+                                                            {(selectedRequest as any).matched_asset.asset_type && (
+                                                                <>
+                                                                    <span className="text-white/40">Type</span>
+                                                                    <span className="text-white/80">{(selectedRequest as any).matched_asset.asset_type}</span>
+                                                                </>
+                                                            )}
+                                                            {(selectedRequest as any).matched_asset.properties &&
+                                                                Object.entries((selectedRequest as any).matched_asset.properties)
+                                                                    .filter(([key]) => !['id', 'asset_id', 'name', 'layer_name', 'objectid'].includes(key.toLowerCase()))
+                                                                    .slice(0, 6)
+                                                                    .map(([key, value]) => (
+                                                                        <React.Fragment key={key}>
+                                                                            <span className="text-white/40 truncate">
+                                                                                {key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim()}
+                                                                            </span>
+                                                                            <span className="text-white/80 truncate">
+                                                                                {value === null || value === undefined ? 'N/A' : String(value)}
+                                                                            </span>
+                                                                        </React.Fragment>
+                                                                    ))
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
@@ -1037,66 +1092,87 @@ export default function StaffDashboard() {
                                                 <span className="font-medium text-white">Timeline</span>
                                             </div>
                                             <div className="space-y-2.5 text-sm">
-                                                {/* Request Submitted */}
-                                                <div className="flex items-center gap-3 text-white/70">
-                                                    <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-                                                    <span className="flex-1">Request submitted</span>
-                                                    <span className="text-white/40 text-xs">{new Date(selectedRequest.requested_datetime).toLocaleString()}</span>
+                                                {/* Request Submitted - by Resident */}
+                                                <div className="flex items-start gap-3 text-white/70">
+                                                    <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0 mt-1.5" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-baseline gap-2 flex-wrap">
+                                                            <span>Request submitted</span>
+                                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-300">Resident</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-white/40 text-xs flex-shrink-0">{new Date(selectedRequest.requested_datetime).toLocaleString()}</span>
                                                 </div>
 
                                                 {/* Department Assignment */}
                                                 {selectedRequest.assigned_department_id && (
-                                                    <div className="flex items-center gap-3 text-white/70">
-                                                        <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
-                                                        <span className="flex-1">Assigned to {departments.find(d => d.id === selectedRequest.assigned_department_id)?.name || 'department'}</span>
-                                                        <span className="text-white/40 text-xs">
-                                                            {selectedRequest.updated_datetime
-                                                                ? new Date(selectedRequest.updated_datetime).toLocaleString()
-                                                                : ''}
+                                                    <div className="flex items-start gap-3 text-white/70">
+                                                        <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0 mt-1.5" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-baseline gap-2 flex-wrap">
+                                                                <span>Assigned to {departments.find(d => d.id === selectedRequest.assigned_department_id)?.name || 'department'}</span>
+                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300">Staff</span>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-white/40 text-xs flex-shrink-0">
+                                                            {selectedRequest.updated_datetime ? new Date(selectedRequest.updated_datetime).toLocaleString() : ''}
                                                         </span>
                                                     </div>
                                                 )}
 
                                                 {/* Staff Assignment */}
                                                 {selectedRequest.assigned_to && (
-                                                    <div className="flex items-center gap-3 text-white/70">
-                                                        <div className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
-                                                        <span className="flex-1">Assigned to {selectedRequest.assigned_to}</span>
-                                                        <span className="text-white/40 text-xs">
-                                                            {selectedRequest.updated_datetime
-                                                                ? new Date(selectedRequest.updated_datetime).toLocaleString()
-                                                                : ''}
+                                                    <div className="flex items-start gap-3 text-white/70">
+                                                        <div className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0 mt-1.5" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-baseline gap-2 flex-wrap">
+                                                                <span>Assigned to {selectedRequest.assigned_to}</span>
+                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300">Staff</span>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-white/40 text-xs flex-shrink-0">
+                                                            {selectedRequest.updated_datetime ? new Date(selectedRequest.updated_datetime).toLocaleString() : ''}
                                                         </span>
                                                     </div>
                                                 )}
 
-                                                {/* In Progress Status */}
-                                                {selectedRequest.status === 'in_progress' && (
-                                                    <div className="flex items-center gap-3 text-white/70">
-                                                        <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
-                                                        <span className="flex-1">Marked as In Progress</span>
-                                                        <span className="text-white/40 text-xs">
-                                                            {selectedRequest.updated_datetime
-                                                                ? new Date(selectedRequest.updated_datetime).toLocaleString()
-                                                                : ''}
+                                                {/* In Progress Status - shows for both in_progress AND closed (as historical event) */}
+                                                {(selectedRequest.status === 'in_progress' || selectedRequest.status === 'closed') && (
+                                                    <div className="flex items-start gap-3 text-white/70">
+                                                        <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0 mt-1.5" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-baseline gap-2 flex-wrap">
+                                                                <span>Marked as In Progress</span>
+                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300">Staff</span>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-white/40 text-xs flex-shrink-0">
+                                                            {selectedRequest.status === 'closed' && selectedRequest.closed_datetime
+                                                                ? '' // We don't have exact in_progress timestamp, so leave blank
+                                                                : selectedRequest.updated_datetime ? new Date(selectedRequest.updated_datetime).toLocaleString() : ''}
                                                         </span>
                                                     </div>
                                                 )}
 
                                                 {/* Closed Status */}
                                                 {selectedRequest.status === 'closed' && (
-                                                    <div className="flex items-center gap-3 text-white/70">
-                                                        <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-                                                        <span className="flex-1">
-                                                            Closed - {selectedRequest.closed_substatus === 'resolved'
-                                                                ? 'Resolved'
-                                                                : selectedRequest.closed_substatus === 'no_action'
-                                                                    ? 'No Action Needed'
-                                                                    : selectedRequest.closed_substatus === 'third_party'
-                                                                        ? 'Third Party Contacted'
-                                                                        : selectedRequest.closed_substatus}
-                                                        </span>
-                                                        <span className="text-white/40 text-xs">
+                                                    <div className="flex items-start gap-3 text-white/70">
+                                                        <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0 mt-1.5" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-baseline gap-2 flex-wrap">
+                                                                <span>
+                                                                    Closed - {selectedRequest.closed_substatus === 'resolved'
+                                                                        ? 'Resolved'
+                                                                        : selectedRequest.closed_substatus === 'no_action'
+                                                                            ? 'No Action Needed'
+                                                                            : selectedRequest.closed_substatus === 'third_party'
+                                                                                ? 'Third Party Contacted'
+                                                                                : selectedRequest.closed_substatus}
+                                                                </span>
+                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300">Staff</span>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-white/40 text-xs flex-shrink-0">
                                                             {selectedRequest.closed_datetime
                                                                 ? new Date(selectedRequest.closed_datetime).toLocaleString()
                                                                 : selectedRequest.updated_datetime
@@ -1105,68 +1181,79 @@ export default function StaffDashboard() {
                                                         </span>
                                                     </div>
                                                 )}
-
-                                                {/* Comments in Timeline */}
-                                                {comments.length > 0 && comments.slice(0, 3).map((c, _i) => (
-                                                    <div key={c.id} className="flex items-center gap-3 text-white/60">
-                                                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.visibility === 'internal' ? 'bg-orange-400' : 'bg-teal-400'}`} />
-                                                        <span className="flex-1 truncate">
-                                                            {c.visibility === 'internal' ? '🔒' : '💬'} {c.username}: "{c.content.substring(0, 40)}{c.content.length > 40 ? '...' : ''}"
-                                                        </span>
-                                                        <span className="text-white/40 text-xs flex-shrink-0">
-                                                            {c.created_at ? new Date(c.created_at).toLocaleString() : ''}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                                {comments.length > 3 && (
-                                                    <div className="text-white/40 text-xs pl-5">
-                                                        +{comments.length - 3} more comments
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
 
                                         {/* ═══ SECTION 5: Comments ═══ */}
                                         <div className="p-4 rounded-lg bg-slate-800/50 border border-white/10">
-                                            <div className="flex items-center gap-2 mb-3">
+                                            <div className="flex items-center gap-2 mb-4">
                                                 <MessageSquare className="w-4 h-4 text-blue-400" />
-                                                <span className="font-medium text-white">Comments ({comments.length})</span>
+                                                <span className="font-medium text-white">Comments</span>
+                                                {comments.length > 0 && (
+                                                    <span className="px-2 py-0.5 rounded-full text-xs bg-white/10 text-white/60">{comments.length}</span>
+                                                )}
                                             </div>
 
+                                            {/* Comments List */}
                                             {comments.length > 0 && (
-                                                <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                                                <div className="space-y-3 max-h-64 overflow-y-auto mb-4 pr-1">
                                                     {comments.map(c => (
-                                                        <div key={c.id} className={`p-3 rounded-lg text-sm ${c.visibility === 'internal' ? 'bg-orange-500/5 border border-orange-500/20' : 'bg-white/5 border border-white/10'}`}>
-                                                            <div className="flex items-center gap-2 mb-1">
+                                                        <div key={c.id} className={`rounded-lg overflow-hidden ${c.visibility === 'internal' ? 'bg-orange-500/5' : 'bg-slate-700/30'}`}>
+                                                            {/* Comment Header */}
+                                                            <div className={`px-3 py-2 flex items-center gap-2 text-xs ${c.visibility === 'internal' ? 'bg-orange-500/10 border-b border-orange-500/20' : 'bg-slate-600/30 border-b border-white/5'}`}>
+                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${c.visibility === 'internal' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                                                    {c.username?.charAt(0).toUpperCase() || '?'}
+                                                                </div>
                                                                 <span className="font-medium text-white/90">{c.username}</span>
-                                                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${c.visibility === 'internal' ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400'}`}>
-                                                                    {c.visibility === 'internal' ? 'INTERNAL - Staff Only' : 'PUBLIC - Visible to Reporter'}
+                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${c.visibility === 'internal' ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400'}`}>
+                                                                    {c.visibility === 'internal' ? 'Internal' : 'Public'}
                                                                 </span>
-                                                                <span className="text-xs text-white/30 ml-auto">{c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
+                                                                <span className="text-white/30 ml-auto">{c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
                                                             </div>
-                                                            <p className="text-white/70">{c.content}</p>
+                                                            {/* Comment Body */}
+                                                            <div className="px-3 py-2.5">
+                                                                <p className="text-sm text-white/80 leading-relaxed">{c.content}</p>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
                                             )}
 
-                                            {/* Add Comment with CLEAR visibility indicator */}
-                                            <div className="space-y-2">
-                                                <div className={`p-3 rounded-lg ${commentVisibility === 'internal' ? 'bg-orange-950/30 border border-orange-500/30' : 'bg-green-950/30 border border-green-500/30'}`}>
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className={`text-sm font-semibold ${commentVisibility === 'internal' ? 'text-orange-400' : 'text-green-400'}`}>
-                                                            {commentVisibility === 'internal' ? '🔒 INTERNAL - Staff only' : '🌐 PUBLIC - Reporter will see'}
-                                                        </span>
-                                                        <button onClick={() => setCommentVisibility(commentVisibility === 'internal' ? 'external' : 'internal')} className={`ml-auto px-2 py-1 rounded text-xs font-medium transition-colors ${commentVisibility === 'internal' ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'}`}>
-                                                            Switch to {commentVisibility === 'internal' ? 'Public' : 'Internal'}
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <input type="text" placeholder="Write your comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="flex-1 py-2.5 px-3 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm placeholder:text-slate-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-                                                        <button onClick={handleAddComment} disabled={!newComment.trim() || isSubmittingComment} className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2 transition-colors">
-                                                            <Send className="w-4 h-4" /> Send
-                                                        </button>
-                                                    </div>
+                                            {comments.length === 0 && (
+                                                <div className="text-center py-6 text-white/30 text-sm mb-4">
+                                                    No comments yet
+                                                </div>
+                                            )}
+
+                                            {/* Add Comment */}
+                                            <div className={`rounded-lg overflow-hidden ${commentVisibility === 'internal' ? 'bg-orange-950/20 border border-orange-500/20' : 'bg-green-950/20 border border-green-500/20'}`}>
+                                                <div className="px-3 py-2 flex items-center gap-2 border-b border-white/5">
+                                                    <span className={`text-xs font-semibold ${commentVisibility === 'internal' ? 'text-orange-400' : 'text-green-400'}`}>
+                                                        {commentVisibility === 'internal' ? '🔒 Internal Note - Staff Only' : '🌐 Public Reply - Visible to Reporter'}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => setCommentVisibility(commentVisibility === 'internal' ? 'external' : 'internal')}
+                                                        className={`ml-auto px-2 py-1 rounded text-xs font-medium transition-all ${commentVisibility === 'internal' ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'}`}
+                                                    >
+                                                        Switch to {commentVisibility === 'internal' ? 'Public' : 'Internal'}
+                                                    </button>
+                                                </div>
+                                                <div className="p-3 flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        placeholder={commentVisibility === 'internal' ? 'Add internal note...' : 'Reply to reporter...'}
+                                                        value={newComment}
+                                                        onChange={(e) => setNewComment(e.target.value)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()}
+                                                        className="flex-1 py-2 px-3 rounded-lg bg-slate-900/50 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    />
+                                                    <button
+                                                        onClick={handleAddComment}
+                                                        disabled={!newComment.trim() || isSubmittingComment}
+                                                        className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2 transition-colors"
+                                                    >
+                                                        <Send className="w-4 h-4" />
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -1174,11 +1261,62 @@ export default function StaffDashboard() {
                                         {/* ═══ Actions Footer ═══ */}
                                         <div className="p-4 rounded-lg bg-slate-800/50 border border-white/10">
                                             <div className="flex gap-3">
-                                                <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/staff/request/${selectedRequest.service_request_id}`); }} className="flex-1 py-2.5 px-4 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors">
-                                                    <Link className="w-4 h-4" /> Copy Shareable Link
-                                                </button>
+                                                {/* Share Link Dropdown */}
+                                                <div className="relative flex-1">
+                                                    <button
+                                                        onClick={() => setShowShareMenu(!showShareMenu)}
+                                                        className="w-full py-2.5 px-4 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                                                    >
+                                                        <Link className="w-4 h-4" />
+                                                        Share Link
+                                                        <ChevronDown className={`w-4 h-4 transition-transform ${showShareMenu ? 'rotate-180' : ''}`} />
+                                                    </button>
+
+                                                    {showShareMenu && (
+                                                        <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-800 rounded-lg border border-white/10 shadow-xl overflow-hidden z-20">
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(`${window.location.origin}/staff/request/${selectedRequest.service_request_id}`);
+                                                                    setCopiedLink('staff');
+                                                                    setTimeout(() => { setCopiedLink(null); setShowShareMenu(false); }, 1500);
+                                                                }}
+                                                                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                                                                    {copiedLink === 'staff' ? <Check className="w-4 h-4 text-green-400" /> : <Link className="w-4 h-4 text-purple-400" />}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="text-sm font-medium text-white">
+                                                                        {copiedLink === 'staff' ? 'Copied!' : 'Staff Portal Link'}
+                                                                    </div>
+                                                                    <div className="text-xs text-white/40 truncate">For internal staff use</div>
+                                                                </div>
+                                                            </button>
+                                                            <div className="border-t border-white/5" />
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(`${window.location.origin}/track/${selectedRequest.service_request_id}`);
+                                                                    setCopiedLink('resident');
+                                                                    setTimeout(() => { setCopiedLink(null); setShowShareMenu(false); }, 1500);
+                                                                }}
+                                                                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                                                                    {copiedLink === 'resident' ? <Check className="w-4 h-4 text-green-400" /> : <ExternalLink className="w-4 h-4 text-blue-400" />}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="text-sm font-medium text-white">
+                                                                        {copiedLink === 'resident' ? 'Copied!' : 'Resident Portal Link'}
+                                                                    </div>
+                                                                    <div className="text-xs text-white/40 truncate">Share with the reporter</div>
+                                                                </div>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+
                                                 <button onClick={() => setShowDeleteModal(true)} className="py-2.5 px-4 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-medium flex items-center gap-2 transition-colors">
-                                                    <Trash2 className="w-4 h-4" /> Delete
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </div>
