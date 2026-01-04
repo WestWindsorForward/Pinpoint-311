@@ -559,3 +559,39 @@ async def delete_request(
     await db.refresh(request)
     
     return {"message": "Request deleted", "request_id": request_id}
+
+
+@router.get("/requests/asset/{asset_id}/related")
+async def get_asset_related_requests(
+    asset_id: str,
+    exclude_request_id: Optional[str] = Query(None, description="Request ID to exclude from results"),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_staff)
+):
+    """Get all requests that matched to the same asset (staff only)"""
+    from sqlalchemy import text
+    
+    # Query using PostgreSQL JSON extraction - matched_asset->>'asset_id'
+    query = select(ServiceRequest).where(
+        ServiceRequest.matched_asset.isnot(None),
+        ServiceRequest.deleted_at.is_(None),
+        text("matched_asset->>'asset_id' = :asset_id")
+    ).params(asset_id=asset_id).order_by(ServiceRequest.requested_datetime.desc())
+    
+    result = await db.execute(query)
+    requests = result.scalars().all()
+    
+    # Filter out the excluded request and build response
+    return [
+        {
+            "service_request_id": r.service_request_id,
+            "service_name": r.service_name,
+            "status": r.status,
+            "requested_datetime": r.requested_datetime.isoformat() if r.requested_datetime else None,
+            "address": r.address,
+            "description": r.description[:100] if r.description else None,
+        }
+        for r in requests
+        if r.service_request_id != exclude_request_id
+    ]
+

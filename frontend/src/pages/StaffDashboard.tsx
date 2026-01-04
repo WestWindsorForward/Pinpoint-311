@@ -143,6 +143,11 @@ export default function StaffDashboard() {
     const [filterAssignment, setFilterAssignment] = useState<'all' | 'me' | 'department'>('all');
     const [showFilters, setShowFilters] = useState(false);
 
+    // Asset-related requests (for matched assets)
+    type AssetRelatedRequest = { service_request_id: string; service_name: string; status: string; requested_datetime: string; address: string; description: string; };
+    const [assetRelatedRequests, setAssetRelatedRequests] = useState<AssetRelatedRequest[]>([]);
+    const [isLoadingAssetHistory, setIsLoadingAssetHistory] = useState(false);
+
     // Share link state
     const [showShareMenu, setShowShareMenu] = useState(false);
     const [copiedLink, setCopiedLink] = useState<'staff' | 'resident' | null>(null);
@@ -298,6 +303,31 @@ export default function StaffDashboard() {
             document.body.style.overflow = '';
             document.body.style.touchAction = '';
         };
+    }, [selectedRequest]);
+
+    // Load asset-related requests when selected request has a matched_asset
+    useEffect(() => {
+        const loadAssetHistory = async () => {
+            const matchedAsset = (selectedRequest as any)?.matched_asset;
+            if (matchedAsset?.asset_id) {
+                setIsLoadingAssetHistory(true);
+                try {
+                    const related = await api.getAssetRelatedRequests(
+                        matchedAsset.asset_id,
+                        selectedRequest?.service_request_id
+                    );
+                    setAssetRelatedRequests(related);
+                } catch (err) {
+                    console.error('Failed to load asset history:', err);
+                    setAssetRelatedRequests([]);
+                } finally {
+                    setIsLoadingAssetHistory(false);
+                }
+            } else {
+                setAssetRelatedRequests([]);
+            }
+        };
+        loadAssetHistory();
     }, [selectedRequest]);
 
     const loadInitialData = async () => {
@@ -1463,6 +1493,53 @@ export default function StaffDashboard() {
                                                                         </React.Fragment>
                                                                     ))
                                                             }
+                                                        </div>
+
+                                                        {/* Asset History - Related Reports */}
+                                                        <div className="mt-3 pt-3 border-t border-emerald-500/20">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500/70">📋 Asset History</span>
+                                                                {isLoadingAssetHistory && (
+                                                                    <div className="w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                                                                )}
+                                                            </div>
+                                                            {assetRelatedRequests.length > 0 ? (
+                                                                <div className="space-y-2">
+                                                                    <p className="text-xs text-emerald-400/80">
+                                                                        {assetRelatedRequests.length} other report{assetRelatedRequests.length !== 1 ? 's' : ''} linked to this asset
+                                                                    </p>
+                                                                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                                                        {assetRelatedRequests.slice(0, 5).map((r) => (
+                                                                            <button
+                                                                                key={r.service_request_id}
+                                                                                onClick={() => loadRequestDetail(r.service_request_id)}
+                                                                                className="w-full text-left p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors group"
+                                                                            >
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <span className="text-xs font-mono text-emerald-400 group-hover:text-emerald-300">{r.service_request_id}</span>
+                                                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${r.status === 'closed' ? 'bg-green-500/20 text-green-400' :
+                                                                                        r.status === 'in_progress' ? 'bg-amber-500/20 text-amber-400' :
+                                                                                            'bg-red-500/20 text-red-400'
+                                                                                        }`}>{r.status.replace('_', ' ')}</span>
+                                                                                </div>
+                                                                                <p className="text-xs text-white/60 truncate mt-0.5">{r.service_name}</p>
+                                                                                <p className="text-[10px] text-white/40 mt-0.5">
+                                                                                    {new Date(r.requested_datetime).toLocaleDateString()}
+                                                                                </p>
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                    {assetRelatedRequests.length > 5 && (
+                                                                        <p className="text-[10px] text-white/40 text-center">
+                                                                            +{assetRelatedRequests.length - 5} more reports
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            ) : !isLoadingAssetHistory ? (
+                                                                <p className="text-xs text-white/40">
+                                                                    No previous reports for this asset
+                                                                </p>
+                                                            ) : null}
                                                         </div>
                                                     </div>
                                                 )}

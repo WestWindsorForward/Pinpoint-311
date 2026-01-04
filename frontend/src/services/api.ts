@@ -499,6 +499,21 @@ class ApiClient {
 
         return response.json();
     }
+
+    // Asset Related Requests
+    async getAssetRelatedRequests(assetId: string, excludeRequestId?: string): Promise<{
+        service_request_id: string;
+        service_name: string;
+        status: string;
+        requested_datetime: string;
+        address: string;
+        description: string;
+    }[]> {
+        const params = new URLSearchParams();
+        if (excludeRequestId) params.append('exclude_request_id', excludeRequestId);
+        const queryString = params.toString() ? `?${params.toString()}` : '';
+        return this.request(`/open311/v2/requests/asset/${encodeURIComponent(assetId)}/related${queryString}`);
+    }
 }
 
 export const api = new ApiClient();
