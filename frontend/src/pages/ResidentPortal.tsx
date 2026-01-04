@@ -124,7 +124,7 @@ export default function ResidentPortal() {
             setDepartments(depts);
         }).catch(() => { });
 
-        api.getUsers().then((userList) => {
+        api.getPublicStaffList().then((userList) => {
             setUsers(userList);
         }).catch(() => { });
     }, []);
@@ -525,11 +525,32 @@ export default function ResidentPortal() {
                                 )}
 
                                 {/* Community Map Section */}
-                                {/* Section Divider */}
-                                <div className="my-16 flex items-center gap-4">
-                                    <div className="flex-1 h-[2px] bg-gradient-to-r from-transparent via-white/40 to-white/40" />
-                                    <div className="w-3 h-3 rounded-full bg-white/40" />
-                                    <div className="flex-1 h-[2px] bg-gradient-to-l from-transparent via-white/40 to-white/40" />
+                                {/* Section Divider - Modern Wave */}
+                                <div className="my-16 relative">
+                                    <svg className="w-full h-16" viewBox="0 0 1200 80" preserveAspectRatio="none">
+                                        <defs>
+                                            <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <stop offset="0%" stopColor="rgba(99, 102, 241, 0)" />
+                                                <stop offset="25%" stopColor="rgba(99, 102, 241, 0.4)" />
+                                                <stop offset="50%" stopColor="rgba(139, 92, 246, 0.5)" />
+                                                <stop offset="75%" stopColor="rgba(99, 102, 241, 0.4)" />
+                                                <stop offset="100%" stopColor="rgba(99, 102, 241, 0)" />
+                                            </linearGradient>
+                                        </defs>
+                                        <path
+                                            d="M0,40 C200,20 400,60 600,40 C800,20 1000,60 1200,40"
+                                            fill="none"
+                                            stroke="url(#waveGradient)"
+                                            strokeWidth="2"
+                                        />
+                                        <path
+                                            d="M0,50 C150,35 350,65 600,50 C850,35 1050,65 1200,50"
+                                            fill="none"
+                                            stroke="url(#waveGradient)"
+                                            strokeWidth="1.5"
+                                            opacity="0.6"
+                                        />
+                                    </svg>
                                 </div>
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}

@@ -49,6 +49,26 @@ async def list_staff_members(
     return result.scalars().all()
 
 
+class PublicStaffResponse(BaseModel):
+    username: str
+    full_name: str | None
+    role: str
+    
+    class Config:
+        from_attributes = True
+
+
+@router.get("/staff/public", response_model=List[PublicStaffResponse])
+async def list_staff_public(db: AsyncSession = Depends(get_db)):
+    """List staff usernames for public filters (no auth required)"""
+    result = await db.execute(
+        select(User)
+        .where(User.role.in_(['staff', 'admin']), User.is_active == True)
+        .order_by(User.full_name, User.username)
+    )
+    return result.scalars().all()
+
+
 @router.get("/", response_model=List[UserResponse])
 async def list_users(
     db: AsyncSession = Depends(get_db),
