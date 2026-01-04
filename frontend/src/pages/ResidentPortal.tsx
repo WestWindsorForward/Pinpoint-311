@@ -267,17 +267,11 @@ export default function ResidentPortal() {
             const exclusionList = config.exclusion_list || [];
             console.log('Checking exclusion list:', exclusionList);
 
-            // Flexible matching: check if key words from the road name appear in address
+            // Match road names - require the full road name to be in the address
             const matchesExclusion = exclusionList.some(road => {
                 const roadLower = road.toLowerCase().trim();
-                // Simple substring check first
-                if (addressLower.includes(roadLower)) return true;
-                // Also try matching significant words (more than 3 chars) from the road name
-                const roadWords = roadLower.split(/[\s,]+/).filter(w => w.length > 3);
-                const matchCount = roadWords.filter(word => addressLower.includes(word)).length;
-                // Match if at least half the significant words are found
-                const threshold = Math.max(1, Math.floor(roadWords.length * 0.5));
-                return matchCount >= threshold;
+                // Exact substring match only - the road name must appear in the address
+                return addressLower.includes(roadLower);
             });
             console.log('Matches exclusion:', matchesExclusion);
 
@@ -295,17 +289,11 @@ export default function ResidentPortal() {
             const inclusionList = config.inclusion_list || [];
             console.log('Checking inclusion list:', inclusionList);
 
-            // Flexible matching: check if key words from the road name appear in address
+            // Match road names - require the full road name to be in the address
             const matchesInclusion = inclusionList.some(road => {
                 const roadLower = road.toLowerCase().trim();
-                // Simple substring check first
-                if (addressLower.includes(roadLower)) return true;
-                // Also try matching significant words (more than 3 chars) from the road name
-                const roadWords = roadLower.split(/[\s,]+/).filter(w => w.length > 3);
-                const matchCount = roadWords.filter(word => addressLower.includes(word)).length;
-                // Match if at least half the significant words are found
-                const threshold = Math.max(1, Math.floor(roadWords.length * 0.5));
-                return matchCount >= threshold;
+                // Exact substring match only - the road name must appear in the address
+                return addressLower.includes(roadLower);
             });
             console.log('Matches inclusion:', matchesInclusion);
 
