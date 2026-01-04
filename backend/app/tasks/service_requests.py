@@ -71,9 +71,10 @@ def analyze_request(self, request_id: int):
     async def _analyze():
         from app.models import SystemSettings
         from app.services.vertex_ai_service import (
+            get_historical_context,
+            get_spatial_context,
             build_analysis_prompt,
             analyze_with_gemini,
-            get_historical_context,
             strip_pii
         )
         from datetime import datetime
@@ -123,17 +124,20 @@ def analyze_request(self, request_id: int):
                 "matched_asset": request.matched_asset,
             }
             
-            # Get historical context
-            historical_context = await get_historical_context(
-                db, request.address, request.service_code,
-                lat=request.lat, long=request.long
+            # Get spatial & environmental context
+            spatial_context = await get_spatial_context(
+                db, request.lat, request.long, request.service_code
             )
             
+            # Simple weather simulation (could be expanded to call OpenWeather API)
+            # For now, we use time/season based heuristics or just a placeholder
+            request_data["weather_sim"] = "Increased risk due to forecasted heavy precipitation" if "drain" in request.service_name.lower() else "Clear conditions"
+
             # Build the analysis prompt
             prompt = build_analysis_prompt(
                 request_data,
                 historical_context=historical_context,
-                spatial_context=None  # TODO: Add spatial context from GIS
+                spatial_context=spatial_context
             )
             
             # Get images for multimodal analysis

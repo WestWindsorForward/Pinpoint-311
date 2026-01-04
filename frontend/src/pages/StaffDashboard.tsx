@@ -33,6 +33,11 @@ import {
     ChevronLeft,
     Check,
     ExternalLink,
+    AlertTriangle,
+    Activity,
+    History,
+    Cloud,
+    Shield,
 } from 'lucide-react';
 import { Button, Card, Modal, Input, Textarea, Select, StatusBadge, Badge } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
@@ -1406,7 +1411,10 @@ export default function StaffDashboard() {
                                                                     </div>
                                                                     <div>
                                                                         <span className="text-sm font-bold text-white tracking-wide uppercase">Actionable Intelligence</span>
-                                                                        <p className="text-[10px] text-white/40">Powered by Gemini 3.0 Flash</p>
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <p className="text-[10px] text-white/40">Powered by Gemini 3 Flash</p>
+                                                                            <span className="px-1 py-0.5 rounded-sm bg-primary-500/20 text-primary-400 text-[8px] font-bold uppercase tracking-widest border border-primary-500/30">Preview</span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                                 {/* Priority Score Badge - Cleaned up */}
@@ -1485,12 +1493,48 @@ export default function StaffDashboard() {
                                                                                 }`}>{ai.quantitative_metrics.estimated_severity.toUpperCase()}</p>
                                                                         </div>
                                                                     )}
-                                                                    {ai.quantitative_metrics.recurrence_risk && ai.quantitative_metrics.recurrence_risk !== 'unknown' && (
+                                                                    {ai.quantitative_metrics.systemic_failure_probability !== undefined && (
                                                                         <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
-                                                                            <p className="text-[9px] uppercase tracking-wider text-white/30 mb-0.5">Recurrence Risk</p>
-                                                                            <p className={`text-xs font-bold ${ai.quantitative_metrics.recurrence_risk === 'high' ? 'text-red-400' :
-                                                                                ai.quantitative_metrics.recurrence_risk === 'medium' ? 'text-amber-400' : 'text-green-400'
-                                                                                }`}>{ai.quantitative_metrics.recurrence_risk.toUpperCase()}</p>
+                                                                            <p className="text-[9px] uppercase tracking-wider text-white/30 mb-0.5">Systemic Risk</p>
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <p className={`text-xs font-bold ${ai.quantitative_metrics.systemic_failure_probability > 0.7 ? 'text-red-400' : 'text-primary-400'}`}>
+                                                                                    {(ai.quantitative_metrics.systemic_failure_probability * 100).toFixed(0)}%
+                                                                                </p>
+                                                                                <Activity className={`w-3 h-3 ${ai.quantitative_metrics.systemic_failure_probability > 0.7 ? 'text-red-400' : 'text-primary-400'}`} />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Diagnostic Context - New Section */}
+                                                            {ai?.diagnostic_context && !hasError && (
+                                                                <div className="mb-4 space-y-2">
+                                                                    {ai.diagnostic_context.infrastructure_proximity && (
+                                                                        <div className="px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10 flex items-start gap-2.5">
+                                                                            <Shield className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
+                                                                            <div>
+                                                                                <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tight">Infrastructure Proximity</p>
+                                                                                <p className="text-[11px] text-blue-200/70">{ai.diagnostic_context.infrastructure_proximity}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {ai.diagnostic_context.historical_trend && (
+                                                                        <div className="px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 flex items-start gap-2.5">
+                                                                            <History className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+                                                                            <div>
+                                                                                <p className="text-[9px] font-bold text-amber-400 uppercase tracking-tight">Historical Trend</p>
+                                                                                <p className="text-[11px] text-amber-200/70">{ai.diagnostic_context.historical_trend}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {ai.diagnostic_context.weather_impact && ai.diagnostic_context.weather_impact !== 'None' && (
+                                                                        <div className="px-3 py-2 rounded-lg bg-primary-500/5 border border-primary-500/10 flex items-start gap-2.5">
+                                                                            <Cloud className="w-3.5 h-3.5 text-primary-400 mt-0.5 flex-shrink-0" />
+                                                                            <div>
+                                                                                <p className="text-[9px] font-bold text-primary-400 uppercase tracking-tight">Weather Criticality</p>
+                                                                                <p className="text-[11px] text-primary-200/70">{ai.diagnostic_context.weather_impact}</p>
+                                                                            </div>
                                                                         </div>
                                                                     )}
                                                                 </div>
