@@ -325,6 +325,7 @@ class HotspotData(BaseModel):
     cluster_id: int
     sample_address: Optional[str] = None  # Representative address for the cluster
     top_categories: Optional[List[str]] = None  # Most common issue types in cluster
+    unique_reporters: Optional[int] = None  # Count of distinct reporters (for bias detection)
 
 
 class TrendData(BaseModel):

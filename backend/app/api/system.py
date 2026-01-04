@@ -323,11 +323,11 @@ async def get_advanced_statistics(
     # Cluster points within 500m with minimum 2 points per cluster
     hotspots = []
     try:
-        # First get the clusters with basic info
+        # Get clusters with addresses, categories, and unique reporter count
         hotspot_query = text("""
             WITH clustered AS (
                 SELECT 
-                    id, lat, long, address, service_name,
+                    id, lat, long, address, service_name, email,
                     ST_ClusterDBSCAN(location, eps := 0.005, minpoints := 2) OVER () as cluster_id
                 FROM service_requests
                 WHERE deleted_at IS NULL 
@@ -339,13 +339,14 @@ async def get_advanced_statistics(
                     AVG(lat) as center_lat,
                     AVG(long) as center_lng,
                     COUNT(*) as point_count,
+                    COUNT(DISTINCT email) as unique_reporters,
                     (ARRAY_AGG(address ORDER BY id DESC))[1] as sample_address,
                     (ARRAY_AGG(DISTINCT service_name))[1:3] as top_categories
                 FROM clustered
                 WHERE cluster_id IS NOT NULL
                 GROUP BY cluster_id
             )
-            SELECT center_lat, center_lng, point_count, cluster_id, sample_address, top_categories
+            SELECT center_lat, center_lng, point_count, cluster_id, sample_address, top_categories, unique_reporters
             FROM cluster_stats
             ORDER BY point_count DESC
             LIMIT 10
@@ -358,7 +359,8 @@ async def get_advanced_statistics(
                 count=int(row['point_count']),
                 cluster_id=int(row['cluster_id']),
                 sample_address=row.get('sample_address'),
-                top_categories=row.get('top_categories') or []
+                top_categories=row.get('top_categories') or [],
+                unique_reporters=int(row['unique_reporters']) if row.get('unique_reporters') else None
             ))
     except Exception as e:
         print(f"Hotspot query failed (PostGIS may not be enabled): {e}")

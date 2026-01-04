@@ -771,10 +771,20 @@ export default function StaffDashboard() {
                             {advancedStats?.hotspots && advancedStats.hotspots.length > 0 && (
                                 <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-red-500">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-bold text-gray-900">Problem Areas</h3>
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-lg font-bold text-gray-900">Problem Areas</h3>
+                                            {advancedStats.geographic_spread_km && (
+                                                <span className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                                                    Spread: {advancedStats.geographic_spread_km.toFixed(1)} km
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-sm text-gray-600 mt-1">
-                                            Locations with multiple service requests nearby. Consider prioritizing inspections or infrastructure improvements in these areas.
+                                            Locations with concentrated service requests. Consider prioritizing inspections or infrastructure improvements.
                                         </p>
+                                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                                            <strong>Note:</strong> Data may reflect reporting patterns. Areas may appear more active if residents are more familiar with the platform.
+                                        </div>
                                     </div>
                                     <div className="space-y-3">
                                         {advancedStats.hotspots.slice(0, 6).map((hotspot, idx) => (
@@ -792,14 +802,26 @@ export default function StaffDashboard() {
                                                             ))}
                                                         </div>
                                                     )}
-                                                    <div className="text-xs text-gray-500 mt-2">
-                                                        {hotspot.count} requests within 500m radius
+                                                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                                        <span>{hotspot.count} requests</span>
+                                                        {hotspot.unique_reporters && (
+                                                            <span className={`${hotspot.unique_reporters === 1 ? 'text-amber-600 font-medium' : ''}`}>
+                                                                {hotspot.unique_reporters === 1
+                                                                    ? '⚠ Single reporter'
+                                                                    : `${hotspot.unique_reporters} reporters`}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div className="ml-4 flex-shrink-0">
+                                                <div className="ml-4 flex-shrink-0 text-center">
                                                     <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
                                                         {hotspot.count}
                                                     </div>
+                                                    {hotspot.unique_reporters && hotspot.count > 1 && (
+                                                        <div className="text-xs text-gray-400 mt-1">
+                                                            {(hotspot.count / hotspot.unique_reporters).toFixed(1)}/user
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
