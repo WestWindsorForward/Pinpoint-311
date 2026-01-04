@@ -255,6 +255,8 @@ export interface HotspotData {
     lng: number;
     count: number;
     cluster_id: number;
+    sample_address?: string;  // Representative address for the cluster
+    top_categories?: string[];  // Most common issue types in cluster
 }
 
 export interface TrendData {

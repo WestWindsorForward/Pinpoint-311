@@ -320,28 +320,35 @@ async def get_advanced_statistics(
     # ========== Geospatial Analytics (PostGIS) ==========
     
     # Hotspot detection using PostGIS ST_ClusterDBSCAN
-    # Cluster points within 500m with minimum 3 points per cluster
+    # Cluster points within 500m with minimum 2 points per cluster
     hotspots = []
     try:
+        # First get the clusters with basic info
         hotspot_query = text("""
             WITH clustered AS (
                 SELECT 
-                    lat, long,
+                    id, lat, long, address, service_name,
                     ST_ClusterDBSCAN(location, eps := 0.005, minpoints := 2) OVER () as cluster_id
                 FROM service_requests
                 WHERE deleted_at IS NULL 
                 AND location IS NOT NULL
+            ),
+            cluster_stats AS (
+                SELECT 
+                    cluster_id,
+                    AVG(lat) as center_lat,
+                    AVG(long) as center_lng,
+                    COUNT(*) as point_count,
+                    (ARRAY_AGG(address ORDER BY id DESC))[1] as sample_address,
+                    (ARRAY_AGG(DISTINCT service_name))[1:3] as top_categories
+                FROM clustered
+                WHERE cluster_id IS NOT NULL
+                GROUP BY cluster_id
             )
-            SELECT 
-                AVG(lat) as center_lat,
-                AVG(long) as center_lng,
-                COUNT(*) as point_count,
-                cluster_id
-            FROM clustered
-            WHERE cluster_id IS NOT NULL
-            GROUP BY cluster_id
+            SELECT center_lat, center_lng, point_count, cluster_id, sample_address, top_categories
+            FROM cluster_stats
             ORDER BY point_count DESC
-            LIMIT 20
+            LIMIT 10
         """)
         hotspot_result = await db.execute(hotspot_query)
         for row in hotspot_result.mappings().all():
@@ -349,7 +356,9 @@ async def get_advanced_statistics(
                 lat=float(row['center_lat']),
                 lng=float(row['center_lng']),
                 count=int(row['point_count']),
-                cluster_id=int(row['cluster_id'])
+                cluster_id=int(row['cluster_id']),
+                sample_address=row.get('sample_address'),
+                top_categories=row.get('top_categories') or []
             ))
     except Exception as e:
         print(f"Hotspot query failed (PostGIS may not be enabled): {e}")

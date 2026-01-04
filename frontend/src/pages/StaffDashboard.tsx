@@ -767,33 +767,39 @@ export default function StaffDashboard() {
                                 </div>
                             )}
 
-                            {/* PostGIS Geographic Hotspots */}
+                            {/* Geographic Hotspots - Problem Areas */}
                             {advancedStats?.hotspots && advancedStats.hotspots.length > 0 && (
-                                <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
+                                <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-red-500">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-bold text-gray-900">Geographic Hotspots</h3>
-                                        <div className="mt-2 bg-purple-50 border border-purple-200 rounded p-3">
-                                            <p className="text-sm text-gray-800 font-medium mb-1">PostGIS Spatial Analysis:</p>
-                                            <p className="text-xs text-gray-700">
-                                                <strong>Method:</strong> Using ST_ClusterDBSCAN with 500m radius to identify geographic clusters of service requests.
-                                                Highlighted areas show where multiple requests are concentrated.
-                                            </p>
-                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-900">Problem Areas</h3>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            Locations with multiple service requests nearby. Consider prioritizing inspections or infrastructure improvements in these areas.
+                                        </p>
                                     </div>
                                     <div className="space-y-3">
-                                        {advancedStats.hotspots.slice(0, 8).map((hotspot, idx) => (
-                                            <div key={idx} className="flex items-center justify-between p-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200">
-                                                <div className="flex-1">
-                                                    <div className="text-sm font-medium text-gray-900">Cluster {idx + 1}</div>
-                                                    <div className="text-xs text-gray-600 mt-1">
-                                                        {hotspot.lat.toFixed(4)}, {hotspot.lng.toFixed(4)}
+                                        {advancedStats.hotspots.slice(0, 6).map((hotspot, idx) => (
+                                            <div key={idx} className="flex items-start justify-between p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200 hover:border-red-400 transition">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-semibold text-gray-900">
+                                                        {hotspot.sample_address || `Area ${idx + 1}`}
+                                                    </div>
+                                                    {hotspot.top_categories && hotspot.top_categories.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                            {hotspot.top_categories.slice(0, 3).map((cat, i) => (
+                                                                <span key={i} className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
+                                                                    {cat}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    <div className="text-xs text-gray-500 mt-2">
+                                                        {hotspot.count} requests within 500m radius
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-2 rounded-full font-bold">
+                                                <div className="ml-4 flex-shrink-0">
+                                                    <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
                                                         {hotspot.count}
                                                     </div>
-                                                    <div className="text-xs text-gray-500 mt-1">requests</div>
                                                 </div>
                                             </div>
                                         ))}

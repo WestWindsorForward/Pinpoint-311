@@ -323,6 +323,8 @@ class HotspotData(BaseModel):
     lng: float
     count: int
     cluster_id: int
+    sample_address: Optional[str] = None  # Representative address for the cluster
+    top_categories: Optional[List[str]] = None  # Most common issue types in cluster
 
 
 class TrendData(BaseModel):
