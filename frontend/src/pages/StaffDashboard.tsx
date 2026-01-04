@@ -37,8 +37,8 @@ import { Button, Card, Modal, Input, Textarea, Select, StatusBadge, Badge } from
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { api, MapLayer } from '../services/api';
-import { ServiceRequest, ServiceRequestDetail, ServiceDefinition, Statistics, RequestComment, ClosedSubstatus, User as UserType, Department, AuditLogEntry } from '../types';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { ServiceRequest, ServiceRequestDetail, ServiceDefinition, Statistics, AdvancedStatistics, RequestComment, ClosedSubstatus, User as UserType, Department, AuditLogEntry } from '../types';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Tooltip, Legend } from 'recharts';
 import StaffDashboardMap from '../components/StaffDashboardMap';
 import RequestDetailMap from '../components/RequestDetailMap';
 
@@ -60,6 +60,7 @@ export default function StaffDashboard() {
     const [showIntakeModal, setShowIntakeModal] = useState(false);
     const [services, setServices] = useState<ServiceDefinition[]>([]);
     const [statistics, setStatistics] = useState<Statistics | null>(null);
+    const [advancedStats, setAdvancedStats] = useState<AdvancedStatistics | null>(null);
 
     // Dashboard-specific state
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -257,8 +258,12 @@ export default function StaffDashboard() {
 
     const loadStatistics = async () => {
         try {
-            const statsData = await api.getStatistics();
+            const [statsData, advancedData] = await Promise.all([
+                api.getStatistics(),
+                api.getAdvancedStatistics()
+            ]);
             setStatistics(statsData);
+            setAdvancedStats(advancedData);
         } catch (err) {
             console.error('Failed to load statistics:', err);
         }
@@ -647,90 +652,268 @@ export default function StaffDashboard() {
                 {/* Statistics View */}
                 {currentView === 'statistics' && (
                     <div className="flex-1 p-6 overflow-auto">
-                        <div className="max-w-6xl mx-auto space-y-6">
+                        <div className="max-w-7xl mx-auto space-y-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <Badge variant="info">Analytics Dashboard</Badge>
-                                    <h1 className="text-2xl font-bold text-white mt-2">System Statistics</h1>
+                                    <Badge variant="info">Advanced Analytics Dashboard</Badge>
+                                    <h1 className="text-2xl font-bold text-white mt-2">PostGIS-Powered Statistics</h1>
+                                    {advancedStats?.cached_at && (
+                                        <p className="text-xs text-white/40 mt-1">
+                                            Last updated: {new Date(advancedStats.cached_at).toLocaleString()}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Stats Cards */}
+                            {/* Performance KPI Cards */}
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <Card className="text-center">
-                                    <p className="text-3xl font-bold text-white">{statistics?.total_requests || 0}</p>
+                                    <p className="text-3xl font-bold text-white">{advancedStats?.total_requests || 0}</p>
                                     <p className="text-white/60 text-sm">Total Requests</p>
                                 </Card>
-                                <Card className="text-center border-red-500/30">
-                                    <p className="text-3xl font-bold text-red-400">{statistics?.open_requests || 0}</p>
-                                    <p className="text-white/60 text-sm">Open</p>
+                                <Card className="text-center border-emerald-500/30">
+                                    <p className="text-3xl font-bold text-emerald-400">
+                                        {advancedStats?.avg_resolution_hours
+                                            ? `${advancedStats.avg_resolution_hours.toFixed(1)}h`
+                                            : 'N/A'}
+                                    </p>
+                                    <p className="text-white/60 text-sm">Avg Resolution Time</p>
                                 </Card>
-                                <Card className="text-center border-amber-500/30">
-                                    <p className="text-3xl font-bold text-amber-400">{statistics?.in_progress_requests || 0}</p>
-                                    <p className="text-white/60 text-sm">In Progress</p>
+                                <Card className="text-center border-purple-500/30">
+                                    <p className="text-3xl font-bold text-purple-400">
+                                        {advancedStats?.resolution_rate
+                                            ? `${(advancedStats.resolution_rate * 100).toFixed(1)}%`
+                                            : 'N/A'}
+                                    </p>
+                                    <p className="text-white/60 text-sm">Resolution Rate</p>
                                 </Card>
-                                <Card className="text-center border-green-500/30">
-                                    <p className="text-3xl font-bold text-green-400">{statistics?.closed_requests || 0}</p>
-                                    <p className="text-white/60 text-sm">Resolved</p>
+                                <Card className="text-center border-blue-500/30">
+                                    <p className="text-3xl font-bold text-blue-400">
+                                        {advancedStats?.geographic_spread_km
+                                            ? `${advancedStats.geographic_spread_km.toFixed(1)}km`
+                                            : 'N/A'}
+                                    </p>
+                                    <p className="text-white/60 text-sm">Geographic Spread</p>
                                 </Card>
                             </div>
 
-                            {/* Charts */}
+                            {/* Temporal Demand Heatmap (24-hour) */}
+                            <Card>
+                                <h3 className="text-lg font-semibold text-white mb-4">📊 Temporal Demand Pattern (24-Hour Heatmap)</h3>
+                                <p className="text-sm text-white/50 mb-4">Identify peak staffing hours based on community demand</p>
+                                <div className="h-72">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart
+                                            data={Object.entries(advancedStats?.requests_by_hour || {})
+                                                .map(([hour, count]) => ({
+                                                    hour: `${hour}:00`,
+                                                    count: count as number
+                                                }))
+                                                .sort((a, b) => parseInt(a.hour) - parseInt(b.hour))}
+                                        >
+                                            <defs>
+                                                <linearGradient id="demandGradient" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8} />
+                                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1} />
+                                                </linearGradient>
+                                            </defs>
+                                            <XAxis dataKey="hour" stroke="#ffffff40" fontSize={12} />
+                                            <YAxis stroke="#ffffff40" fontSize={12} />
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                                labelStyle={{ color: '#fff' }}
+                                            />
+                                            <Area type="monotone" dataKey="count" stroke="#6366f1" fillOpacity={1} fill="url(#demandGradient)" />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </Card>
+
+                            {/* Backlog Aging Analysis */}
+                            <Card>
+                                <h3 className="text-lg font-semibold text-white mb-4">⏰ Backlog Aging Analysis</h3>
+                                <p className="text-sm text-white/50 mb-4">Visualize ticket processing delays by age bucket</p>
+                                <div className="h-72">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            data={Object.entries(advancedStats?.backlog_by_age || {})
+                                                .map(([age, count]) => ({
+                                                    age,
+                                                    count: count as number
+                                                }))}
+                                        >
+                                            <XAxis dataKey="age" stroke="#ffffff40" fontSize={12} />
+                                            <YAxis stroke="#ffffff40" fontSize={12} />
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                                labelStyle={{ color: '#fff' }}
+                                            />
+                                            <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </Card>
+
+                            {/* Department Performance Benchmarking */}
+                            <Card>
+                                <h3 className="text-lg font-semibold text-white mb-4">🏢 Department Performance Metrics</h3>
+                                <p className="text-sm text-white/50 mb-4">Compare resolution rates and workload across departments</p>
+                                <div className="h-80">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            layout="vertical"
+                                            data={advancedStats?.department_metrics || []}
+                                        >
+                                            <XAxis type="number" stroke="#ffffff40" fontSize={12} />
+                                            <YAxis type="category" dataKey="name" stroke="#ffffff40" fontSize={12} width={120} />
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                                labelStyle={{ color: '#fff' }}
+                                            />
+                                            <Legend />
+                                            <Bar dataKey="total_requests" fill="#3b82f6" name="Total Requests" radius={[0, 4, 4, 0]} />
+                                            <Bar dataKey="open_requests" fill="#ef4444" name="Open" radius={[0, 4, 4, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </Card>
+
+                            {/* Staff Leaderboard + Category Distribution */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Staff Leaderboard */}
                                 <Card>
-                                    <h3 className="text-lg font-semibold text-white mb-4">Requests by Category</h3>
-                                    <div className="h-64">
+                                    <h3 className="text-lg font-semibold text-white mb-4">🏆 Staff Performance Leaderboard</h3>
+                                    <p className="text-sm text-white/50 mb-4">Top performing staff by total resolutions</p>
+                                    <div className="space-y-3 max-h-80 overflow-y-auto">
+                                        {Object.entries(advancedStats?.top_staff_by_resolutions || {})
+                                            .sort(([, a], [, b]) => (b as number) - (a as number))
+                                            .slice(0, 10)
+                                            .map(([staff, count], index) => (
+                                                <div
+                                                    key={staff}
+                                                    className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
+                                                >
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                                                            index === 1 ? 'bg-gray-400/20 text-gray-300' :
+                                                                index === 2 ? 'bg-orange-600/20 text-orange-400' :
+                                                                    'bg-blue-500/20 text-blue-400'
+                                                        }`}>
+                                                        {index + 1}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-white font-medium">{staff}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-2xl font-bold text-emerald-400">{count as number}</p>
+                                                        <p className="text-xs text-white/40">resolutions</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        {Object.keys(advancedStats?.top_staff_by_resolutions || {}).length === 0 && (
+                                            <p className="text-white/40 text-center py-8">No staff resolution data available</p>
+                                        )}
+                                    </div>
+                                </Card>
+
+                                {/* Category Distribution */}
+                                <Card>
+                                    <h3 className="text-lg font-semibold text-white mb-4">📋 Requests by Category</h3>
+                                    <div className="h-80">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={Object.entries(statistics?.requests_by_category || {}).map(([name, count]) => ({ name, count }))}>
-                                                <XAxis dataKey="name" stroke="#ffffff40" fontSize={12} />
+                                            <BarChart data={Object.entries(advancedStats?.requests_by_category || {})
+                                                .map(([name, count]) => ({
+                                                    name: name.length > 15 ? name.substring(0, 15) + '...' : name,
+                                                    count: count as number
+                                                }))
+                                                .sort((a, b) => b.count - a.count)
+                                                .slice(0, 10)}
+                                            >
+                                                <XAxis dataKey="name" stroke="#ffffff40" fontSize={10} angle={-45} textAnchor="end" height={80} />
                                                 <YAxis stroke="#ffffff40" fontSize={12} />
-                                                <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                                                <Tooltip
+                                                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                                    labelStyle={{ color: '#fff' }}
+                                                />
+                                                <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </Card>
+                            </div>
 
+                            {/* Geospatial Hotspots Summary */}
+                            {advancedStats?.hotspots && advancedStats.hotspots.length > 0 && (
                                 <Card>
-                                    <h3 className="text-lg font-semibold text-white mb-4">Status Distribution</h3>
-                                    <div className="h-64 flex items-center justify-center">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={[
-                                                        { name: 'Open', value: statistics?.open_requests || 0 },
-                                                        { name: 'In Progress', value: statistics?.in_progress_requests || 0 },
-                                                        { name: 'Closed', value: statistics?.closed_requests || 0 },
-                                                    ]}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={80}
-                                                    paddingAngle={5}
-                                                    dataKey="value"
-                                                >
-                                                    {[0, 1, 2].map((index) => (
-                                                        <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                                                    ))}
-                                                </Pie>
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div className="flex justify-center gap-6 mt-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded-full bg-red-500" />
-                                            <span className="text-sm text-white/60">Open</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded-full bg-amber-500" />
-                                            <span className="text-sm text-white/60">In Progress</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded-full bg-green-500" />
-                                            <span className="text-sm text-white/60">Closed</span>
-                                        </div>
+                                    <h3 className="text-lg font-semibold text-white mb-4">🗺️ Geographic Hotspots (PostGIS DBSCAN)</h3>
+                                    <p className="text-sm text-white/50 mb-4">
+                                        Statistically significant incident clusters detected within ~500m radius
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {advancedStats.hotspots.slice(0, 6).map((hotspot, index) => (
+                                            <div
+                                                key={hotspot.cluster_id}
+                                                className="p-4 rounded-lg bg-red-500/10 border border-red-500/30"
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <div>
+                                                        <p className="text-sm text-white/60">Cluster #{hotspot.cluster_id}</p>
+                                                        <p className="text-2xl font-bold text-red-400">{hotspot.count}</p>
+                                                        <p className="text-xs text-white/40">incidents</p>
+                                                    </div>
+                                                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                                        <MapPin className="w-5 h-5 text-red-400" />
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-white/40">
+                                                    {hotspot.lat.toFixed(4)}, {hotspot.lng.toFixed(4)}
+                                                </p>
+                                            </div>
+                                        ))}
                                     </div>
                                 </Card>
-                            </div>
+                            )}
+
+                            {/* Status Distribution (Keep existing) */}
+                            <Card>
+                                <h3 className="text-lg font-semibold text-white mb-4">📈 Status Distribution</h3>
+                                <div className="h-64 flex items-center justify-center">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={[
+                                                    { name: 'Open', value: advancedStats?.open_requests || 0 },
+                                                    { name: 'In Progress', value: advancedStats?.in_progress_requests || 0 },
+                                                    { name: 'Closed', value: advancedStats?.closed_requests || 0 },
+                                                ]}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={80}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                            >
+                                                {[0, 1, 2].map((index) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index]} />
+                                                ))}
+                                            </Pie>
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div className="flex justify-center gap-6 mt-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-red-500" />
+                                        <span className="text-sm text-white/60">Open ({advancedStats?.open_requests || 0})</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-amber-500" />
+                                        <span className="text-sm text-white/60">In Progress ({advancedStats?.in_progress_requests || 0})</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-green-500" />
+                                        <span className="text-sm text-white/60">Closed ({advancedStats?.closed_requests || 0})</span>
+                                    </div>
+                                </div>
+                            </Card>
                         </div>
                     </div>
                 )}
