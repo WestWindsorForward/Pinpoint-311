@@ -248,19 +248,23 @@ export default function StaffDashboardMap({
             // Department filter - only filter if departments are loaded
             const requestDeptId = (r as any).assigned_department_id ?? 0;
             if (Object.keys(departmentFilters).length > 0) {
-                // If the department ID is in filters and set to false, hide it
-                if (departmentFilters[requestDeptId] === false) return false;
-                // If the department ID isn't in filters at all (unknown dept), check if unassigned is hidden
-                if (!(requestDeptId in departmentFilters) && departmentFilters[0] === false) return false;
+                // Convert to number for comparison (filter keys are numbers)
+                const deptKey = Number(requestDeptId) || 0;
+                console.log('[FILTER DEBUG] Request dept ID:', requestDeptId, '-> key:', deptKey, 'filter value:', departmentFilters[deptKey]);
+                if (departmentFilters[deptKey] === false) {
+                    console.log('[FILTER DEBUG] Hiding request due to dept filter');
+                    return false;
+                }
             }
 
             // Staff filter - only filter if users are loaded
             const requestStaff = (r as any).assigned_to ?? '';
             if (Object.keys(staffFilters).length > 0) {
-                // If the staff is in filters and set to false, hide it
-                if (staffFilters[requestStaff] === false) return false;
-                // If the staff isn't in filters at all (unknown staff), check if unassigned is hidden
-                if (!(requestStaff in staffFilters) && staffFilters[''] === false) return false;
+                console.log('[FILTER DEBUG] Request staff:', requestStaff, 'filter value:', staffFilters[requestStaff]);
+                if (staffFilters[requestStaff] === false) {
+                    console.log('[FILTER DEBUG] Hiding request due to staff filter');
+                    return false;
+                }
             }
 
             // Assignment filter - search in assigned_to, service_name, or description
