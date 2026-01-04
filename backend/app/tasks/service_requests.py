@@ -103,7 +103,7 @@ def analyze_request(self, request_id: int):
             logger.info(f"[AI Analysis] Project ID found: {project_id}")
             print(f"[AI Analysis] Project ID found: {project_id}")
             
-            location = "us-central1"  # Default location
+            location = "global"  # Gemini 3 Flash is available on global endpoints
             service_account_json = await get_secret(db, "VERTEX_AI_SERVICE_ACCOUNT_KEY")
             
             # Get the request
