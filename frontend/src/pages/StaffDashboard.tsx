@@ -695,18 +695,7 @@ export default function StaffDashboard() {
                             </div>
 
                             {/* Top KPIs - Government Focused */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
-                                    <div className="text-sm font-medium text-gray-600">Estimated Cost (Open)</div>
-                                    <div className="text-3xl font-bold text-blue-600 mt-2">
-                                        ${(advancedStats?.cost_estimates
-                                            ?.reduce((sum, c) => sum + c.total_estimated_cost, 0) || 0)
-                                            .toLocaleString()}
-                                    </div>
-                                    <div className="text-xs text-gray-500 mt-1">
-                                        {advancedStats?.open_requests || 0} open tickets
-                                    </div>
-                                </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
                                 <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
                                     <div className="text-sm font-medium text-gray-600">Next Week Forecast</div>
@@ -777,45 +766,41 @@ export default function StaffDashboard() {
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {/* Cost Breakdown */}
+                            {/* PostGIS Geographic Hotspots */}
+                            {advancedStats?.hotspots && advancedStats.hotspots.length > 0 && (
                                 <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-bold text-gray-900">💰 Cost Breakdown</h3>
-                                        <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-4">
-                                            <p className="text-sm text-gray-800 font-medium mb-2">💡 How Costs Are Calculated:</p>
-                                            <div className="text-xs text-gray-700 space-y-1">
-                                                <p><strong>Formula:</strong> (Open Tickets) × (Avg Hours per Ticket) × (Hourly Labor Rate)</p>
-                                                <p><strong>Example:</strong> 5 tickets × 26.48 hours × $50/hr = <strong>$6,620</strong></p>
-                                                <p className="mt-2"><strong>Labor Rates:</strong> Pothole $50/hr • Street Repair $75/hr • Sewer/Water $85/hr • Traffic Signal $65/hr • Default $55/hr</p>
-                                            </div>
+                                        <h3 className="text-lg font-bold text-gray-900">🗺️ Geographic Hotspots</h3>
+                                        <div className="mt-2 bg-purple-50 border border-purple-200 rounded p-3">
+                                            <p className="text-sm text-gray-800 font-medium mb-1">📍 PostGIS Spatial Analysis:</p>
+                                            <p className="text-xs text-gray-700">
+                                                <strong>Method:</strong> Using ST_ClusterDBSCAN with 500m radius to identify geographic clusters of service requests.
+                                                Highlighted areas show where multiple requests are concentrated.
+                                            </p>
                                         </div>
                                     </div>
-                                    {advancedStats?.cost_estimates && advancedStats.cost_estimates.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {advancedStats.cost_estimates.slice(0, 6).map((cost, idx) => (
-                                                <div key={idx} className="flex items-center justify-between border-b border-gray-100 pb-3 hover:bg-purple-50 px-2 rounded transition">
-                                                    <div className="flex-1">
-                                                        <div className="text-sm font-medium text-gray-900">{cost.category}</div>
-                                                        <div className="text-xs text-gray-600 mt-1">
-                                                            {cost.open_tickets} open × {cost.avg_hours.toFixed(2)}h avg × ${(cost.estimated_cost / cost.avg_hours).toFixed(0)}/hr
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                                            ${cost.total_estimated_cost.toLocaleString()}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500">
-                                                            ${cost.estimated_cost.toFixed(2)}/ticket
-                                                        </div>
+                                    <div className="space-y-3">
+                                        {advancedStats.hotspots.slice(0, 8).map((hotspot, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200">
+                                                <div className="flex-1">
+                                                    <div className="text-sm font-medium text-gray-900">Cluster {idx + 1}</div>
+                                                    <div className="text-xs text-gray-600 mt-1">
+                                                        📍 {hotspot.latitude.toFixed(4)}, {hotspot.longitude.toFixed(4)}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-gray-400 text-center py-8">No cost data available</p>
-                                    )}
+                                                <div className="text-right">
+                                                    <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-2 rounded-full font-bold">
+                                                        {hotspot.count}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 mt-1">requests</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
+                            )}
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                                 {/* Priority Backlog */}
                                 <div className="bg-white rounded-lg shadow p-6">
