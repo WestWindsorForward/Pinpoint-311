@@ -226,6 +226,10 @@ export default function StaffDashboardMap({
         const map = mapInstanceRef.current;
         if (!map) return;
 
+        console.log('[StaffDashboardMap] updateMarkers called');
+        console.log('[StaffDashboardMap] departmentFilters:', departmentFilters);
+        console.log('[StaffDashboardMap] staffFilters:', staffFilters);
+
         // Clear existing markers
         markersRef.current.forEach(m => m.setMap(null));
         markersRef.current = [];
