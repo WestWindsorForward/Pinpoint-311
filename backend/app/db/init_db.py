@@ -76,6 +76,7 @@ DEFAULT_SECRETS = [
     
     # AI Analysis
     {"key_name": "VERTEX_AI_PROJECT", "description": "Google Cloud project for Vertex AI"},
+    {"key_name": "VERTEX_AI_SERVICE_ACCOUNT_KEY", "description": "Service account JSON key for Vertex AI (optional if using default credentials)"},
     
     # SMS Providers - Twilio
     {"key_name": "SMS_PROVIDER", "description": "SMS provider type: twilio, http, or none"},

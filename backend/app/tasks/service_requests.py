@@ -62,9 +62,33 @@ async def configure_notifications(db):
 
 @celery_app.task(bind=True, max_retries=3)
 def analyze_request(self, request_id: int):
-    """Analyze service request with AI (if enabled)"""
+    """Analyze service request with Vertex AI (if enabled)"""
     async def _analyze():
+        from app.models import SystemSettings
+        from app.services.vertex_ai_service import (
+            build_analysis_prompt,
+            analyze_with_gemini,
+            get_historical_context,
+            strip_pii
+        )
+        from datetime import datetime
+        
         async with SessionLocal() as db:
+            # Check if AI analysis is enabled
+            settings_result = await db.execute(select(SystemSettings).limit(1))
+            settings = settings_result.scalar_one_or_none()
+            if not settings or not settings.modules.get('ai_analysis', False):
+                return {"status": "skipped", "reason": "AI analysis not enabled"}
+            
+            # Get Vertex AI credentials
+            project_id = await get_secret(db, "VERTEX_AI_PROJECT")
+            if not project_id:
+                return {"status": "skipped", "reason": "VERTEX_AI_PROJECT not configured"}
+            
+            location = "us-central1"  # Default location
+            service_account_json = await get_secret(db, "VERTEX_AI_SERVICE_ACCOUNT_KEY")
+            
+            # Get the request
             result = await db.execute(
                 select(ServiceRequest).where(ServiceRequest.id == request_id)
             )
@@ -72,21 +96,54 @@ def analyze_request(self, request_id: int):
             if not request:
                 return {"error": "Request not found"}
             
-            # TODO: Implement actual Vertex AI analysis
-            # For now, set a placeholder analysis
-            analysis = {
-                "priority": 5,
-                "category_confidence": 0.85,
-                "flagged": False,
-                "summary": f"Request for {request.service_name}"
+            # Build request data with PII stripped
+            request_data = {
+                "service_name": request.service_name,
+                "service_code": request.service_code,
+                "description": strip_pii(request.description or ""),
+                "address": request.address,  # Keep address for context
+                "submitted_date": request.requested_datetime.isoformat() if request.requested_datetime else None,
+                "matched_asset": request.matched_asset,
             }
             
-            request.ai_analysis = analysis
-            request.priority = analysis.get("priority", 5)
-            request.flagged = analysis.get("flagged", False)
+            # Get historical context
+            historical_context = await get_historical_context(
+                db, request.address, request.service_code
+            )
+            
+            # Build the analysis prompt
+            prompt = build_analysis_prompt(
+                request_data,
+                historical_context=historical_context,
+                spatial_context=None  # TODO: Add spatial context from GIS
+            )
+            
+            # Get images for multimodal analysis
+            image_data = request.media_urls[:3] if request.media_urls else None
+            
+            # Call Vertex AI
+            analysis_result = await analyze_with_gemini(
+                project_id=project_id,
+                location=location,
+                prompt=prompt,
+                image_data=image_data,
+                service_account_json=service_account_json if service_account_json else None
+            )
+            
+            # Store the analysis
+            request.ai_analysis = analysis_result
+            request.priority = min(10, max(1, int(analysis_result.get("priority_score", 5))))
+            request.flagged = len(analysis_result.get("safety_flags", [])) > 0
+            if request.flagged:
+                request.flag_reason = ", ".join(analysis_result.get("safety_flags", [])[:3])
+            
+            # Store in vertex_ai columns for easier querying
+            request.vertex_ai_summary = analysis_result.get("qualitative_analysis", "")
+            request.vertex_ai_priority_score = analysis_result.get("priority_score", 5.0)
+            request.vertex_ai_analyzed_at = datetime.utcnow()
             
             await db.commit()
-            return analysis
+            return {"status": "success", "analysis": analysis_result}
     
     try:
         return run_async(_analyze())

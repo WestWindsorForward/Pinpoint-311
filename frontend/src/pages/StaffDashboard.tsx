@@ -1374,24 +1374,97 @@ export default function StaffDashboard() {
                                             {/* Description */}
                                             <p className="text-white/90 leading-relaxed mb-4">{selectedRequest.description}</p>
 
-                                            {/* AI Analysis - Integrated */}
-                                            {selectedRequest.vertex_ai_summary && (
-                                                <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 mb-4">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <Brain className="w-4 h-4 text-purple-400" />
-                                                        <span className="text-xs font-medium text-purple-400 uppercase">AI Analysis</span>
-                                                    </div>
-                                                    <p className="text-white/80 text-sm mb-2">{selectedRequest.vertex_ai_summary}</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {selectedRequest.vertex_ai_classification && (
-                                                            <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-xs">{selectedRequest.vertex_ai_classification}</span>
+                                            {/* AI Analysis - Enhanced Display */}
+                                            {(() => {
+                                                const ai = selectedRequest.ai_analysis as any;
+                                                const priorityScore = ai?.priority_score ?? selectedRequest.vertex_ai_priority_score ?? null;
+                                                const qualitativeText = ai?.qualitative_analysis ?? selectedRequest.vertex_ai_summary ?? null;
+
+                                                if (!ai && !qualitativeText) return null;
+
+                                                return (
+                                                    <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/20 mb-4">
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <Brain className="w-4 h-4 text-purple-400" />
+                                                                <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">AI Analysis</span>
+                                                            </div>
+                                                            {/* Priority Score Badge */}
+                                                            {priorityScore && (
+                                                                <div className={`px-3 py-1 rounded-full text-xs font-bold ${priorityScore >= 8 ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30' :
+                                                                        priorityScore >= 6 ? 'bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30' :
+                                                                            priorityScore >= 4 ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30' :
+                                                                                'bg-green-500/20 text-green-400 ring-1 ring-green-500/30'
+                                                                    }`}>
+                                                                    Priority: {Number(priorityScore).toFixed(1)}/10
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Qualitative Analysis */}
+                                                        {qualitativeText && (
+                                                            <p className="text-white/80 text-sm mb-3 leading-relaxed">{qualitativeText}</p>
                                                         )}
-                                                        {selectedRequest.vertex_ai_priority_score && (
-                                                            <span className="text-xs text-white/50">Priority: {selectedRequest.vertex_ai_priority_score.toFixed(1)}/10</span>
+
+                                                        {/* Priority Justification */}
+                                                        {ai?.priority_justification && (
+                                                            <p className="text-white/50 text-xs italic mb-3">"{ai.priority_justification}"</p>
+                                                        )}
+
+                                                        {/* Quantitative Metrics */}
+                                                        {ai?.quantitative_metrics && (
+                                                            <div className="grid grid-cols-2 gap-2 mb-3">
+                                                                {ai.quantitative_metrics.estimated_severity && (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-white/40 text-xs">Severity:</span>
+                                                                        <span className={`text-xs font-medium ${ai.quantitative_metrics.estimated_severity === 'critical' ? 'text-red-400' :
+                                                                                ai.quantitative_metrics.estimated_severity === 'high' ? 'text-amber-400' :
+                                                                                    ai.quantitative_metrics.estimated_severity === 'medium' ? 'text-blue-400' :
+                                                                                        'text-green-400'
+                                                                            }`}>{ai.quantitative_metrics.estimated_severity}</span>
+                                                                    </div>
+                                                                )}
+                                                                {ai.quantitative_metrics.estimated_affected_area && (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-white/40 text-xs">Area:</span>
+                                                                        <span className="text-white/70 text-xs">{ai.quantitative_metrics.estimated_affected_area}</span>
+                                                                    </div>
+                                                                )}
+                                                                {ai.quantitative_metrics.recurrence_risk && (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-white/40 text-xs">Recurrence:</span>
+                                                                        <span className="text-white/70 text-xs">{ai.quantitative_metrics.recurrence_risk}</span>
+                                                                    </div>
+                                                                )}
+                                                                {ai.recommended_response_time && (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-white/40 text-xs">Response:</span>
+                                                                        <span className="text-purple-300 text-xs font-medium">{ai.recommended_response_time}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Safety Flags */}
+                                                        {ai?.safety_flags && Array.isArray(ai.safety_flags) && ai.safety_flags.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {ai.safety_flags.map((flag: string, i: number) => (
+                                                                    <span key={i} className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-medium uppercase">
+                                                                        ⚠️ {flag.replace(/_/g, ' ')}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Analyzed timestamp */}
+                                                        {selectedRequest.vertex_ai_analyzed_at && (
+                                                            <p className="text-white/30 text-[10px] mt-2">
+                                                                Analyzed {new Date(selectedRequest.vertex_ai_analyzed_at).toLocaleString()}
+                                                            </p>
                                                         )}
                                                     </div>
-                                                </div>
-                                            )}
+                                                );
+                                            })()}
 
                                             {/* Photos */}
                                             {selectedRequest.media_urls && selectedRequest.media_urls.length > 0 && (

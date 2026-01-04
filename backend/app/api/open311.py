@@ -333,9 +333,9 @@ async def create_request(
     db.add(audit_entry)
     await db.commit()
     
-    # TODO: Trigger Celery task for AI analysis
-    # from app.tasks.service_requests import analyze_request
-    # analyze_request.delay(service_request.id)
+    # Trigger Celery task for AI analysis
+    from app.tasks.service_requests import analyze_request
+    analyze_request.delay(service_request.id)
     
     return service_request
 
