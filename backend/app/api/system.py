@@ -196,7 +196,407 @@ async def get_statistics(
     )
 
 
+# ============ Advanced Statistics (PostGIS-powered) ============
+
+from sqlalchemy import text, extract, case
+from sqlalchemy.sql.expression import literal_column
+from datetime import timedelta
+import json
+from app.schemas import AdvancedStatisticsResponse, HotspotData, TrendData, DepartmentMetrics
+from app.models import Department
+
+# Redis client import (reuse from open311)
+try:
+    from app.api.open311 import redis_client
+except ImportError:
+    redis_client = None
+
+STATS_CACHE_TTL = 300  # 5 minutes
+
+
+@router.get("/advanced-statistics", response_model=AdvancedStatisticsResponse)
+async def get_advanced_statistics(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_staff)
+):
+    """Get advanced PostGIS-powered statistics (staff only, cached for 5 minutes)"""
+    
+    # Check cache first
+    cache_key = "advanced_statistics"
+    try:
+        if redis_client:
+            cached = await redis_client.get(cache_key)
+            if cached:
+                data = json.loads(cached)
+                data["cached_at"] = data.get("cached_at")
+                return AdvancedStatisticsResponse(**data)
+    except Exception:
+        pass  # Redis unavailable
+
+    from datetime import datetime
+    now = datetime.utcnow()
+    
+    # ========== Basic Counts ==========
+    base_query = select(ServiceRequest).where(ServiceRequest.deleted_at.is_(None))
+    
+    total_result = await db.execute(select(func.count(ServiceRequest.id)).where(ServiceRequest.deleted_at.is_(None)))
+    total_count = total_result.scalar() or 0
+    
+    open_result = await db.execute(
+        select(func.count(ServiceRequest.id)).where(ServiceRequest.deleted_at.is_(None), ServiceRequest.status == "open")
+    )
+    open_count = open_result.scalar() or 0
+    
+    in_progress_result = await db.execute(
+        select(func.count(ServiceRequest.id)).where(ServiceRequest.deleted_at.is_(None), ServiceRequest.status == "in_progress")
+    )
+    in_progress_count = in_progress_result.scalar() or 0
+    
+    closed_result = await db.execute(
+        select(func.count(ServiceRequest.id)).where(ServiceRequest.deleted_at.is_(None), ServiceRequest.status == "closed")
+    )
+    closed_count = closed_result.scalar() or 0
+    
+    # ========== Temporal Analytics ==========
+    
+    # Requests by hour of day
+    hour_query = select(
+        extract('hour', ServiceRequest.requested_datetime).label('hour'),
+        func.count(ServiceRequest.id)
+    ).where(ServiceRequest.deleted_at.is_(None)).group_by('hour')
+    hour_result = await db.execute(hour_query)
+    requests_by_hour = {int(row[0]): row[1] for row in hour_result.all() if row[0] is not None}
+    # Fill missing hours with 0
+    for h in range(24):
+        if h not in requests_by_hour:
+            requests_by_hour[h] = 0
+    
+    # Requests by day of week
+    dow_query = select(
+        extract('dow', ServiceRequest.requested_datetime).label('dow'),
+        func.count(ServiceRequest.id)
+    ).where(ServiceRequest.deleted_at.is_(None)).group_by('dow')
+    dow_result = await db.execute(dow_query)
+    day_names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    requests_by_day_of_week = {}
+    for row in dow_result.all():
+        if row[0] is not None:
+            requests_by_day_of_week[day_names[int(row[0])]] = row[1]
+    for day in day_names:
+        if day not in requests_by_day_of_week:
+            requests_by_day_of_week[day] = 0
+    
+    # Requests by month (last 12 months)
+    month_query = select(
+        func.to_char(ServiceRequest.requested_datetime, 'YYYY-MM').label('month'),
+        func.count(ServiceRequest.id)
+    ).where(
+        ServiceRequest.deleted_at.is_(None),
+        ServiceRequest.requested_datetime >= now - timedelta(days=365)
+    ).group_by('month').order_by('month')
+    month_result = await db.execute(month_query)
+    requests_by_month = {row[0]: row[1] for row in month_result.all() if row[0]}
+    
+    # Average resolution hours by category
+    resolution_query = select(
+        ServiceRequest.service_name,
+        func.avg(
+            extract('epoch', ServiceRequest.closed_datetime - ServiceRequest.requested_datetime) / 3600
+        ).label('avg_hours')
+    ).where(
+        ServiceRequest.deleted_at.is_(None),
+        ServiceRequest.status == "closed",
+        ServiceRequest.closed_datetime.isnot(None)
+    ).group_by(ServiceRequest.service_name)
+    resolution_result = await db.execute(resolution_query)
+    avg_resolution_hours_by_category = {
+        row[0]: round(float(row[1]), 2) if row[1] else 0 
+        for row in resolution_result.all() if row[0]
+    }
+    
+    # ========== Geospatial Analytics (PostGIS) ==========
+    
+    # Hotspot detection using PostGIS ST_ClusterDBSCAN
+    # Cluster points within 500m with minimum 3 points per cluster
+    hotspots = []
+    try:
+        hotspot_query = text("""
+            WITH clustered AS (
+                SELECT 
+                    lat, long,
+                    ST_ClusterDBSCAN(location, eps := 0.005, minpoints := 2) OVER () as cluster_id
+                FROM service_requests
+                WHERE deleted_at IS NULL 
+                AND location IS NOT NULL
+            )
+            SELECT 
+                AVG(lat) as center_lat,
+                AVG(long) as center_lng,
+                COUNT(*) as point_count,
+                cluster_id
+            FROM clustered
+            WHERE cluster_id IS NOT NULL
+            GROUP BY cluster_id
+            ORDER BY point_count DESC
+            LIMIT 20
+        """)
+        hotspot_result = await db.execute(hotspot_query)
+        for row in hotspot_result.mappings().all():
+            hotspots.append(HotspotData(
+                lat=float(row['center_lat']),
+                lng=float(row['center_lng']),
+                count=int(row['point_count']),
+                cluster_id=int(row['cluster_id'])
+            ))
+    except Exception as e:
+        print(f"Hotspot query failed (PostGIS may not be enabled): {e}")
+    
+    # Geographic center
+    center_query = select(
+        func.avg(ServiceRequest.lat),
+        func.avg(ServiceRequest.long)
+    ).where(
+        ServiceRequest.deleted_at.is_(None),
+        ServiceRequest.lat.isnot(None),
+        ServiceRequest.long.isnot(None)
+    )
+    center_result = await db.execute(center_query)
+    center_row = center_result.one_or_none()
+    geographic_center = None
+    if center_row and center_row[0] and center_row[1]:
+        geographic_center = {"lat": float(center_row[0]), "lng": float(center_row[1])}
+    
+    # Geographic spread (standard deviation in km)
+    geographic_spread_km = None
+    try:
+        spread_query = text("""
+            SELECT 
+                STDDEV(ST_Distance(
+                    location::geography,
+                    (SELECT ST_Centroid(ST_Collect(location))::geography FROM service_requests WHERE deleted_at IS NULL AND location IS NOT NULL)
+                )) / 1000 as spread_km
+            FROM service_requests
+            WHERE deleted_at IS NULL AND location IS NOT NULL
+        """)
+        spread_result = await db.execute(spread_query)
+        spread_row = spread_result.scalar()
+        if spread_row:
+            geographic_spread_km = round(float(spread_row), 2)
+    except Exception:
+        pass
+    
+    # ========== Department Analytics ==========
+    
+    dept_result = await db.execute(select(Department))
+    departments = dept_result.scalars().all()
+    
+    department_metrics = []
+    for dept in departments:
+        dept_total = await db.execute(
+            select(func.count(ServiceRequest.id)).where(
+                ServiceRequest.deleted_at.is_(None),
+                ServiceRequest.assigned_department_id == dept.id
+            )
+        )
+        dept_total_count = dept_total.scalar() or 0
+        
+        dept_open = await db.execute(
+            select(func.count(ServiceRequest.id)).where(
+                ServiceRequest.deleted_at.is_(None),
+                ServiceRequest.assigned_department_id == dept.id,
+                ServiceRequest.status == "open"
+            )
+        )
+        dept_open_count = dept_open.scalar() or 0
+        
+        dept_closed = await db.execute(
+            select(func.count(ServiceRequest.id)).where(
+                ServiceRequest.deleted_at.is_(None),
+                ServiceRequest.assigned_department_id == dept.id,
+                ServiceRequest.status == "closed"
+            )
+        )
+        dept_closed_count = dept_closed.scalar() or 0
+        
+        # Average resolution time for department
+        dept_resolution = await db.execute(
+            select(func.avg(
+                extract('epoch', ServiceRequest.closed_datetime - ServiceRequest.requested_datetime) / 3600
+            )).where(
+                ServiceRequest.deleted_at.is_(None),
+                ServiceRequest.assigned_department_id == dept.id,
+                ServiceRequest.status == "closed",
+                ServiceRequest.closed_datetime.isnot(None)
+            )
+        )
+        dept_avg_hours = dept_resolution.scalar()
+        
+        department_metrics.append(DepartmentMetrics(
+            name=dept.name,
+            total_requests=dept_total_count,
+            open_requests=dept_open_count,
+            avg_resolution_hours=round(float(dept_avg_hours), 2) if dept_avg_hours else None,
+            resolution_rate=round(dept_closed_count / dept_total_count * 100, 1) if dept_total_count > 0 else 0
+        ))
+    
+    # Top staff by resolutions
+    staff_query = select(
+        ServiceRequest.assigned_to,
+        func.count(ServiceRequest.id)
+    ).where(
+        ServiceRequest.deleted_at.is_(None),
+        ServiceRequest.status == "closed",
+        ServiceRequest.assigned_to.isnot(None),
+        ServiceRequest.assigned_to != ""
+    ).group_by(ServiceRequest.assigned_to).order_by(func.count(ServiceRequest.id).desc()).limit(10)
+    staff_result = await db.execute(staff_query)
+    top_staff_by_resolutions = {row[0]: row[1] for row in staff_result.all() if row[0]}
+    
+    # ========== Performance Metrics ==========
+    
+    # Average resolution time overall
+    overall_resolution = await db.execute(
+        select(func.avg(
+            extract('epoch', ServiceRequest.closed_datetime - ServiceRequest.requested_datetime) / 3600
+        )).where(
+            ServiceRequest.deleted_at.is_(None),
+            ServiceRequest.status == "closed",
+            ServiceRequest.closed_datetime.isnot(None)
+        )
+    )
+    avg_resolution_hours = overall_resolution.scalar()
+    if avg_resolution_hours:
+        avg_resolution_hours = round(float(avg_resolution_hours), 2)
+    
+    # Backlog by age
+    backlog_by_age = {"<1 day": 0, "1-3 days": 0, "3-7 days": 0, "1-2 weeks": 0, ">2 weeks": 0}
+    open_requests_query = select(ServiceRequest.requested_datetime).where(
+        ServiceRequest.deleted_at.is_(None),
+        ServiceRequest.status.in_(["open", "in_progress"])
+    )
+    open_requests_result = await db.execute(open_requests_query)
+    for row in open_requests_result.all():
+        if row[0]:
+            age = now - row[0].replace(tzinfo=None)
+            if age < timedelta(days=1):
+                backlog_by_age["<1 day"] += 1
+            elif age < timedelta(days=3):
+                backlog_by_age["1-3 days"] += 1
+            elif age < timedelta(days=7):
+                backlog_by_age["3-7 days"] += 1
+            elif age < timedelta(days=14):
+                backlog_by_age["1-2 weeks"] += 1
+            else:
+                backlog_by_age[">2 weeks"] += 1
+    
+    # Resolution rate
+    resolution_rate = round(closed_count / total_count * 100, 1) if total_count > 0 else 0
+    
+    # Category distribution
+    category_query = select(
+        ServiceRequest.service_name,
+        func.count(ServiceRequest.id)
+    ).where(ServiceRequest.deleted_at.is_(None)).group_by(ServiceRequest.service_name)
+    category_result = await db.execute(category_query)
+    requests_by_category = {row[0]: row[1] for row in category_result.all() if row[0]}
+    
+    # Flagged count
+    flagged_result = await db.execute(
+        select(func.count(ServiceRequest.id)).where(
+            ServiceRequest.deleted_at.is_(None),
+            ServiceRequest.flagged == True
+        )
+    )
+    flagged_count = flagged_result.scalar() or 0
+    
+    # ========== Trends ==========
+    
+    # Weekly trend (last 8 weeks)
+    weekly_trend = []
+    for i in range(7, -1, -1):
+        week_start = now - timedelta(weeks=i+1)
+        week_end = now - timedelta(weeks=i)
+        week_label = f"W{8-i}"
+        
+        week_stats = {"period": week_label, "open": 0, "in_progress": 0, "closed": 0, "total": 0}
+        for status in ["open", "in_progress", "closed"]:
+            count_result = await db.execute(
+                select(func.count(ServiceRequest.id)).where(
+                    ServiceRequest.deleted_at.is_(None),
+                    ServiceRequest.status == status,
+                    ServiceRequest.requested_datetime >= week_start,
+                    ServiceRequest.requested_datetime < week_end
+                )
+            )
+            week_stats[status] = count_result.scalar() or 0
+        week_stats["total"] = week_stats["open"] + week_stats["in_progress"] + week_stats["closed"]
+        weekly_trend.append(TrendData(**week_stats))
+    
+    # Monthly trend (last 6 months)
+    monthly_trend = []
+    for i in range(5, -1, -1):
+        month_start = (now.replace(day=1) - timedelta(days=30*i)).replace(day=1)
+        if i > 0:
+            month_end = (now.replace(day=1) - timedelta(days=30*(i-1))).replace(day=1)
+        else:
+            month_end = now
+        month_label = month_start.strftime("%b")
+        
+        month_stats = {"period": month_label, "open": 0, "in_progress": 0, "closed": 0, "total": 0}
+        for status in ["open", "in_progress", "closed"]:
+            count_result = await db.execute(
+                select(func.count(ServiceRequest.id)).where(
+                    ServiceRequest.deleted_at.is_(None),
+                    ServiceRequest.status == status,
+                    ServiceRequest.requested_datetime >= month_start,
+                    ServiceRequest.requested_datetime < month_end
+                )
+            )
+            month_stats[status] = count_result.scalar() or 0
+        month_stats["total"] = month_stats["open"] + month_stats["in_progress"] + month_stats["closed"]
+        monthly_trend.append(TrendData(**month_stats))
+    
+    # Build response
+    response_data = AdvancedStatisticsResponse(
+        total_requests=total_count,
+        open_requests=open_count,
+        in_progress_requests=in_progress_count,
+        closed_requests=closed_count,
+        requests_by_hour=requests_by_hour,
+        requests_by_day_of_week=requests_by_day_of_week,
+        requests_by_month=requests_by_month,
+        avg_resolution_hours_by_category=avg_resolution_hours_by_category,
+        hotspots=hotspots,
+        geographic_center=geographic_center,
+        geographic_spread_km=geographic_spread_km,
+        requests_density_by_zone={},
+        department_metrics=department_metrics,
+        top_staff_by_resolutions=top_staff_by_resolutions,
+        avg_resolution_hours=avg_resolution_hours,
+        avg_first_response_hours=None,  # Would need audit log analysis
+        backlog_by_age=backlog_by_age,
+        resolution_rate=resolution_rate,
+        requests_by_category=requests_by_category,
+        flagged_count=flagged_count,
+        weekly_trend=weekly_trend,
+        monthly_trend=monthly_trend,
+        cached_at=now
+    )
+    
+    # Cache the result
+    try:
+        if redis_client:
+            cache_data = response_data.model_dump()
+            cache_data["cached_at"] = now.isoformat()
+            await redis_client.setex(cache_key, STATS_CACHE_TTL, json.dumps(cache_data, default=str))
+    except Exception:
+        pass
+    
+    return response_data
+
+
 # ============ System Update ============
+
 
 @router.post("/update")
 async def update_system(_: User = Depends(get_current_admin)):

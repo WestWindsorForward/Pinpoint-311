@@ -9,6 +9,7 @@ import {
     SystemSettings,
     SystemSecret,
     Statistics,
+    AdvancedStatistics,
     UserCreate,
     ServiceCreate,
     Department,
@@ -296,6 +297,11 @@ class ApiClient {
     // Statistics
     async getStatistics(): Promise<Statistics> {
         return this.request<Statistics>('/system/statistics');
+    }
+
+    // Advanced Statistics (PostGIS-powered)
+    async getAdvancedStatistics(): Promise<AdvancedStatistics> {
+        return this.request<AdvancedStatistics>('/system/advanced-statistics');
     }
 
     // System Update (Admin)

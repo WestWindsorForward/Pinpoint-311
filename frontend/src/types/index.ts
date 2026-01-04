@@ -250,6 +250,70 @@ export interface Statistics {
     recent_requests: ServiceRequest[];
 }
 
+export interface HotspotData {
+    lat: number;
+    lng: number;
+    count: number;
+    cluster_id: number;
+}
+
+export interface TrendData {
+    period: string;
+    open: number;
+    in_progress: number;
+    closed: number;
+    total: number;
+}
+
+export interface DepartmentMetrics {
+    name: string;
+    total_requests: number;
+    open_requests: number;
+    avg_resolution_hours: number | null;
+    resolution_rate: number;
+}
+
+export interface AdvancedStatistics {
+    // Summary counts
+    total_requests: number;
+    open_requests: number;
+    in_progress_requests: number;
+    closed_requests: number;
+
+    // Temporal analytics
+    requests_by_hour: Record<number, number>;
+    requests_by_day_of_week: Record<string, number>;
+    requests_by_month: Record<string, number>;
+    avg_resolution_hours_by_category: Record<string, number>;
+
+    // Geospatial analytics (PostGIS)
+    hotspots: HotspotData[];
+    geographic_center: { lat: number; lng: number } | null;
+    geographic_spread_km: number | null;
+    requests_density_by_zone: Record<string, number>;
+
+    // Department analytics
+    department_metrics: DepartmentMetrics[];
+    top_staff_by_resolutions: Record<string, number>;
+
+    // Performance metrics
+    avg_resolution_hours: number | null;
+    avg_first_response_hours: number | null;
+    backlog_by_age: Record<string, number>;
+    resolution_rate: number;
+
+    // Category analytics
+    requests_by_category: Record<string, number>;
+    flagged_count: number;
+
+    // Trends
+    weekly_trend: TrendData[];
+    monthly_trend: TrendData[];
+
+    // Cache info
+    cached_at: string | null;
+}
+
 // Auth types
 export interface LoginCredentials {
     username: string;

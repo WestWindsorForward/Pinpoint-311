@@ -318,6 +318,70 @@ class StatisticsResponse(BaseModel):
     recent_requests: List[ServiceRequestResponse]
 
 
+class HotspotData(BaseModel):
+    lat: float
+    lng: float
+    count: int
+    cluster_id: int
+
+
+class TrendData(BaseModel):
+    period: str
+    open: int
+    in_progress: int
+    closed: int
+    total: int
+
+
+class DepartmentMetrics(BaseModel):
+    name: str
+    total_requests: int
+    open_requests: int
+    avg_resolution_hours: Optional[float]
+    resolution_rate: float
+
+
+class AdvancedStatisticsResponse(BaseModel):
+    # Summary counts
+    total_requests: int
+    open_requests: int
+    in_progress_requests: int
+    closed_requests: int
+    
+    # Temporal analytics
+    requests_by_hour: Dict[int, int]  # {0: 5, 1: 2, ..., 23: 8}
+    requests_by_day_of_week: Dict[str, int]  # {"Monday": 10, ...}
+    requests_by_month: Dict[str, int]  # {"2024-01": 50, ...}
+    avg_resolution_hours_by_category: Dict[str, float]
+    
+    # Geospatial analytics (PostGIS)
+    hotspots: List[HotspotData]
+    geographic_center: Optional[Dict[str, float]]  # {lat, lng}
+    geographic_spread_km: Optional[float]  # Standard deviation of request locations
+    requests_density_by_zone: Dict[str, int]  # If zones are defined
+    
+    # Department analytics
+    department_metrics: List[DepartmentMetrics]
+    top_staff_by_resolutions: Dict[str, int]  # {username: count}
+    
+    # Performance metrics
+    avg_resolution_hours: Optional[float]
+    avg_first_response_hours: Optional[float]
+    backlog_by_age: Dict[str, int]  # {"<1 day": 5, "1-3 days": 8, ...}
+    resolution_rate: float  # Closed / Total
+    
+    # Category analytics
+    requests_by_category: Dict[str, int]
+    flagged_count: int
+    
+    # Trends
+    weekly_trend: List[TrendData]
+    monthly_trend: List[TrendData]
+    
+    # Cache info
+    cached_at: Optional[datetime] = None
+
+
 # ============ Map Layers ============
 class MapLayerBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
