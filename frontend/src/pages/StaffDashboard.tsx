@@ -261,6 +261,21 @@ export default function StaffDashboard() {
         }
     }, [selectedRequest, currentView, updateHash, updateTitle]);
 
+    // Lock body scroll when mobile overlay is open to prevent scroll bleed-through
+    useEffect(() => {
+        if (selectedRequest && window.innerWidth < 1024) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none';
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+        };
+    }, [selectedRequest]);
+
     const loadInitialData = async () => {
         setIsLoading(true);
         try {
@@ -1182,7 +1197,7 @@ export default function StaffDashboard() {
                         </div>
 
                         {/* Detail Panel - Shows as overlay on mobile, side panel on desktop */}
-                        <div className={`${selectedRequest ? 'fixed inset-0 z-50 lg:relative lg:inset-auto' : 'hidden'} lg:flex flex-1 flex-col bg-slate-900`}>
+                        <div className={`${selectedRequest ? 'fixed inset-0 z-50 lg:relative lg:inset-auto overflow-y-auto overscroll-contain touch-pan-y' : 'hidden'} lg:flex flex-1 flex-col bg-slate-900`}>
                             {/* Mobile Back Button */}
                             {selectedRequest && (
                                 <div className="lg:hidden p-3 border-b border-white/10 flex items-center">
