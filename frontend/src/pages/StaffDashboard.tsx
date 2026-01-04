@@ -651,11 +651,11 @@ export default function StaffDashboard() {
 
                 {/* Statistics View - Clean Government Design */}
                 {currentView === 'statistics' && (
-                    <div className="flex-1 p-8 overflow-auto bg-gray-50">
+                    <div className="flex-1 p-8 overflow-auto bg-gradient-to-br from-gray-50 to-purple-50">
                         <div className="max-w-7xl mx-auto space-y-6">
                             {/* Header */}
                             <div className="mb-6">
-                                <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+                                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Analytics Dashboard</h1>
                                 {advancedStats?.cached_at && (
                                     <p className="text-sm text-gray-500 mt-1">
                                         Last updated: {new Date(advancedStats.cached_at).toLocaleString()}
@@ -663,9 +663,40 @@ export default function StaffDashboard() {
                                 )}
                             </div>
 
+                            {/* Basic Statistics Overview */}
+                            <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
+                                <h2 className="text-xl font-bold text-gray-900 mb-4">📊 Overview</h2>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                    <div>
+                                        <div className="text-sm font-medium text-gray-600">Total Requests (All Time)</div>
+                                        <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mt-1">
+                                            {advancedStats?.total_requests || 0}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-medium text-gray-600">Open</div>
+                                        <div className="text-2xl font-bold text-orange-600 mt-1">
+                                            {advancedStats?.open_requests || 0}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-medium text-gray-600">In Progress</div>
+                                        <div className="text-2xl font-bold text-blue-600 mt-1">
+                                            {advancedStats?.in_progress_requests || 0}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-medium text-gray-600">Closed</div>
+                                        <div className="text-2xl font-bold text-green-600 mt-1">
+                                            {advancedStats?.closed_requests || 0}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Top KPIs - Government Focused */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+                                <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
                                     <div className="text-sm font-medium text-gray-600">Estimated Cost (Open)</div>
                                     <div className="text-3xl font-bold text-blue-600 mt-2">
                                         ${(advancedStats?.cost_estimates
@@ -708,8 +739,18 @@ export default function StaffDashboard() {
 
                             {/* Predictive Insights Panel */}
                             {advancedStats?.predictive_insights && (
-                                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow p-6 border border-purple-200">
-                                    <h2 className="text-lg font-semibold text-gray-900 mb-4">🔮 Predictive Insights</h2>
+                                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-lg p-6 border border-purple-300">
+                                    <div className="mb-4">
+                                        <h2 className="text-xl font-bold text-gray-900">🔮 Predictive Insights</h2>
+                                        <div className="mt-2 bg-white/60 rounded p-3 border border-purple-200">
+                                            <p className="text-sm text-gray-800 font-medium mb-1">📊 How Predictions Work:</p>
+                                            <p className="text-xs text-gray-700 leading-relaxed">
+                                                <strong>Volume Forecast:</strong> Calculated using a 4-week moving average of your recent request history.
+                                                We analyze the past 4 weeks of data and project the trend forward.<br />
+                                                <strong>Peak Activity:</strong> Based on historical patterns showing which day/month consistently receives the most requests.
+                                            </p>
+                                        </div>
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div>
                                             <div className="text-sm font-medium text-gray-700">Volume Forecast</div>
@@ -738,24 +779,34 @@ export default function StaffDashboard() {
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Cost Breakdown */}
-                                <div className="bg-white rounded-lg shadow p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">💰 Cost Breakdown</h3>
+                                <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
+                                    <div className="mb-4">
+                                        <h3 className="text-lg font-bold text-gray-900">💰 Cost Breakdown</h3>
+                                        <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                            <p className="text-sm text-gray-800 font-medium mb-2">💡 How Costs Are Calculated:</p>
+                                            <div className="text-xs text-gray-700 space-y-1">
+                                                <p><strong>Formula:</strong> (Open Tickets) × (Avg Hours per Ticket) × (Hourly Labor Rate)</p>
+                                                <p><strong>Example:</strong> 5 tickets × 26.48 hours × $50/hr = <strong>$6,620</strong></p>
+                                                <p className="mt-2"><strong>Labor Rates:</strong> Pothole $50/hr • Street Repair $75/hr • Sewer/Water $85/hr • Traffic Signal $65/hr • Default $55/hr</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                     {advancedStats?.cost_estimates && advancedStats.cost_estimates.length > 0 ? (
-                                        <div className="space-y-3">
+                                        <div className="space-y-4">
                                             {advancedStats.cost_estimates.slice(0, 6).map((cost, idx) => (
-                                                <div key={idx} className="flex items-center justify-between border-b border-gray-100 pb-2">
+                                                <div key={idx} className="flex items-center justify-between border-b border-gray-100 pb-3 hover:bg-purple-50 px-2 rounded transition">
                                                     <div className="flex-1">
                                                         <div className="text-sm font-medium text-gray-900">{cost.category}</div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {cost.open_tickets} open × {cost.avg_hours}h avg
+                                                        <div className="text-xs text-gray-600 mt-1">
+                                                            {cost.open_tickets} open × {cost.avg_hours.toFixed(2)}h avg × ${(cost.estimated_cost / cost.avg_hours).toFixed(0)}/hr
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="text-lg font-bold text-blue-600">
+                                                        <div className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                                                             ${cost.total_estimated_cost.toLocaleString()}
                                                         </div>
                                                         <div className="text-xs text-gray-500">
-                                                            ${cost.estimated_cost}/ticket
+                                                            ${cost.estimated_cost.toFixed(2)}/ticket
                                                         </div>
                                                     </div>
                                                 </div>
@@ -771,29 +822,29 @@ export default function StaffDashboard() {
                                     <h3 className="text-lg font-semibold text-gray-900 mb-4">🚨 Priority Backlog</h3>
                                     <div className="h-64">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart 
+                                            <BarChart
                                                 data={Object.entries(advancedStats?.backlog_by_priority || {})
                                                     .filter(([_, count]) => count > 0)
-                                                    .map(([priority, count]) => ({ 
+                                                    .map(([priority, count]) => ({
                                                         priority: `P${priority}`,
                                                         count
                                                     }))}
                                                 layout="horizontal"
                                             >
-                                                <XAxis 
+                                                <XAxis
                                                     type="number"
                                                     stroke="#6b7280"
                                                     style={{ fontSize: '12px' }}
                                                 />
-                                                <YAxis 
+                                                <YAxis
                                                     type="category"
                                                     dataKey="priority"
                                                     stroke="#6b7280"
                                                     style={{ fontSize: '12px' }}
                                                 />
-                                                <Tooltip 
-                                                    contentStyle={{ 
-                                                        backgroundColor: 'white', 
+                                                <Tooltip
+                                                    contentStyle={{
+                                                        backgroundColor: 'white',
                                                         border: '1px solid #e5e7eb'
                                                     }}
                                                 />
@@ -801,6 +852,23 @@ export default function StaffDashboard() {
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Requests by Category */}
+                            <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">📋 Requests by Category</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {Object.entries(advancedStats?.requests_by_category || {})
+                                        .sort(([, a], [, b]) => (b as number) - (a as number))
+                                        .map(([category, count]) => (
+                                            <div key={category} className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-200 hover:shadow-md transition">
+                                                <div className="text-sm font-medium text-gray-900 truncate">{category}</div>
+                                                <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mt-1">
+                                                    {count as number}
+                                                </div>
+                                            </div>
+                                        ))}
                                 </div>
                             </div>
 
@@ -824,6 +892,26 @@ export default function StaffDashboard() {
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Staff Performance */}
+                            {advancedStats?.top_staff_by_resolutions && Object.keys(advancedStats.top_staff_by_resolutions).length > 0 && (
+                                <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-4">⭐ Top Staff by Resolutions</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {Object.entries(advancedStats.top_staff_by_resolutions)
+                                            .sort(([, a], [, b]) => (b as number) - (a as number))
+                                            .slice(0, 9)
+                                            .map(([staff, count]) => (
+                                                <div key={staff} className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                                                    <span className="text-sm font-medium text-gray-900 truncate flex-1">{staff}</span>
+                                                    <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold ml-2">
+                                                        {count as number}
+                                                    </span>
+                                                </div>
+                                            ))}
                                     </div>
                                 </div>
                             )}
@@ -854,26 +942,26 @@ export default function StaffDashboard() {
                                 <div className="h-64">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={advancedStats?.weekly_trend || []}>
-                                            <XAxis 
+                                            <XAxis
                                                 dataKey="period"
                                                 stroke="#6b7280"
                                                 style={{ fontSize: '12px' }}
                                             />
-                                            <YAxis 
+                                            <YAxis
                                                 stroke="#6b7280"
                                                 style={{ fontSize: '12px' }}
                                             />
-                                            <Tooltip 
-                                                contentStyle={{ 
-                                                    backgroundColor: 'white', 
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'white',
                                                     border: '1px solid #e5e7eb'
                                                 }}
                                             />
-                                            <Area 
-                                                type="monotone" 
-                                                dataKey="total" 
-                                                stroke="#3b82f6" 
-                                                fill="#93c5fd" 
+                                            <Area
+                                                type="monotone"
+                                                dataKey="total"
+                                                stroke="#3b82f6"
+                                                fill="#93c5fd"
                                                 fillOpacity={0.6}
                                             />
                                         </AreaChart>
