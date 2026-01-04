@@ -489,7 +489,8 @@ async def get_advanced_statistics(
             else:
                 backlog_by_age[">2 weeks"] += 1
     
-    # Resolution rate
+    # Resolution rate (fixed: proper completion rate)
+    # This is the percentage of all requests that have been successfully closed
     resolution_rate = round(closed_count / total_count * 100, 1) if total_count > 0 else 0
     
     # Category distribution
@@ -508,6 +509,57 @@ async def get_advanced_statistics(
         )
     )
     flagged_count = flagged_result.scalar() or 0
+    
+    # ========== Infrastructure Metrics ==========
+    
+    # Backlog by priority (current open + in_progress)
+    priority_query = select(
+        ServiceRequest.priority,
+        func.count(ServiceRequest.id)
+    ).where(
+        ServiceRequest.deleted_at.is_(None),
+        ServiceRequest.status.in_(["open", "in_progress"])
+    ).group_by(ServiceRequest.priority)
+    priority_result = await db.execute(priority_query)
+    backlog_by_priority = {int(row[0]): row[1] for row in priority_result.all() if row[0]}
+    # Ensure all priorities 1-10 are represented
+    for p in range(1, 11):
+        if p not in backlog_by_priority:
+            backlog_by_priority[p] = 0
+    
+    # Current workload by staff (active assignments)
+    workload_query = select(
+        ServiceRequest.assigned_to,
+        func.count(ServiceRequest.id)
+    ).where(
+        ServiceRequest.deleted_at.is_(None),
+        ServiceRequest.status.in_(["open", "in_progress"]),
+        ServiceRequest.assigned_to.isnot(None),
+        ServiceRequest.assigned_to != ""
+    ).group_by(ServiceRequest.assigned_to)
+    workload_result = await db.execute(workload_query)
+    workload_by_staff = {row[0]: row[1] for row in workload_result.all() if row[0]}
+    
+    # SLA tracking (open requests only, by age)
+    open_by_age_sla = {"<1 day": 0, "1-3 days": 0, "3-7 days": 0, "1-2 weeks": 0, ">2 weeks": 0}
+    open_only_query = select(ServiceRequest.requested_datetime).where(
+        ServiceRequest.deleted_at.is_(None),
+        ServiceRequest.status == "open"  # Only "open" status, not in_progress
+    )
+    open_only_result = await db.execute(open_only_query)
+    for row in open_only_result.all():
+        if row[0]:
+            age = now - row[0].replace(tzinfo=None)
+            if age < timedelta(days=1):
+                open_by_age_sla["<1 day"] += 1
+            elif age < timedelta(days=3):
+                open_by_age_sla["1-3 days"] += 1
+            elif age < timedelta(days=7):
+                open_by_age_sla["3-7 days"] += 1
+            elif age < timedelta(days=14):
+                open_by_age_sla["1-2 weeks"] += 1
+            else:
+                open_by_age_sla[">2 weeks"] += 1
     
     # ========== Trends ==========
     
@@ -576,6 +628,9 @@ async def get_advanced_statistics(
         avg_first_response_hours=None,  # Would need audit log analysis
         backlog_by_age=backlog_by_age,
         resolution_rate=resolution_rate,
+        backlog_by_priority=backlog_by_priority,
+        workload_by_staff=workload_by_staff,
+        open_by_age_sla=open_by_age_sla,
         requests_by_category=requests_by_category,
         flagged_count=flagged_count,
         weekly_trend=weekly_trend,

@@ -370,6 +370,11 @@ class AdvancedStatisticsResponse(BaseModel):
     backlog_by_age: Dict[str, int]  # {"<1 day": 5, "1-3 days": 8, ...}
     resolution_rate: float  # Closed / Total
     
+    # Infrastructure-focused metrics
+    backlog_by_priority: Dict[int, int]  # {1: 5, 2: 10, ...} - Current open/in_progress by priority
+    workload_by_staff: Dict[str, int]  # {username: active_count} - Current assignments
+    open_by_age_sla: Dict[str, int]  # Same as backlog_by_age but only "open" status for SLA tracking
+    
     # Category analytics
     requests_by_category: Dict[str, int]
     flagged_count: int
@@ -380,6 +385,7 @@ class AdvancedStatisticsResponse(BaseModel):
     
     # Cache info
     cached_at: Optional[datetime] = None
+
 
 
 # ============ Map Layers ============

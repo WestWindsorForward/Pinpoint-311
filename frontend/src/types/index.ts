@@ -302,6 +302,11 @@ export interface AdvancedStatistics {
     backlog_by_age: Record<string, number>;
     resolution_rate: number;
 
+    // Infrastructure-focused metrics
+    backlog_by_priority: Record<number, number>;
+    workload_by_staff: Record<string, number>;
+    open_by_age_sla: Record<string, number>;
+
     // Category analytics
     requests_by_category: Record<string, number>;
     flagged_count: number;

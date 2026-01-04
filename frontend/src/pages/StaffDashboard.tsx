@@ -666,7 +666,7 @@ export default function StaffDashboard() {
                             </div>
 
                             {/* Performance KPI Cards */}
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                                 <Card className="text-center">
                                     <p className="text-3xl font-bold text-white">{advancedStats?.total_requests || 0}</p>
                                     <p className="text-white/60 text-sm">Total Requests</p>
@@ -682,7 +682,7 @@ export default function StaffDashboard() {
                                 <Card className="text-center border-purple-500/30">
                                     <p className="text-3xl font-bold text-purple-400">
                                         {advancedStats?.resolution_rate
-                                            ? `${(advancedStats.resolution_rate * 100).toFixed(1)}%`
+                                            ? `${advancedStats.resolution_rate.toFixed(1)}%`
                                             : 'N/A'}
                                     </p>
                                     <p className="text-white/60 text-sm">Resolution Rate</p>
@@ -694,6 +694,13 @@ export default function StaffDashboard() {
                                             : 'N/A'}
                                     </p>
                                     <p className="text-white/60 text-sm">Geographic Spread</p>
+                                </Card>
+                                <Card className="text-center border-red-500/50 bg-red-500/5">
+                                    <p className="text-3xl font-bold text-red-400">
+                                        {advancedStats?.open_by_age_sla?.['>2 weeks'] || 0}
+                                    </p>
+                                    <p className="text-white/60 text-sm">⚠️ SLA Breaches</p>
+                                    <p className="text-xs text-white/40">(Open &gt; 14 days)</p>
                                 </Card>
                             </div>
 
@@ -794,9 +801,9 @@ export default function StaffDashboard() {
                                                     className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
                                                 >
                                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
-                                                            index === 1 ? 'bg-gray-400/20 text-gray-300' :
-                                                                index === 2 ? 'bg-orange-600/20 text-orange-400' :
-                                                                    'bg-blue-500/20 text-blue-400'
+                                                        index === 1 ? 'bg-gray-400/20 text-gray-300' :
+                                                            index === 2 ? 'bg-orange-600/20 text-orange-400' :
+                                                                'bg-blue-500/20 text-blue-400'
                                                         }`}>
                                                         {index + 1}
                                                     </div>
@@ -841,37 +848,130 @@ export default function StaffDashboard() {
                                 </Card>
                             </div>
 
-                            {/* Geospatial Hotspots Summary */}
-                            {advancedStats?.hotspots && advancedStats.hotspots.length > 0 && (
-                                <Card>
-                                    <h3 className="text-lg font-semibold text-white mb-4">🗺️ Geographic Hotspots (PostGIS DBSCAN)</h3>
-                                    <p className="text-sm text-white/50 mb-4">
-                                        Statistically significant incident clusters detected within ~500m radius
-                                    </p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {advancedStats.hotspots.slice(0, 6).map((hotspot, index) => (
-                                            <div
-                                                key={hotspot.cluster_id}
-                                                className="p-4 rounded-lg bg-red-500/10 border border-red-500/30"
-                                            >
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <div>
-                                                        <p className="text-sm text-white/60">Cluster #{hotspot.cluster_id}</p>
-                                                        <p className="text-2xl font-bold text-red-400">{hotspot.count}</p>
-                                                        <p className="text-xs text-white/40">incidents</p>
+                            {/* Geospatial Hotspots (PostGIS DBSCAN) - Always show with empty state */}
+                            <Card>
+                                <h3 className="text-lg font-semibold text-white mb-4">🗺️ Geographic Hotspots (PostGIS DBSCAN)</h3>
+                                {advancedStats?.hotspots && advancedStats.hotspots.length > 0 ? (
+                                    <>
+                                        <p className="text-sm text-white/60 mb-4">
+                                            Statistically significant clusters detected within ~500m radius (minimum 2 incidents)
+                                        </p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {advancedStats.hotspots.slice(0, 6).map((hotspot) => (
+                                                <div
+                                                    key={hotspot.cluster_id}
+                                                    className="p-4 rounded-lg bg-red-500/10 border border-red-500/30"
+                                                >
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <div>
+                                                            <p className="text-sm text-white/60">Cluster #{hotspot.cluster_id}</p>
+                                                            <p className="text-2xl font-bold text-red-400">{hotspot.count}</p>
+                                                            <p className="text-xs text-white/40">incidents</p>
+                                                        </div>
+                                                        <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                                                            <MapPin className="w-5 h-5 text-red-400" />
+                                                        </div>
                                                     </div>
-                                                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
-                                                        <MapPin className="w-5 h-5 text-red-400" />
+                                                    <p className="text-xs text-white/40">
+                                                        {hotspot.lat.toFixed(4)}, {hotspot.lng.toFixed(4)}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="py-12 text-center">
+                                        <MapPin className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                                        <p className="text-white/40">
+                                            No clusters detected. Hotspots appear when 2+ incidents occur within 500m radius.
+                                        </p>
+                                        <p className="text-xs text-white/30 mt-2">
+                                            PostGIS spatial analysis requires location data on service requests.
+                                        </p>
+                                    </div>
+                                )}
+                            </Card>
+
+                            {/* Priority Backlog (Infrastructure Focus) */}
+                            <Card>
+                                <h3 className="text-lg font-semibold text-white mb-4">🚨 Current Backlog by Priority</h3>
+                                <p className="text-sm text-white/60 mb-4">
+                                    Open and in-progress tickets by priority level (1=Critical, 10=Low)
+                                </p>
+                                <div className="h-64">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            data={Object.entries(advancedStats?.backlog_by_priority || {})
+                                                .filter(([_, count]) => count > 0)
+                                                .map(([priority, count]) => ({
+                                                    priority: `P${priority}`,
+                                                    count,
+                                                    priorityNum: parseInt(priority)
+                                                }))
+                                                .sort((a, b) => a.priorityNum - b.priorityNum)}
+                                            layout="horizontal"
+                                        >
+                                            <XAxis
+                                                type="number"
+                                                stroke="#ffffff40"
+                                                style={{ fontSize: '12px' }}
+                                            />
+                                            <YAxis
+                                                type="category"
+                                                dataKey="priority"
+                                                stroke="#ffffff40"
+                                                style={{ fontSize: '12px' }}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: '#1e293b',
+                                                    border: '1px solid #334155',
+                                                    borderRadius: '8px'
+                                                }}
+                                                labelStyle={{ color: '#fff' }}
+                                            />
+                                            <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </Card>
+
+                            {/* Current Workload Distribution */}
+                            <Card>
+                                <h3 className="text-lg font-semibold text-white mb-4">👷 Current Workload by Staff</h3>
+                                <p className="text-sm text-white/60 mb-4">
+                                    Active assignments (open + in-progress tickets)
+                                </p>
+                                {advancedStats?.workload_by_staff && Object.keys(advancedStats.workload_by_staff).length > 0 ? (
+                                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                                        {Object.entries(advancedStats.workload_by_staff)
+                                            .sort(([, a], [, b]) => (b as number) - (a as number))
+                                            .map(([staff, count]) => (
+                                                <div
+                                                    key={staff}
+                                                    className="flex items-center justify-between p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                                                >
+                                                    <span className="text-white font-medium">{staff}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="h-2 rounded-full bg-white/10 w-32">
+                                                            <div
+                                                                className="h-full rounded-full bg-primary-500"
+                                                                style={{
+                                                                    width: `${Math.min((count as number) / Math.max(...Object.values(advancedStats.workload_by_staff)) * 100, 100)}%`
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-primary-400 font-bold w-12 text-right">
+                                                            {count as number}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                                <p className="text-xs text-white/40">
-                                                    {hotspot.lat.toFixed(4)}, {hotspot.lng.toFixed(4)}
-                                                </p>
-                                            </div>
-                                        ))}
+                                            ))}
                                     </div>
-                                </Card>
-                            )}
+                                ) : (
+                                    <p className="text-white/40 text-center py-8">No active assignments</p>
+                                )}
+                            </Card>
 
                             {/* Status Distribution (Keep existing) */}
                             <Card>
