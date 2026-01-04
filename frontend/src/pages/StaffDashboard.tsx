@@ -754,13 +754,6 @@ export default function StaffDashboard() {
                                             <Search className="w-4 h-4" />
                                             {hasActiveFilters && <span className="ml-1 text-xs">•</span>}
                                         </Button>
-                                        <Button
-                                            size="sm"
-                                            leftIcon={<Plus className="w-4 h-4" />}
-                                            onClick={() => setShowIntakeModal(true)}
-                                        >
-                                            Add
-                                        </Button>
                                     </div>
                                 </div>
 

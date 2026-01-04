@@ -25,7 +25,7 @@ import {
 import { Button, Input, Textarea, Card } from '../components/ui';
 import GoogleMapsLocationPicker from '../components/GoogleMapsLocationPicker';
 import TrackRequests from '../components/TrackRequests';
-import StaffDashboardMap from '../components/StaffDashboardMap';
+import ResidentMapView from '../components/ResidentMapView';
 import { useSettings } from '../context/SettingsContext';
 import { api, MapLayer } from '../services/api';
 import { ServiceDefinition, ServiceRequestCreate, ServiceRequest } from '../types';
@@ -514,6 +514,7 @@ export default function ResidentPortal() {
                                 )}
 
                                 {/* Community Map Section */}
+                                <div className="border-t border-white/10 my-10" />
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -527,13 +528,9 @@ export default function ResidentPortal() {
                                         View all reported issues and service requests in our community
                                     </p>
                                     <div className="h-[500px] rounded-2xl overflow-hidden">
-                                        <StaffDashboardMap
+                                        <ResidentMapView
                                             apiKey={mapsApiKey || ''}
                                             requests={allRequests}
-                                            mapLayers={mapLayers}
-                                            services={services}
-                                            departments={[]}
-                                            users={[]}
                                             townshipBoundary={townshipBoundary}
                                             onRequestSelect={() => { }}
                                         />

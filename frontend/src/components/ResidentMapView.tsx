@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { MapPin, Layers, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
-import { PublicServiceRequest } from '../types';
 
 declare global {
     interface Window {
@@ -9,13 +8,27 @@ declare global {
     }
 }
 
+// Flexible request type that works with both PublicServiceRequest and ServiceRequest
+interface MapRequest {
+    service_request_id: string;
+    service_code: string;
+    service_name: string;
+    description: string;
+    status: string;
+    address: string | null;
+    lat: number | null;
+    long: number | null;
+    requested_datetime: string;
+    assigned_department_name?: string | null;
+}
+
 interface ResidentMapViewProps {
     apiKey: string;
-    requests: PublicServiceRequest[];
+    requests: MapRequest[];
     townshipBoundary?: object | null;
     defaultCenter?: { lat: number; lng: number };
     defaultZoom?: number;
-    onRequestSelect?: (request: PublicServiceRequest) => void;
+    onRequestSelect?: (request: MapRequest) => void;
 }
 
 // Status colors
