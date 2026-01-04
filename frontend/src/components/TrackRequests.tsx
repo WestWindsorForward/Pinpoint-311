@@ -27,6 +27,7 @@ type StatusFilter = 'all' | 'open' | 'in_progress' | 'closed';
 
 interface TrackRequestsProps {
     initialRequestId?: string;
+    selectedRequestId?: string | null;  // Parent-controlled: sync with hash (null = show list, string = show request)
     onRequestSelect?: (requestId: string | null) => void;  // Callback for when a request is selected/deselected
 }
 
@@ -54,7 +55,7 @@ const statusColors: Record<string, { bg: string; text: string; border: string; l
     },
 };
 
-export default function TrackRequests({ initialRequestId, onRequestSelect }: TrackRequestsProps) {
+export default function TrackRequests({ initialRequestId, selectedRequestId, onRequestSelect }: TrackRequestsProps) {
     const [requests, setRequests] = useState<PublicServiceRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -88,6 +89,20 @@ export default function TrackRequests({ initialRequestId, onRequestSelect }: Tra
             loadAuditLog(selectedRequest.service_request_id);
         }
     }, [selectedRequest]);
+
+    // Sync internal state with parent-controlled selectedRequestId (for back/forward navigation)
+    useEffect(() => {
+        if (selectedRequestId === null) {
+            // Parent says to clear selection (user navigated back)
+            setSelectedRequest(null);
+        } else if (selectedRequestId && requests.length > 0) {
+            // Parent says to select a specific request
+            const request = requests.find(r => r.service_request_id === selectedRequestId);
+            if (request && (!selectedRequest || selectedRequest.service_request_id !== selectedRequestId)) {
+                setSelectedRequest(request);
+            }
+        }
+    }, [selectedRequestId, requests]);
 
     const loadRequests = async () => {
         setIsLoading(true);

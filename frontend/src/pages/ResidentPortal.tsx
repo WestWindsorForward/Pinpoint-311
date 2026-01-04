@@ -65,6 +65,12 @@ export default function ResidentPortal() {
     // Handle browser back/forward navigation
     const handleHashChange = useCallback((hash: string) => {
         if (hash === 'track') {
+            // Track list view (no specific request selected)
+            setShowTrackingView(true);
+            // TrackRequests component will handle clearing its internal selectedRequest
+        } else if (hash.startsWith('track/')) {
+            // Track with specific request - show tracking view
+            // TrackRequests will load the request from its initialRequestId or internal state
             setShowTrackingView(true);
         } else if (hash === '' || hash === 'categories') {
             setShowTrackingView(false);
@@ -477,6 +483,11 @@ export default function ResidentPortal() {
                         </button>
                         <TrackRequests
                             initialRequestId={urlRequestId}
+                            selectedRequestId={
+                                currentHash === 'track' ? null :
+                                    currentHash.startsWith('track/') ? currentHash.split('/')[1] :
+                                        urlRequestId || null
+                            }
                             onRequestSelect={(requestId) => {
                                 if (requestId) {
                                     updateHash(`track/${requestId}`);
