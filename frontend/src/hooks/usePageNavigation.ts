@@ -1,34 +1,42 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 
 interface UsePageNavigationOptions {
     baseTitle: string;        // e.g., "Staff Portal"
     scrollContainerRef?: React.RefObject<HTMLElement>;  // Container to scroll (or window if not provided)
+    onHashChange?: (hash: string) => void;  // Callback when hash changes (for back/forward navigation)
 }
 
 /**
  * Custom hook for URL hashing, dynamic document titles, and scroll-to-top behavior.
- * 
- * Usage:
- * const { updateHash, updateTitle, scrollToTop } = usePageNavigation({ baseTitle: 'Staff Portal' });
- * 
- * // When tab changes:
- * updateHash('statistics');
- * updateTitle('Statistics');
- * scrollToTop();
- * 
- * // When request is selected:
- * updateHash(`request/${requestId}`);
- * updateTitle(`Request ${requestId}`);
+ * Supports browser back/forward navigation via popstate listener.
  */
-export function usePageNavigation({ baseTitle, scrollContainerRef }: UsePageNavigationOptions) {
+export function usePageNavigation({ baseTitle, scrollContainerRef, onHashChange }: UsePageNavigationOptions) {
     const initialLoad = useRef(true);
+    const lastHash = useRef<string>('');
+    const [currentHash, setCurrentHash] = useState(() =>
+        typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+    );
 
-    // Update URL hash without triggering page reload
-    const updateHash = useCallback((hash: string) => {
+    // Update URL hash and add to browser history
+    const updateHash = useCallback((hash: string, replace: boolean = false) => {
+        // Don't push duplicate hash entries
+        if (hash === lastHash.current) return;
+
+        lastHash.current = hash;
+        setCurrentHash(hash);
+
         if (hash) {
-            window.history.replaceState(null, '', `${window.location.pathname}#${hash}`);
+            if (replace) {
+                window.history.replaceState(null, '', `${window.location.pathname}#${hash}`);
+            } else {
+                window.history.pushState(null, '', `${window.location.pathname}#${hash}`);
+            }
         } else {
-            window.history.replaceState(null, '', window.location.pathname);
+            if (replace) {
+                window.history.replaceState(null, '', window.location.pathname);
+            } else {
+                window.history.pushState(null, '', window.location.pathname);
+            }
         }
     }, []);
 
@@ -56,11 +64,11 @@ export function usePageNavigation({ baseTitle, scrollContainerRef }: UsePageNavi
     }, []);
 
     // Parse hash into sections (e.g., "request/12345" -> { section: 'request', id: '12345' })
-    const parseHash = useCallback(() => {
-        const hash = getHash();
-        if (!hash) return { section: '', id: '' };
+    const parseHash = useCallback((hash?: string) => {
+        const h = hash ?? getHash();
+        if (!h) return { section: '', id: '', parts: [] as string[] };
 
-        const parts = hash.split('/');
+        const parts = h.split('/');
         return {
             section: parts[0] || '',
             id: parts[1] || '',
@@ -68,13 +76,37 @@ export function usePageNavigation({ baseTitle, scrollContainerRef }: UsePageNavi
         };
     }, [getHash]);
 
-    // On initial load, set base title
+    // Listen for back/forward browser navigation (popstate event)
+    useEffect(() => {
+        const handlePopState = () => {
+            const newHash = window.location.hash.slice(1);
+            lastHash.current = newHash;
+            setCurrentHash(newHash);
+            if (onHashChange) {
+                onHashChange(newHash);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [onHashChange]);
+
+    // On initial load, set base title and check for existing hash
     useEffect(() => {
         if (initialLoad.current) {
             initialLoad.current = false;
-            document.title = baseTitle;
+            const existingHash = window.location.hash.slice(1);
+            if (existingHash) {
+                lastHash.current = existingHash;
+                setCurrentHash(existingHash);
+                if (onHashChange) {
+                    onHashChange(existingHash);
+                }
+            } else {
+                document.title = baseTitle;
+            }
         }
-    }, [baseTitle]);
+    }, [baseTitle, onHashChange]);
 
     return {
         updateHash,
@@ -82,7 +114,7 @@ export function usePageNavigation({ baseTitle, scrollContainerRef }: UsePageNavi
         scrollToTop,
         getHash,
         parseHash,
-        currentHash: typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+        currentHash
     };
 }
 

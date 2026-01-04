@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -49,9 +49,10 @@ type Step = 'categories' | 'form' | 'success';
 export default function ResidentPortal() {
     const { settings } = useSettings();
     const { requestId: urlRequestId } = useParams<{ requestId?: string }>();
-    const pathname = window.location.pathname;
-    const isTrackRoute = pathname.startsWith('/track');
-    const [showTrackingView, setShowTrackingView] = useState(urlRequestId || isTrackRoute ? true : false);
+
+    // Initialize state based on URL hash (not pathname)
+    const initialHash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+    const [showTrackingView, setShowTrackingView] = useState(urlRequestId || initialHash === 'track');
     const [step, setStep] = useState<Step>('categories');
     const [services, setServices] = useState<ServiceDefinition[]>([]);
     const [selectedService, setSelectedService] = useState<ServiceDefinition | null>(null);
@@ -61,29 +62,55 @@ export default function ResidentPortal() {
     const [submittedId, setSubmittedId] = useState<string | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
+    // Handle browser back/forward navigation
+    const handleHashChange = useCallback((hash: string) => {
+        if (hash === 'track') {
+            setShowTrackingView(true);
+        } else if (hash === '' || hash === 'categories') {
+            setShowTrackingView(false);
+            setStep('categories');
+            setSelectedService(null);
+        } else if (hash.startsWith('report/')) {
+            setShowTrackingView(false);
+            setStep('form');
+            // Service will be selected based on the hash - handled in useEffect after services load
+        } else if (hash === 'success') {
+            setShowTrackingView(false);
+            setStep('success');
+        }
+    }, []);
+
     // URL hashing, dynamic titles, and scroll-to-top
-    const { updateHash, updateTitle, scrollToTop } = usePageNavigation({
+    const { updateHash, updateTitle, scrollToTop, currentHash } = usePageNavigation({
         baseTitle: settings?.township_name || 'Resident Portal',
         scrollContainerRef: contentRef,
+        onHashChange: handleHashChange,
     });
 
-    // Update hash and title based on current step and view
+    // Update title based on current state (but DON'T update hash here - that causes loops)
     useEffect(() => {
         if (showTrackingView) {
-            updateHash('track');
             updateTitle('Track My Requests');
         } else if (step === 'categories') {
-            updateHash('');
             updateTitle('Report an Issue');
         } else if (step === 'form' && selectedService) {
-            updateHash(`report/${selectedService.service_code}`);
             updateTitle(selectedService.service_name);
         } else if (step === 'success') {
-            updateHash('success');
             updateTitle('Request Submitted');
         }
-        scrollToTop('instant');
-    }, [step, showTrackingView, selectedService, updateHash, updateTitle, scrollToTop]);
+    }, [step, showTrackingView, selectedService, updateTitle]);
+
+    // Handle initial hash on page load (after services are loaded)
+    useEffect(() => {
+        if (services.length > 0 && currentHash.startsWith('report/')) {
+            const serviceCode = currentHash.split('/')[1];
+            const service = services.find(s => s.service_code === serviceCode);
+            if (service && !selectedService) {
+                setSelectedService(service);
+                setStep('form');
+            }
+        }
+    }, [services, currentHash, selectedService]);
 
     // Requests for staff map
     const [allRequests, setAllRequests] = useState<ServiceRequest[]>([]);
@@ -206,6 +233,8 @@ export default function ResidentPortal() {
         }
 
         setStep('form');
+        updateHash(`report/${service.service_code}`);
+        scrollToTop('instant');
     };
 
     // Check if address matches road-based blocking rules
@@ -331,6 +360,8 @@ export default function ResidentPortal() {
             });
             setSubmittedId(result.service_request_id);
             setStep('success');
+            updateHash('success');
+            scrollToTop('instant');
         } catch (err) {
             console.error('Failed to submit request:', err);
             setFormErrors({ submit: 'Failed to submit request. Please try again.' });
@@ -435,7 +466,10 @@ export default function ResidentPortal() {
                 {showTrackingView ? (
                     <div className="space-y-6">
                         <button
-                            onClick={() => setShowTrackingView(false)}
+                            onClick={() => {
+                                setShowTrackingView(false);
+                                updateHash('');
+                            }}
                             className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
@@ -609,7 +643,11 @@ export default function ResidentPortal() {
                                     className="text-center pt-8"
                                 >
                                     <Button
-                                        onClick={() => setShowTrackingView(true)}
+                                        onClick={() => {
+                                            setShowTrackingView(true);
+                                            updateHash('track');
+                                            scrollToTop('instant');
+                                        }}
                                         variant="secondary"
                                         size="lg"
                                         className="px-8 py-4"
@@ -629,9 +667,12 @@ export default function ResidentPortal() {
                                 exit={{ opacity: 0, x: -50 }}
                                 className="max-w-2xl mx-auto space-y-6"
                             >
-                                {/* Back button */}
                                 <button
-                                    onClick={() => setStep('categories')}
+                                    onClick={() => {
+                                        setStep('categories');
+                                        setSelectedService(null);
+                                        updateHash('');
+                                    }}
                                     className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
                                 >
                                     <ArrowLeft className="w-5 h-5" />
