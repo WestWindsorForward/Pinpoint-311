@@ -665,7 +665,7 @@ export default function StaffDashboard() {
 
                             {/* Basic Statistics Overview */}
                             <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
-                                <h2 className="text-xl font-bold text-gray-900 mb-4">📊 Overview</h2>
+                                <h2 className="text-xl font-bold text-gray-900 mb-4">Overview</h2>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                                     <div>
                                         <div className="text-sm font-medium text-gray-600">Total Requests (All Time)</div>
@@ -730,9 +730,9 @@ export default function StaffDashboard() {
                             {advancedStats?.predictive_insights && (
                                 <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-lg p-6 border border-purple-300">
                                     <div className="mb-4">
-                                        <h2 className="text-xl font-bold text-gray-900">🔮 Predictive Insights</h2>
+                                        <h2 className="text-xl font-bold text-gray-900">Predictive Insights</h2>
                                         <div className="mt-2 bg-white/60 rounded p-3 border border-purple-200">
-                                            <p className="text-sm text-gray-800 font-medium mb-1">📊 How Predictions Work:</p>
+                                            <p className="text-sm text-gray-800 font-medium mb-1">How Predictions Work:</p>
                                             <p className="text-xs text-gray-700 leading-relaxed">
                                                 <strong>Volume Forecast:</strong> Calculated using a 4-week moving average of your recent request history.
                                                 We analyze the past 4 weeks of data and project the trend forward.<br />
@@ -770,9 +770,9 @@ export default function StaffDashboard() {
                             {advancedStats?.hotspots && advancedStats.hotspots.length > 0 && (
                                 <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-bold text-gray-900">🗺️ Geographic Hotspots</h3>
+                                        <h3 className="text-lg font-bold text-gray-900">Geographic Hotspots</h3>
                                         <div className="mt-2 bg-purple-50 border border-purple-200 rounded p-3">
-                                            <p className="text-sm text-gray-800 font-medium mb-1">📍 PostGIS Spatial Analysis:</p>
+                                            <p className="text-sm text-gray-800 font-medium mb-1">PostGIS Spatial Analysis:</p>
                                             <p className="text-xs text-gray-700">
                                                 <strong>Method:</strong> Using ST_ClusterDBSCAN with 500m radius to identify geographic clusters of service requests.
                                                 Highlighted areas show where multiple requests are concentrated.
@@ -785,7 +785,7 @@ export default function StaffDashboard() {
                                                 <div className="flex-1">
                                                     <div className="text-sm font-medium text-gray-900">Cluster {idx + 1}</div>
                                                     <div className="text-xs text-gray-600 mt-1">
-                                                        📍 {hotspot.latitude.toFixed(4)}, {hotspot.longitude.toFixed(4)}
+                                                        {hotspot.lat.toFixed(4)}, {hotspot.lng.toFixed(4)}
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
@@ -804,7 +804,7 @@ export default function StaffDashboard() {
 
                                 {/* Priority Backlog */}
                                 <div className="bg-white rounded-lg shadow p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">🚨 Priority Backlog</h3>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Priority Backlog</h3>
                                     <div className="h-64">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <BarChart
@@ -842,7 +842,7 @@ export default function StaffDashboard() {
 
                             {/* Requests by Category */}
                             <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">📋 Requests by Category</h3>
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">Requests by Category</h3>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     {Object.entries(advancedStats?.requests_by_category || {})
                                         .sort(([, a], [, b]) => (b as number) - (a as number))
@@ -860,7 +860,7 @@ export default function StaffDashboard() {
                             {/* Repeat Locations */}
                             {advancedStats?.repeat_locations && advancedStats.repeat_locations.length > 0 && (
                                 <div className="bg-white rounded-lg shadow p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">📍 Repeat Locations (Infrastructure Hotspots)</h3>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Repeat Locations (Infrastructure Hotspots)</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {advancedStats.repeat_locations.slice(0, 6).map((loc, idx) => (
                                             <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:border-blue-400 transition">
@@ -884,7 +884,7 @@ export default function StaffDashboard() {
                             {/* Staff Performance */}
                             {advancedStats?.top_staff_by_resolutions && Object.keys(advancedStats.top_staff_by_resolutions).length > 0 && (
                                 <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-purple-500">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-4">⭐ Top Staff by Resolutions</h3>
+                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Top Staff by Resolutions</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {Object.entries(advancedStats.top_staff_by_resolutions)
                                             .sort(([, a], [, b]) => (b as number) - (a as number))
@@ -904,7 +904,7 @@ export default function StaffDashboard() {
                             {/* Current Workload */}
                             {advancedStats?.workload_by_staff && Object.keys(advancedStats.workload_by_staff).length > 0 && (
                                 <div className="bg-white rounded-lg shadow p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">👷 Current Workload</h3>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Workload</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {Object.entries(advancedStats.workload_by_staff)
                                             .sort(([, a], [, b]) => (b as number) - (a as number))
@@ -923,7 +923,7 @@ export default function StaffDashboard() {
 
                             {/* Weekly Trend */}
                             <div className="bg-white rounded-lg shadow p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 Weekly Trend</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Weekly Trend</h3>
                                 <div className="h-64">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={advancedStats?.weekly_trend || []}>
