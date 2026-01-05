@@ -134,6 +134,7 @@ def analyze_request(self, request_id: int):
             historical_context = await get_historical_context(
                 db, request.address, request.service_code, request.lat, request.long, exclude_id=request.id
             )
+            print(f"[AI Analysis] Historical Context (exclude_id={request.id}): {historical_context}")
             spatial_context = await get_spatial_context(
                 db, request.lat, request.long, request.service_code
             )
