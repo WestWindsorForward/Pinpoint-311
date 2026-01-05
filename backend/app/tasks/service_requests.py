@@ -130,6 +130,12 @@ def analyze_request(self, request_id: int):
                 "matched_asset": request.matched_asset,
             }
             
+            from app.services.weather_service import get_weather_for_location
+            
+            # Record time of analysis
+            analysis_time = datetime.now()
+            request_data["analysis_time"] = analysis_time.strftime("%Y-%m-%d %H:%M:%S")
+
             # Get historical & spatial context
             historical_context = await get_historical_context(
                 db, request.address, request.service_code, request.lat, request.long, exclude_id=request.id
@@ -138,9 +144,8 @@ def analyze_request(self, request_id: int):
                 db, request.lat, request.long, request.service_code
             )
             
-            # Simple weather simulation (could be expanded to call OpenWeather API)
-            # For now, we use time/season based heuristics or just a placeholder
-            request_data["weather_sim"] = "Increased risk due to forecasted heavy precipitation" if "drain" in request.service_name.lower() else "Clear conditions"
+            # Fetch real-time weather for triage location
+            request_data["current_weather"] = await get_weather_for_location(request.lat, request.long)
 
             # Build the analysis prompt
             prompt = build_analysis_prompt(

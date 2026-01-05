@@ -113,20 +113,22 @@ def build_analysis_prompt(
 """
 
     prompt += f"""
-## Real-time & Safety Factors
-- **Current Weather Scenario**: {request_data.get('weather_sim', 'Clear skies')} 
-- **Time of Day Context**: {datetime.now().strftime('%H:%M')} (Visibility impact if night/outages)
+## Analysis-Time Context (Live Triage)
+- **Current Weather at Location**: {request_data.get('current_weather', 'Clear skies')}
+- **Actual Time of Analysis**: {request_data.get('analysis_time', 'Unknown')}
+- **Time of Day Context**: {request_data.get('analysis_time', 'Unknown')[11:16] if request_data.get('analysis_time') else 'Unknown'} (Current visibility impact)
 
 ## Analysis Required
 
 Analyze the provided description, photos, and deep context to provide a professional triage assessment.
 
 ### Diagnostic Instructions:
-1. **Evidence Citing**: For every diagnostic context claim (Infrastructure, Trend, Weather), you MUST cite specific raw data or report IDs provided above. 
-2. **Critical Proximity**: If within 50ft of a hospital, school, or fire station, urgency must be elevated.
-3. **Chronic vs One-off**: Use recurrence data and past resolution quality to determine if this is a systemic failure.
-4. **Nodal Reporting**: High duplicate density indicates high public frustration/visibility. Citing specific nearby IDs increases trust.
-5. **Visual Assessment**: Analyze photos for physical scale, required effort, and blockage severity.
+1. **Real-time Prioritization**: You MUST prioritize the **Current Weather** and **Actual Time of Analysis** over the submission time for immediate triage. For example, if it is currently night or raining, the urgency for road hazards or outages is significantly higher.
+2. **Evidence Citing**: For every diagnostic context claim (Infrastructure, Trend, Weather), you MUST cite specific raw data or report IDs provided above. 
+3. **Critical Proximity**: If within 50ft of a hospital, school, or fire station, urgency must be elevated.
+4. **Chronic vs One-off**: Use recurrence data and past resolution quality to determine if this is a systemic failure.
+5. **Nodal Reporting**: High duplicate density indicates high public frustration/visibility. Citing specific nearby IDs increases trust.
+6. **Visual Assessment**: Analyze photos for physical scale, required effort, and blockage severity.
 
 Provide your analysis in the following JSON format ONLY:
 
