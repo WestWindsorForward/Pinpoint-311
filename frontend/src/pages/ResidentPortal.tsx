@@ -113,6 +113,8 @@ export default function ResidentPortal() {
             const service = services.find(s => s.service_code === serviceCode);
             if (service && !selectedService) {
                 setSelectedService(service);
+                // Also set formData.service_code - critical for submission!
+                setFormData((prev) => ({ ...prev, service_code: service.service_code }));
                 setStep('form');
             }
         }
