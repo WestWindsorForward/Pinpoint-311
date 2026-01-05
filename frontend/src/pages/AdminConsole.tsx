@@ -757,8 +757,8 @@ export default function AdminConsole() {
                         </div>
                     </nav>
 
-                    {/* User Footer */}
-                    <div className="p-4 border-t border-white/10">
+                    {/* User Footer - Sticky */}
+                    <div className="sticky bottom-0 p-4 border-t border-white/10 bg-slate-900/90 backdrop-blur-md">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-amber-500/30 flex items-center justify-center text-white font-medium">

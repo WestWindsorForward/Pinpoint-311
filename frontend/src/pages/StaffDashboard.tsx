@@ -173,6 +173,9 @@ export default function StaffDashboard() {
     // AI section collapse state (collapsed by default to save space)
     const [isAIExpanded, setIsAIExpanded] = useState(false);
 
+    // Map priority filter state ('all', 'high', 'medium', 'low')
+    const [mapPriorityFilter, setMapPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+
     // Get current user's department IDs
     const userDepartmentIds = useMemo(() => {
         return user?.departments?.map(d => d.id) || [];
@@ -269,6 +272,18 @@ export default function StaffDashboard() {
 
         return { assignedToMe, inMyDepartment, total };
     }, [allRequests, currentView, user, userDepartmentIds]);
+
+    // Filter requests by priority for the map
+    const mapFilteredRequests = useMemo(() => {
+        if (mapPriorityFilter === 'all') return allRequests;
+        return allRequests.filter(r => {
+            const priority = (r as any).manual_priority_score ?? (r as any).vertex_ai_priority_score ?? 5;
+            if (mapPriorityFilter === 'high') return priority >= 8;
+            if (mapPriorityFilter === 'medium') return priority >= 5 && priority < 8;
+            if (mapPriorityFilter === 'low') return priority < 5;
+            return true;
+        });
+    }, [allRequests, mapPriorityFilter]);
 
     // Clear all filters
     const clearFilters = () => {
@@ -743,12 +758,25 @@ export default function StaffDashboard() {
                 {/* Dashboard View */}
                 {currentView === 'dashboard' && (
                     <div className="flex-1 flex flex-col p-4 lg:p-6 overflow-auto">
-                        {/* Map Section */}
-                        <div className="flex-1 min-h-[400px] lg:min-h-[500px] mb-6 rounded-xl overflow-hidden">
+                        {/* Map Section with Priority Filter */}
+                        <div className="flex-1 min-h-[400px] lg:min-h-[500px] mb-6 rounded-xl overflow-hidden relative">
+                            {/* Priority Filter Dropdown */}
+                            <div className="absolute top-4 right-4 z-10">
+                                <select
+                                    value={mapPriorityFilter}
+                                    onChange={(e) => setMapPriorityFilter(e.target.value as 'all' | 'high' | 'medium' | 'low')}
+                                    className="px-3 py-2 rounded-lg bg-slate-800/90 backdrop-blur-sm border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
+                                >
+                                    <option value="all">All Priorities ({allRequests.length})</option>
+                                    <option value="high">🔴 High Priority (8-10)</option>
+                                    <option value="medium">🟡 Medium (5-7)</option>
+                                    <option value="low">🟢 Low (1-4)</option>
+                                </select>
+                            </div>
                             {mapsConfig?.google_maps_api_key ? (
                                 <StaffDashboardMap
                                     apiKey={mapsConfig.google_maps_api_key}
-                                    requests={allRequests}
+                                    requests={mapFilteredRequests}
                                     services={services}
                                     departments={departments}
                                     users={users}
@@ -853,6 +881,66 @@ export default function StaffDashboard() {
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Priority Distribution */}
+                            <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-orange-500">
+                                <h2 className="text-xl font-bold text-gray-900 mb-4">Priority Distribution</h2>
+                                {(() => {
+                                    // Calculate priority distribution from allRequests
+                                    const highPriority = allRequests.filter(r => {
+                                        const p = (r as any).manual_priority_score ?? (r as any).vertex_ai_priority_score ?? 5;
+                                        return p >= 8;
+                                    }).length;
+                                    const mediumPriority = allRequests.filter(r => {
+                                        const p = (r as any).manual_priority_score ?? (r as any).vertex_ai_priority_score ?? 5;
+                                        return p >= 5 && p < 8;
+                                    }).length;
+                                    const lowPriority = allRequests.filter(r => {
+                                        const p = (r as any).manual_priority_score ?? (r as any).vertex_ai_priority_score ?? 5;
+                                        return p < 5;
+                                    }).length;
+                                    const total = allRequests.length || 1;
+                                    return (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-3 gap-4 text-center mb-6">
+                                                <div>
+                                                    <div className="text-3xl font-bold text-red-600">{highPriority}</div>
+                                                    <div className="text-sm text-gray-600">High (8-10)</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-3xl font-bold text-yellow-600">{mediumPriority}</div>
+                                                    <div className="text-sm text-gray-600">Medium (5-7)</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-3xl font-bold text-green-600">{lowPriority}</div>
+                                                    <div className="text-sm text-gray-600">Low (1-4)</div>
+                                                </div>
+                                            </div>
+                                            {/* Visual Bar */}
+                                            <div className="flex h-8 rounded-lg overflow-hidden">
+                                                <div
+                                                    className="bg-red-500 flex items-center justify-center text-white text-xs font-bold"
+                                                    style={{ width: `${(highPriority / total) * 100}%` }}
+                                                >
+                                                    {highPriority > 0 && `${Math.round((highPriority / total) * 100)}%`}
+                                                </div>
+                                                <div
+                                                    className="bg-yellow-500 flex items-center justify-center text-white text-xs font-bold"
+                                                    style={{ width: `${(mediumPriority / total) * 100}%` }}
+                                                >
+                                                    {mediumPriority > 0 && `${Math.round((mediumPriority / total) * 100)}%`}
+                                                </div>
+                                                <div
+                                                    className="bg-green-500 flex items-center justify-center text-white text-xs font-bold"
+                                                    style={{ width: `${(lowPriority / total) * 100}%` }}
+                                                >
+                                                    {lowPriority > 0 && `${Math.round((lowPriority / total) * 100)}%`}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             {/* Top KPIs - Government Focused */}
