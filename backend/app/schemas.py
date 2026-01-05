@@ -159,6 +159,7 @@ class ServiceRequestCreate(BaseModel):
     phone: Optional[str] = None
     media_urls: Optional[List[str]] = []  # Up to 3 photo URLs/base64
     matched_asset: Optional[Dict[str, Any]] = None  # Nearby asset from map layers
+    custom_fields: Optional[Dict[str, Any]] = {} # Standard custom question responses
 
 
 
@@ -198,6 +199,7 @@ class ServiceRequestResponse(BaseModel):
     # Assignment
     assigned_department_id: Optional[int] = None
     assigned_to: Optional[str] = None
+    custom_fields: Optional[Dict[str, Any]] = {}
     # Closed sub-status
     closed_substatus: Optional[str] = None
     # Soft delete info
@@ -247,6 +249,7 @@ class ServiceRequestDetailResponse(ServiceRequestResponse):
     completion_photo_url: Optional[str] = None
     # Delete justification (for admin view)
     delete_justification: Optional[str] = None
+    custom_fields: Optional[Dict[str, Any]] = {}
     # Vertex AI Analysis placeholders
     vertex_ai_summary: Optional[str] = None
     vertex_ai_classification: Optional[str] = None

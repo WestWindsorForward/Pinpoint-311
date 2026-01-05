@@ -351,6 +351,7 @@ export default function ResidentPortal() {
                 ...formData,
                 media_urls: photoPreviewUrls.slice(0, 3),  // Include photos (max 3)
                 matched_asset: matchedAsset,
+                custom_fields: customAnswers,
             });
             setSubmittedId(result.service_request_id);
             setStep('success');

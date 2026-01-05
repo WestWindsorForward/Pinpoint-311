@@ -128,13 +128,15 @@ def analyze_request(self, request_id: int):
                 "address": request.address,  # Keep address for context
                 "submitted_date": request.requested_datetime.isoformat() if request.requested_datetime else None,
                 "matched_asset": request.matched_asset,
+                "custom_fields": request.custom_fields,
             }
             
             from app.services.weather_service import get_weather_for_location
             
             # Record time of analysis
-            analysis_time = datetime.now()
-            request_data["analysis_time"] = analysis_time.strftime("%Y-%m-%d %H:%M:%S")
+            from zoneinfo import ZoneInfo
+            analysis_time = datetime.now(ZoneInfo("US/Eastern"))
+            request_data["analysis_time"] = analysis_time.strftime("%Y-%m-%d %H:%M:%S %Z")
 
             # Get historical & spatial context
             historical_context = await get_historical_context(

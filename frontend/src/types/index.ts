@@ -107,6 +107,7 @@ export interface ServiceRequest {
     // Soft delete
     deleted_at: string | null;
     deleted_by: string | null;
+    custom_fields?: Record<string, string | string[]>;
 }
 
 // Public-facing request (no personal information)
@@ -200,6 +201,7 @@ export interface ServiceRequestCreate {
         properties: Record<string, any>;
         distance_meters?: number;
     };
+    custom_fields?: Record<string, string | string[]>;
 }
 
 

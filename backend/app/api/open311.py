@@ -313,6 +313,7 @@ async def create_request(
         phone=request_data.phone,
         media_urls=request_data.media_urls[:3] if request_data.media_urls else [],  # Limit to 3 photos
         matched_asset=request_data.matched_asset,
+        custom_fields=request_data.custom_fields,
         source="resident_portal",
         assigned_department_id=assigned_department_id,
         assigned_to=assigned_to

@@ -89,6 +89,17 @@ def build_analysis_prompt(
 - **Layer**: {asset.get('layer_name', 'Unknown')}
 - **Distance**: {asset.get('distance_meters', 'N/A')}m from reported location
 """
+        properties = asset.get('properties', {})
+        if properties:
+            prompt += "- **Asset Attributes (Specific Properties)**:\n"
+            for k, v in properties.items():
+                prompt += f"  - {k}: {v}\n"
+
+    # Add custom fields (resident survey responses)
+    if request_data.get('custom_fields'):
+        prompt += "\n## Resident Survey Responses\n"
+        for label, answer in request_data['custom_fields'].items():
+            prompt += f"- **{label}**: {answer}\n"
 
     # Add historical context
     if historical_context:
@@ -347,6 +358,7 @@ async def get_historical_context(db, address: str, service_code: str, lat: Optio
         three_months_ago = datetime.now() - timedelta(days=90)
         addr_history_query = select(ServiceRequest.id, ServiceRequest.service_request_id, ServiceRequest.requested_datetime).where(
             ServiceRequest.address == address,
+            ServiceRequest.service_code == service_code,  # Category-specific check
             ServiceRequest.requested_datetime >= three_months_ago,
             ServiceRequest.deleted_at.is_(None)
         )

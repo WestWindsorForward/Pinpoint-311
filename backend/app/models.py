@@ -148,6 +148,9 @@ class ServiceRequest(Base):
     # Matched asset from map layers (detected on submit)
     matched_asset = Column(JSON)  # { layer_name, asset_id, asset_type, properties, distance_meters }
     
+    # Custom question responses from resident portal
+    custom_fields = Column(JSON)  # { question_id: answer }
+    
     # Closed sub-status (when status = 'closed')
     closed_substatus = Column(String(30))  # no_action, resolved, third_party
     completion_message = Column(Text)  # Staff message when closing

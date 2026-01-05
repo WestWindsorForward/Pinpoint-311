@@ -12,7 +12,7 @@ async def get_weather_for_location(lat: float, lon: float) -> str:
     if lat is None or lon is None:
         return "Weather data unavailable (missing coordinates)"
 
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=True"
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=True&temperature_unit=fahrenheit&windspeed_unit=mph"
     
     try:
         async with aiohttp.ClientSession() as session:
@@ -46,7 +46,7 @@ async def get_weather_for_location(lat: float, lon: float) -> str:
                 
                 desc = descriptions.get(weathercode, "Clear")
                 
-                return f"{desc}, {temp}°C, Wind Speed: {windspeed} km/h"
+                return f"{desc}, {temp}°F, Wind Speed: {windspeed} mph"
                 
     except Exception as e:
         logger.error(f"Error fetching weather: {e}")
