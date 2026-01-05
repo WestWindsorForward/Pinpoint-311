@@ -72,7 +72,6 @@ def analyze_request(self, request_id: int):
     import logging
     logger = logging.getLogger(__name__)
     logger.info(f"[AI Analysis] Starting analysis for request {request_id}")
-    print(f"[AI Analysis] Starting analysis for request {request_id}")
     
     async def _analyze():
         from app.models import SystemSettings
@@ -92,22 +91,18 @@ def analyze_request(self, request_id: int):
             if not settings or not settings.modules.get('ai_analysis', False):
                 msg = f"[AI Analysis] Skipped - AI analysis not enabled. modules={settings.modules if settings else 'No settings'}"
                 logger.info(msg)
-                print(msg)
                 return {"status": "skipped", "reason": "AI analysis not enabled"}
             
             logger.info(f"[AI Analysis] AI module is enabled, proceeding...")
-            print(f"[AI Analysis] AI module is enabled, proceeding...")
             
             # Get Vertex AI credentials
             project_id = await get_secret(db, "VERTEX_AI_PROJECT")
             if not project_id:
                 msg = "[AI Analysis] Skipped - VERTEX_AI_PROJECT not configured"
                 logger.warning(msg)
-                print(msg)
                 return {"status": "skipped", "reason": "VERTEX_AI_PROJECT not configured"}
             
             logger.info(f"[AI Analysis] Project ID found: {project_id}")
-            print(f"[AI Analysis] Project ID found: {project_id}")
             
             location = "global"  # Gemini 3 Flash is available on global endpoints
             service_account_json = await get_secret(db, "VERTEX_AI_SERVICE_ACCOUNT_KEY")
@@ -161,7 +156,6 @@ def analyze_request(self, request_id: int):
             
             # Call Vertex AI
             logger.info(f"[AI Analysis] Calling Vertex AI for request {request_id}...")
-            print(f"[AI Analysis] Calling Vertex AI for request {request_id}...")
             
             analysis_result = await analyze_with_gemini(
                 project_id=project_id,
@@ -172,12 +166,10 @@ def analyze_request(self, request_id: int):
             )
             
             logger.info(f"[AI Analysis] Got result: {analysis_result}")
-            print(f"[AI Analysis] Got result: {analysis_result}")
             
             # Check for errors in result
             if "_error" in analysis_result:
                 logger.error(f"[AI Analysis] Error from Vertex AI: {analysis_result['_error']}")
-                print(f"[AI Analysis] Error from Vertex AI: {analysis_result['_error']}")
             
             # Add similar_reports from historical context to the stored result
             # These are already filtered by geo (500m) + category + description similarity (>25%)
@@ -198,17 +190,14 @@ def analyze_request(self, request_id: int):
             
             await db.commit()
             logger.info(f"[AI Analysis] Saved analysis for request {request_id}")
-            print(f"[AI Analysis] Saved analysis for request {request_id}")
             return {"status": "success", "analysis": analysis_result}
     
     try:
         result = run_async(_analyze())
-        print(f"[AI Analysis] Task completed: {result}")
+        logger.info(f"[AI Analysis] Task completed: {result}")
         return result
     except Exception as exc:
-        print(f"[AI Analysis] Task failed with error: {exc}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"[AI Analysis] Task failed with error: {exc}", exc_info=True)
         raise self.retry(exc=exc, countdown=60)
 
 

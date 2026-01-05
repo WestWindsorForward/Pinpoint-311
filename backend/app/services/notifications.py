@@ -3,11 +3,14 @@ Notification services for SMS and Email with configurable providers.
 """
 import os
 import httpx
+import logging
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional, Dict, Any
 from abc import ABC, abstractmethod
+
+logger = logging.getLogger(__name__)
 
 
 # ============ SMS Providers ============
@@ -43,7 +46,7 @@ class TwilioProvider(SMSProvider):
                 )
                 return response.status_code == 201
         except Exception as e:
-            print(f"Twilio SMS error: {e}")
+            logger.warning(f"Twilio SMS error: {e}")
             return False
 
 
@@ -73,11 +76,11 @@ class GenericHTTPSMSProvider(SMSProvider):
                     # Textbelt returns JSON with "success": true/false
                     if response.is_success:
                         result = response.json()
-                        print(f"[Textbelt SMS] Response: {result}")
+                        logger.debug(f"[Textbelt SMS] Response: {result}")
                         if not result.get("success"):
-                            print(f"[Textbelt SMS] Error: {result.get('error', 'Unknown error')}")
+                            logger.warning(f"[Textbelt SMS] Error: {result.get('error', 'Unknown error')}")
                         return result.get("success", False)
-                    print(f"[Textbelt SMS] HTTP Error: {response.status_code}")
+                    logger.warning(f"[Textbelt SMS] HTTP Error: {response.status_code}")
                     return False
                 else:
                     # Standard format with Bearer auth
@@ -95,7 +98,7 @@ class GenericHTTPSMSProvider(SMSProvider):
                     )
                     return response.is_success
         except Exception as e:
-            print(f"HTTP SMS error: {e}")
+            logger.warning(f"HTTP SMS error: {e}")
             return False
 
 
@@ -151,7 +154,7 @@ class EmailProvider:
             
             return True
         except Exception as e:
-            print(f"Email error: {e}")
+            logger.error(f"Email error: {e}")
             return False
 
 
@@ -200,7 +203,7 @@ class NotificationService:
     async def send_sms(self, to: str, message: str) -> bool:
         """Send SMS notification"""
         if not self._sms_provider:
-            print("SMS provider not configured")
+            logger.warning("SMS provider not configured")
             return False
         return await self._sms_provider.send_sms(to, message)
     
@@ -213,7 +216,7 @@ class NotificationService:
     ) -> bool:
         """Send email notification"""
         if not self._email_provider:
-            print("Email provider not configured")
+            logger.warning("Email provider not configured")
             return False
         return self._email_provider.send_email(to, subject, body_html, body_text)
     

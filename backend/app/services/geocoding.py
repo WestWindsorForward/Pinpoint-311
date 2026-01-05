@@ -3,8 +3,11 @@ Geocoding and GIS services for location-based features.
 Supports Google Maps API and OpenStreetMap as fallback.
 """
 import httpx
+import logging
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -76,7 +79,7 @@ class GeocodingService:
                         components=components
                     )
         except Exception as e:
-            print(f"Google geocoding error: {e}")
+            logger.warning(f"Google geocoding error: {e}")
         return None
     
     async def _reverse_geocode_google(self, lat: float, lng: float) -> Optional[GeocodingResult]:
@@ -101,7 +104,7 @@ class GeocodingService:
                         place_id=result.get("place_id")
                     )
         except Exception as e:
-            print(f"Google reverse geocoding error: {e}")
+            logger.warning(f"Google reverse geocoding error: {e}")
         return None
     
     async def _geocode_osm(self, address: str) -> Optional[GeocodingResult]:
@@ -127,7 +130,7 @@ class GeocodingService:
                         formatted_address=result["display_name"]
                     )
         except Exception as e:
-            print(f"OSM geocoding error: {e}")
+            logger.warning(f"OSM geocoding error: {e}")
         return None
     
     async def _reverse_geocode_osm(self, lat: float, lng: float) -> Optional[GeocodingResult]:
@@ -152,7 +155,7 @@ class GeocodingService:
                         formatted_address=data.get("display_name", "")
                     )
         except Exception as e:
-            print(f"OSM reverse geocoding error: {e}")
+            logger.warning(f"OSM reverse geocoding error: {e}")
         return None
 
 

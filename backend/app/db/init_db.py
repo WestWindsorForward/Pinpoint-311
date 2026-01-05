@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User, Department, ServiceDefinition, SystemSettings, SystemSecret
@@ -5,6 +6,7 @@ from app.core.auth import get_password_hash
 from app.core.config import get_settings
 from app.db.session import SessionLocal, init_db
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
@@ -111,10 +113,10 @@ async def seed_database():
         # Check if already seeded
         result = await db.execute(select(User).limit(1))
         if result.scalar_one_or_none():
-            print("Database already seeded, skipping...")
+            logger.info("Database already seeded, skipping...")
             return
         
-        print("Seeding database...")
+        logger.info("Seeding database...")
         
         # Create initial admin user
         admin = User(
@@ -159,7 +161,7 @@ async def seed_database():
             db.add(secret)
         
         await db.commit()
-        print("Database seeded successfully!")
+        logger.info("Database seeded successfully!")
 
 
 if __name__ == "__main__":

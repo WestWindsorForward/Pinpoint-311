@@ -60,6 +60,7 @@ import { useSettings } from '../context/SettingsContext';
 import { api, MapLayer } from '../services/api';
 import { User, ServiceDefinition, SystemSettings, SystemSecret, Department } from '../types';
 import { usePageNavigation } from '../hooks/usePageNavigation';
+import { SetupWizard } from '../components/SetupWizard';
 
 // Icon library for service categories
 const ICON_LIBRARY: { name: string; icon: LucideIcon }[] = [
@@ -106,6 +107,10 @@ export default function AdminConsole() {
     const [isLoading, setIsLoading] = useState(false);
     const [saveMessage, setSaveMessage] = useState<string | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+
+    // Setup wizard state
+    const [showWizard, setShowWizard] = useState(false);
+    const [wizardChecked, setWizardChecked] = useState(false);
 
     // URL hashing, dynamic titles, and scroll-to-top
     const { updateHash, updateTitle, scrollToTop } = usePageNavigation({
@@ -271,6 +276,18 @@ export default function AdminConsole() {
             });
         }
     }, [settings]);
+
+    // Check if wizard should be shown on first load
+    useEffect(() => {
+        if (settings && !wizardChecked) {
+            setWizardChecked(true);
+            // Show wizard if wizard_completed flag is not set
+            const wizardCompleted = (settings.modules as any)?.wizard_completed;
+            if (!wizardCompleted && settings.township_name === 'Your Township') {
+                setShowWizard(true);
+            }
+        }
+    }, [settings, wizardChecked]);
 
     useEffect(() => {
         loadTabData();
@@ -674,6 +691,17 @@ export default function AdminConsole() {
 
     return (
         <div className="min-h-screen flex">
+            {/* Setup Wizard Modal */}
+            {showWizard && (
+                <SetupWizard
+                    onComplete={() => {
+                        setShowWizard(false);
+                        refreshSettings();
+                    }}
+                    townshipName={settings?.township_name}
+                />
+            )}
+
             {/* Mobile sidebar backdrop */}
             <AnimatePresence>
                 {sidebarOpen && (

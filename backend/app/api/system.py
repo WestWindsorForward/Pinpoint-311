@@ -5,7 +5,10 @@ from typing import List
 import subprocess
 import os
 import uuid
+import logging
 import aiofiles
+
+logger = logging.getLogger(__name__)
 
 from app.db.session import get_db
 from app.models import SystemSettings, SystemSecret, ServiceRequest, User
@@ -363,7 +366,7 @@ async def get_advanced_statistics(
                 unique_reporters=int(row['unique_reporters']) if row.get('unique_reporters') else None
             ))
     except Exception as e:
-        print(f"Hotspot query failed (PostGIS may not be enabled): {e}")
+        logger.warning(f"Hotspot query failed (PostGIS may not be enabled): {e}")
     
     # Geographic center
     center_query = select(
@@ -416,7 +419,7 @@ async def get_advanced_statistics(
             furthest_request_miles = round(float(geo_row['max_distance_miles']), 2) if geo_row['max_distance_miles'] else None
             total_coverage_sq_miles = round(float(geo_row['coverage_sq_miles']), 2) if geo_row['coverage_sq_miles'] else None
     except Exception as e:
-        print(f"Geographic metrics query failed: {e}")
+        logger.warning(f"Geographic metrics query failed: {e}")
     
     # ========== Department Analytics ==========
     
@@ -658,7 +661,7 @@ async def get_advanced_statistics(
                     request_count=int(row['request_count'])
                 ))
     except Exception as e:
-        print(f"Repeat locations query failed: {e}")
+        logger.warning(f"Repeat locations query failed: {e}")
     
     # Aging high-priority count (P1-P3 open > 7 days)
     aging_hp_query = select(func.count(ServiceRequest.id)).where(

@@ -11,9 +11,12 @@ This service analyzes service requests using Google's Gemini model to provide:
 import json
 import base64
 import re
+import logging
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -461,7 +464,7 @@ async def get_historical_context(db, address: str, service_code: str, lat: Optio
             context["duplicate_density"] = nodal_result.scalar() or 0
             
     except Exception as e:
-        print(f"Error getting historical context: {e}")
+        logger.warning(f"Error getting historical context: {e}")
     
     return context
 
@@ -619,6 +622,6 @@ async def get_spatial_context(db, lat: float, long: float, service_code: str) ->
                 spatial_info["is_high_density"] = True
 
     except Exception as e:
-        print(f"Error getting spatial context: {e}")
+        logger.warning(f"Error getting spatial context: {e}")
         
     return spatial_info
