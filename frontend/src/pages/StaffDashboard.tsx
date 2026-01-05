@@ -170,6 +170,9 @@ export default function StaffDashboard() {
     const [pendingPriority, setPendingPriority] = useState<number | null>(null);
     const [isUpdatingPriority, setIsUpdatingPriority] = useState(false);
 
+    // AI section collapse state (collapsed by default to save space)
+    const [isAIExpanded, setIsAIExpanded] = useState(false);
+
     // Get current user's department IDs
     const userDepartmentIds = useMemo(() => {
         return user?.departments?.map(d => d.id) || [];
@@ -699,8 +702,8 @@ export default function StaffDashboard() {
                         </div>
                     </nav>
 
-                    {/* User Footer */}
-                    <div className="p-4 border-t border-white/10">
+                    {/* User Footer - Sticky */}
+                    <div className="sticky bottom-0 p-4 border-t border-white/10 bg-slate-900/90 backdrop-blur-md">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-primary-500/30 flex items-center justify-center text-white font-medium">
@@ -1426,9 +1429,12 @@ export default function StaffDashboard() {
                                                         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-500/50 via-purple-500/50 to-primary-500/50" />
 
                                                         <div className="p-5">
-                                                            {/* Header Row */}
-                                                            <div className="flex items-center justify-between mb-4">
-                                                                <div className="flex items-center gap-2.5">
+                                                            {/* Header Row - Clickable to toggle expand */}
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <button
+                                                                    onClick={() => setIsAIExpanded(!isAIExpanded)}
+                                                                    className="flex items-center gap-2.5 text-left hover:opacity-80 transition-opacity"
+                                                                >
                                                                     <div className="p-2 rounded-lg bg-white/5 ring-1 ring-white/10">
                                                                         <Brain className="w-4 h-4 text-primary-400" />
                                                                     </div>
@@ -1439,7 +1445,9 @@ export default function StaffDashboard() {
                                                                             <span className="px-1 py-0.5 rounded-sm bg-primary-500/20 text-primary-400 text-[8px] font-bold uppercase tracking-widest border border-primary-500/30">Preview</span>
                                                                         </div>
                                                                     </div>
-                                                                </div>
+                                                                    <ChevronDown className={`w-4 h-4 text-white/40 transition-transform ${isAIExpanded ? 'rotate-180' : ''}`} />
+                                                                </button>
+
                                                                 {/* Priority Score Badge - Editable */}
                                                                 {(priorityScore || selectedRequest.manual_priority_score) && !hasError && (
                                                                     <div className="relative">
@@ -1557,198 +1565,205 @@ export default function StaffDashboard() {
 
                                                             </div>
 
-                                                            {/* Content Moderation Warning */}
-                                                            {ai?.content_flags && ai.content_flags.length > 0 && !ai.content_flags.includes('none') && (
-                                                                <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2.5">
-                                                                    <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                                                                    <div>
-                                                                        <p className="text-xs font-bold text-red-400 uppercase tracking-tight">Content Warning</p>
-                                                                        <p className="text-xs text-red-300/80">AI detected: {ai.content_flags.join(', ').replace(/_/g, ' ')}</p>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Main Analysis Text */}
-                                                            {qualitativeText && (
-                                                                <p className={`text-sm leading-relaxed mb-4 ${hasError ? 'text-amber-300/80' : 'text-white/80 font-medium'}`}>
-                                                                    {qualitativeText}
-                                                                </p>
-                                                            )}
-
-                                                            {/* Priority Justification Quote */}
-                                                            {ai?.priority_justification && !hasError && (
-                                                                <div className="relative pl-4 mb-5 border-l-2 border-primary-500/20">
-                                                                    <p className="text-white/40 text-xs italic leading-relaxed">"{ai.priority_justification}"</p>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Photo Assessment - New Section */}
-                                                            {ai?.photo_assessment && !hasError && (
-                                                                <div className="mb-5 p-3 rounded-lg bg-white/5 border border-white/5 space-y-2.5">
-                                                                    <div className="flex items-center gap-1.5 opacity-50">
-                                                                        <Camera className="w-3.5 h-3.5" />
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider">Visual Triage Assessment</span>
-                                                                    </div>
-                                                                    <div className="grid grid-cols-1 gap-2">
-                                                                        <div className="flex justify-between items-center text-xs">
-                                                                            <span className="text-white/40">Physical Scale</span>
-                                                                            <span className="text-white/80 font-medium">{ai.photo_assessment.physical_scale}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between items-center text-xs">
-                                                                            <span className="text-white/40">Blocking Severity</span>
-                                                                            <span className={`font-bold ${ai.photo_assessment.blocking_severity === 'full_block' ? 'text-red-400' :
-                                                                                ai.photo_assessment.blocking_severity === 'partial' ? 'text-amber-400' : 'text-green-400'
-                                                                                }`}>{ai.photo_assessment.blocking_severity?.replace('_', ' ').toUpperCase()}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Quantitative Metrics - Cleaned up Grid */}
-                                                            {ai?.quantitative_metrics && !hasError && (
-                                                                <div className="grid grid-cols-2 gap-2 mb-4">
-                                                                    {ai.quantitative_metrics.estimated_severity && ai.quantitative_metrics.estimated_severity !== 'unknown' && (
-                                                                        <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
-                                                                            <p className="text-[9px] uppercase tracking-wider text-white/30 mb-0.5">Severity</p>
-                                                                            <p className={`text-xs font-bold ${ai.quantitative_metrics.estimated_severity === 'critical' ? 'text-red-400' :
-                                                                                ai.quantitative_metrics.estimated_severity === 'high' ? 'text-amber-400' :
-                                                                                    ai.quantitative_metrics.estimated_severity === 'medium' ? 'text-blue-400' : 'text-green-400'
-                                                                                }`}>{ai.quantitative_metrics.estimated_severity.toUpperCase()}</p>
-                                                                        </div>
-                                                                    )}
-                                                                    {ai.quantitative_metrics.systemic_failure_probability !== undefined && (
-                                                                        <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
-                                                                            <p className="text-[9px] uppercase tracking-wider text-white/30 mb-0.5">Systemic Risk</p>
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <p className={`text-xs font-bold ${ai.quantitative_metrics.systemic_failure_probability > 0.7 ? 'text-red-400' : 'text-primary-400'}`}>
-                                                                                    {(ai.quantitative_metrics.systemic_failure_probability * 100).toFixed(0)}%
-                                                                                </p>
-                                                                                <Activity className={`w-3 h-3 ${ai.quantitative_metrics.systemic_failure_probability > 0.7 ? 'text-red-400' : 'text-primary-400'}`} />
+                                                            {/* Collapsible AI Details */}
+                                                            {isAIExpanded && (
+                                                                <>
+                                                                    {/* Content Moderation Warning */}
+                                                                    {ai?.content_flags && ai.content_flags.length > 0 && !ai.content_flags.includes('none') && (
+                                                                        <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2.5">
+                                                                            <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                                                                            <div>
+                                                                                <p className="text-xs font-bold text-red-400 uppercase tracking-tight">Content Warning</p>
+                                                                                <p className="text-xs text-red-300/80">AI detected: {ai.content_flags.join(', ').replace(/_/g, ' ')}</p>
                                                                             </div>
                                                                         </div>
                                                                     )}
-                                                                </div>
-                                                            )}
 
-                                                            {/* Diagnostic Context - New Section */}
-                                                            {ai?.diagnostic_context && !hasError && (
-                                                                <div className="mb-4 space-y-2">
-                                                                    {ai.diagnostic_context.infrastructure_proximity && (
-                                                                        <div className="px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10 flex items-start gap-2.5">
-                                                                            <Shield className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
-                                                                            <div className="flex-1">
-                                                                                <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tight">Infrastructure Proximity</p>
-                                                                                <p className="text-[11px] text-blue-200/70">
-                                                                                    {typeof ai.diagnostic_context.infrastructure_proximity === 'object'
-                                                                                        ? ai.diagnostic_context.infrastructure_proximity.details
-                                                                                        : ai.diagnostic_context.infrastructure_proximity}
-                                                                                </p>
-                                                                                {ai.diagnostic_context.infrastructure_proximity?.evidence && (
-                                                                                    <p className="mt-1 text-[9px] text-blue-400/50 font-medium italic">
-                                                                                        Evidence: {ai.diagnostic_context.infrastructure_proximity.evidence}
-                                                                                    </p>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
+                                                                    {/* Main Analysis Text */}
+                                                                    {qualitativeText && (
+                                                                        <p className={`text-sm leading-relaxed mb-4 ${hasError ? 'text-amber-300/80' : 'text-white/80 font-medium'}`}>
+                                                                            {qualitativeText}
+                                                                        </p>
                                                                     )}
-                                                                    {ai.diagnostic_context.historical_trend && (
-                                                                        <div className="px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 flex items-start gap-2.5">
-                                                                            <History className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
-                                                                            <div className="flex-1">
-                                                                                <p className="text-[9px] font-bold text-amber-400 uppercase tracking-tight">Historical Trend</p>
-                                                                                <p className="text-[11px] text-amber-200/70">
-                                                                                    {typeof ai.diagnostic_context.historical_trend === 'object'
-                                                                                        ? ai.diagnostic_context.historical_trend.details
-                                                                                        : ai.diagnostic_context.historical_trend}
-                                                                                </p>
-                                                                                {ai.diagnostic_context.historical_trend?.evidence && (
-                                                                                    <p className="mt-1 text-[9px] text-amber-400/50 font-medium italic">
-                                                                                        Evidence: {ai.diagnostic_context.historical_trend.evidence}
-                                                                                    </p>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                    {ai.diagnostic_context.weather_impact && ai.diagnostic_context.weather_impact !== 'None' && (
-                                                                        <div className="px-3 py-2 rounded-lg bg-primary-500/5 border border-primary-500/10 flex items-start gap-2.5">
-                                                                            <Cloud className="w-3.5 h-3.5 text-primary-400 mt-0.5 flex-shrink-0" />
-                                                                            <div className="flex-1">
-                                                                                <p className="text-[9px] font-bold text-primary-400 uppercase tracking-tight">Weather Criticality</p>
-                                                                                <p className="text-[11px] text-primary-200/70">
-                                                                                    {typeof ai.diagnostic_context.weather_impact === 'object'
-                                                                                        ? ai.diagnostic_context.weather_impact.details
-                                                                                        : ai.diagnostic_context.weather_impact}
-                                                                                </p>
-                                                                                {ai.diagnostic_context.weather_impact?.evidence && (
-                                                                                    <p className="mt-1 text-[9px] text-primary-400/50 font-medium italic">
-                                                                                        Evidence: {ai.diagnostic_context.weather_impact.evidence}
-                                                                                    </p>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
 
-                                                            {/* Similar Reports - Clickable Links */}
-                                                            {ai.similar_reports && ai.similar_reports.length > 0 && (
-                                                                <div className="mb-4 px-3 py-2 rounded-lg bg-purple-500/5 border border-purple-500/10 flex items-start gap-2.5">
-                                                                    <Link2 className="w-3.5 h-3.5 text-purple-400 mt-0.5 flex-shrink-0" />
-                                                                    <div className="flex-1">
-                                                                        <p className="text-[9px] font-bold text-purple-400 uppercase tracking-tight">Similar Reports</p>
-                                                                        <div className="mt-1 space-y-1">
-                                                                            {ai.similar_reports.map((report: { id: string; description: string; similarity: number; justification?: string }) => (
-                                                                                <button
-                                                                                    key={report.id}
-                                                                                    onClick={() => {
-                                                                                        window.location.hash = `detail/${report.id}`;
-                                                                                    }}
-                                                                                    title={report.justification || `${Math.round(report.similarity * 100)}% match`}
-                                                                                    className="w-full text-left px-2 py-1.5 rounded bg-purple-500/10 hover:bg-purple-500/20 transition-colors group"
-                                                                                >
-                                                                                    <div className="flex items-center justify-between gap-2">
-                                                                                        <span className="text-[10px] text-purple-300 font-mono group-hover:text-purple-200">{report.id}</span>
-                                                                                        <span className="text-[9px] text-purple-400/60">{Math.round(report.similarity * 100)}% match</span>
+                                                                    {/* Priority Justification Quote */}
+                                                                    {ai?.priority_justification && !hasError && (
+                                                                        <div className="relative pl-4 mb-5 border-l-2 border-primary-500/20">
+                                                                            <p className="text-white/40 text-xs italic leading-relaxed">"{ai.priority_justification}"</p>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Photo Assessment - New Section */}
+                                                                    {ai?.photo_assessment && !hasError && (
+                                                                        <div className="mb-5 p-3 rounded-lg bg-white/5 border border-white/5 space-y-2.5">
+                                                                            <div className="flex items-center gap-1.5 opacity-50">
+                                                                                <Camera className="w-3.5 h-3.5" />
+                                                                                <span className="text-[10px] font-bold uppercase tracking-wider">Visual Triage Assessment</span>
+                                                                            </div>
+                                                                            <div className="grid grid-cols-1 gap-2">
+                                                                                <div className="flex justify-between items-center text-xs">
+                                                                                    <span className="text-white/40">Physical Scale</span>
+                                                                                    <span className="text-white/80 font-medium">{ai.photo_assessment.physical_scale}</span>
+                                                                                </div>
+                                                                                <div className="flex justify-between items-center text-xs">
+                                                                                    <span className="text-white/40">Blocking Severity</span>
+                                                                                    <span className={`font-bold ${ai.photo_assessment.blocking_severity === 'full_block' ? 'text-red-400' :
+                                                                                        ai.photo_assessment.blocking_severity === 'partial' ? 'text-amber-400' : 'text-green-400'
+                                                                                        }`}>{ai.photo_assessment.blocking_severity?.replace('_', ' ').toUpperCase()}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Quantitative Metrics - Cleaned up Grid */}
+                                                                    {ai?.quantitative_metrics && !hasError && (
+                                                                        <div className="grid grid-cols-2 gap-2 mb-4">
+                                                                            {ai.quantitative_metrics.estimated_severity && ai.quantitative_metrics.estimated_severity !== 'unknown' && (
+                                                                                <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
+                                                                                    <p className="text-[9px] uppercase tracking-wider text-white/30 mb-0.5">Severity</p>
+                                                                                    <p className={`text-xs font-bold ${ai.quantitative_metrics.estimated_severity === 'critical' ? 'text-red-400' :
+                                                                                        ai.quantitative_metrics.estimated_severity === 'high' ? 'text-amber-400' :
+                                                                                            ai.quantitative_metrics.estimated_severity === 'medium' ? 'text-blue-400' : 'text-green-400'
+                                                                                        }`}>{ai.quantitative_metrics.estimated_severity.toUpperCase()}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {ai.quantitative_metrics.systemic_failure_probability !== undefined && (
+                                                                                <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
+                                                                                    <p className="text-[9px] uppercase tracking-wider text-white/30 mb-0.5">Systemic Risk</p>
+                                                                                    <div className="flex items-center gap-1.5">
+                                                                                        <p className={`text-xs font-bold ${ai.quantitative_metrics.systemic_failure_probability > 0.7 ? 'text-red-400' : 'text-primary-400'}`}>
+                                                                                            {(ai.quantitative_metrics.systemic_failure_probability * 100).toFixed(0)}%
+                                                                                        </p>
+                                                                                        <Activity className={`w-3 h-3 ${ai.quantitative_metrics.systemic_failure_probability > 0.7 ? 'text-red-400' : 'text-primary-400'}`} />
                                                                                     </div>
-                                                                                    <p className="text-[9px] text-purple-200/50 mt-0.5 line-clamp-1">{report.description}</p>
-                                                                                    {report.justification && (
-                                                                                        <p className="text-[8px] text-purple-400/40 mt-0.5 italic">{report.justification}</p>
-                                                                                    )}
-                                                                                </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Diagnostic Context - New Section */}
+                                                                    {ai?.diagnostic_context && !hasError && (
+                                                                        <div className="mb-4 space-y-2">
+                                                                            {ai.diagnostic_context.infrastructure_proximity && (
+                                                                                <div className="px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10 flex items-start gap-2.5">
+                                                                                    <Shield className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
+                                                                                    <div className="flex-1">
+                                                                                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tight">Infrastructure Proximity</p>
+                                                                                        <p className="text-[11px] text-blue-200/70">
+                                                                                            {typeof ai.diagnostic_context.infrastructure_proximity === 'object'
+                                                                                                ? ai.diagnostic_context.infrastructure_proximity.details
+                                                                                                : ai.diagnostic_context.infrastructure_proximity}
+                                                                                        </p>
+                                                                                        {ai.diagnostic_context.infrastructure_proximity?.evidence && (
+                                                                                            <p className="mt-1 text-[9px] text-blue-400/50 font-medium italic">
+                                                                                                Evidence: {ai.diagnostic_context.infrastructure_proximity.evidence}
+                                                                                            </p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                            {ai.diagnostic_context.historical_trend && (
+                                                                                <div className="px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 flex items-start gap-2.5">
+                                                                                    <History className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+                                                                                    <div className="flex-1">
+                                                                                        <p className="text-[9px] font-bold text-amber-400 uppercase tracking-tight">Historical Trend</p>
+                                                                                        <p className="text-[11px] text-amber-200/70">
+                                                                                            {typeof ai.diagnostic_context.historical_trend === 'object'
+                                                                                                ? ai.diagnostic_context.historical_trend.details
+                                                                                                : ai.diagnostic_context.historical_trend}
+                                                                                        </p>
+                                                                                        {ai.diagnostic_context.historical_trend?.evidence && (
+                                                                                            <p className="mt-1 text-[9px] text-amber-400/50 font-medium italic">
+                                                                                                Evidence: {ai.diagnostic_context.historical_trend.evidence}
+                                                                                            </p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                            {ai.diagnostic_context.weather_impact && ai.diagnostic_context.weather_impact !== 'None' && (
+                                                                                <div className="px-3 py-2 rounded-lg bg-primary-500/5 border border-primary-500/10 flex items-start gap-2.5">
+                                                                                    <Cloud className="w-3.5 h-3.5 text-primary-400 mt-0.5 flex-shrink-0" />
+                                                                                    <div className="flex-1">
+                                                                                        <p className="text-[9px] font-bold text-primary-400 uppercase tracking-tight">Weather Criticality</p>
+                                                                                        <p className="text-[11px] text-primary-200/70">
+                                                                                            {typeof ai.diagnostic_context.weather_impact === 'object'
+                                                                                                ? ai.diagnostic_context.weather_impact.details
+                                                                                                : ai.diagnostic_context.weather_impact}
+                                                                                        </p>
+                                                                                        {ai.diagnostic_context.weather_impact?.evidence && (
+                                                                                            <p className="mt-1 text-[9px] text-primary-400/50 font-medium italic">
+                                                                                                Evidence: {ai.diagnostic_context.weather_impact.evidence}
+                                                                                            </p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Similar Reports - Clickable Links */}
+                                                                    {ai.similar_reports && ai.similar_reports.length > 0 && (
+                                                                        <div className="mb-4 px-3 py-2 rounded-lg bg-purple-500/5 border border-purple-500/10 flex items-start gap-2.5">
+                                                                            <Link2 className="w-3.5 h-3.5 text-purple-400 mt-0.5 flex-shrink-0" />
+                                                                            <div className="flex-1">
+                                                                                <p className="text-[9px] font-bold text-purple-400 uppercase tracking-tight">Similar Reports</p>
+                                                                                <div className="mt-1 space-y-1">
+                                                                                    {ai.similar_reports.map((report: { id: string; description: string; similarity: number; justification?: string }) => (
+                                                                                        <button
+                                                                                            key={report.id}
+                                                                                            onClick={() => {
+                                                                                                window.location.hash = `detail/${report.id}`;
+                                                                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                                                            }}
+                                                                                            title={report.justification || `${Math.round(report.similarity * 100)}% match`}
+                                                                                            className="w-full text-left px-2 py-1.5 rounded bg-purple-500/10 hover:bg-purple-500/20 transition-colors group"
+                                                                                        >
+                                                                                            <div className="flex items-center justify-between gap-2">
+                                                                                                <span className="text-[10px] text-purple-300 font-mono group-hover:text-purple-200">{report.id}</span>
+                                                                                                <span className="text-[9px] text-purple-400/60">{Math.round(report.similarity * 100)}% match</span>
+                                                                                            </div>
+                                                                                            <p className="text-[9px] text-purple-200/50 mt-0.5 line-clamp-1">{report.description}</p>
+                                                                                            {report.justification && (
+                                                                                                <p className="text-[8px] text-purple-400/40 mt-0.5 italic">{report.justification}</p>
+                                                                                            )}
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Safety Flags - Cleaned up Pills */}
+                                                                    {ai?.safety_flags && Array.isArray(ai.safety_flags) && ai.safety_flags.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1.5 mb-4">
+                                                                            {ai.safety_flags.map((flag: string, i: number) => (
+                                                                                <span key={i} className="inline-flex items-center px-2 py-1 rounded bg-red-500/10 text-red-400 text-[10px] font-bold ring-1 ring-red-500/20">
+                                                                                    {flag.replace(/_/g, ' ').toUpperCase()}
+                                                                                </span>
                                                                             ))}
                                                                         </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
+                                                                    )}
 
-                                                            {/* Safety Flags - Cleaned up Pills */}
-                                                            {ai?.safety_flags && Array.isArray(ai.safety_flags) && ai.safety_flags.length > 0 && (
-                                                                <div className="flex flex-wrap gap-1.5 mb-4">
-                                                                    {ai.safety_flags.map((flag: string, i: number) => (
-                                                                        <span key={i} className="inline-flex items-center px-2 py-1 rounded bg-red-500/10 text-red-400 text-[10px] font-bold ring-1 ring-red-500/20">
-                                                                            {flag.replace(/_/g, ' ').toUpperCase()}
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-
-                                                            {/* Footer with timestamp */}
-                                                            <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                                                                {selectedRequest.vertex_ai_analyzed_at && (
-                                                                    <p className="text-white/20 text-[9px]">
-                                                                        Analyzed {new Date(selectedRequest.vertex_ai_analyzed_at).toLocaleString()}
-                                                                    </p>
-                                                                )}
-                                                                {!hasError && (
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse" />
-                                                                        <p className="text-[9px] text-white/30 font-medium">
-                                                                            Visual + Spatial Context Integrated
-                                                                        </p>
+                                                                    {/* Footer with timestamp */}
+                                                                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                                                                        {selectedRequest.vertex_ai_analyzed_at && (
+                                                                            <p className="text-white/20 text-[9px]">
+                                                                                Analyzed {new Date(selectedRequest.vertex_ai_analyzed_at).toLocaleString()}
+                                                                            </p>
+                                                                        )}
+                                                                        {!hasError && (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <div className="w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse" />
+                                                                                <p className="text-[9px] text-white/30 font-medium">
+                                                                                    Visual + Spatial Context Integrated
+                                                                                </p>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                )}
-                                                            </div>
+                                                                </>
+                                                            )}
                                                         </div>
+
                                                     </div>
                                                 );
                                             })()}
@@ -1784,148 +1799,150 @@ export default function StaffDashboard() {
                                         </div>
 
                                         {/* ═══ SECTION 2: Location & Map ═══ */}
-                                        {(selectedRequest.address || selectedRequest.lat) && (
-                                            <div className="p-4 rounded-lg bg-slate-800/50 border border-white/10">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <MapPin className="w-4 h-4 text-blue-400" />
-                                                    <span className="font-medium text-white">Location</span>
-                                                </div>
-                                                {selectedRequest.address && (
-                                                    <p className="text-white/80 mb-3">{selectedRequest.address}</p>
-                                                )}
-                                                {/* Interactive Google Maps with Asset Overlay */}
-                                                {selectedRequest.lat && selectedRequest.long && mapsConfig?.google_maps_api_key && (
-                                                    <div className="rounded-lg overflow-hidden h-64 bg-slate-900">
-                                                        <RequestDetailMap
-                                                            lat={selectedRequest.lat}
-                                                            lng={selectedRequest.long}
-                                                            matchedAsset={(selectedRequest as any).matched_asset}
-                                                            mapLayers={mapLayers}
-                                                            apiKey={mapsConfig.google_maps_api_key}
-                                                        />
+                                        {
+                                            (selectedRequest.address || selectedRequest.lat) && (
+                                                <div className="p-4 rounded-lg bg-slate-800/50 border border-white/10">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <MapPin className="w-4 h-4 text-blue-400" />
+                                                        <span className="font-medium text-white">Location</span>
                                                     </div>
-                                                )}
-                                                {/* Fallback for no API key */}
-                                                {selectedRequest.lat && selectedRequest.long && !mapsConfig?.google_maps_api_key && (
-                                                    <div className="rounded-lg overflow-hidden h-48 bg-slate-900">
-                                                        <iframe
-                                                            width="100%"
-                                                            height="100%"
-                                                            style={{ border: 0 }}
-                                                            loading="lazy"
-                                                            src={`https://www.google.com/maps?q=${selectedRequest.lat},${selectedRequest.long}&z=17&output=embed`}
-                                                        />
-                                                    </div>
-                                                )}
+                                                    {selectedRequest.address && (
+                                                        <p className="text-white/80 mb-3">{selectedRequest.address}</p>
+                                                    )}
+                                                    {/* Interactive Google Maps with Asset Overlay */}
+                                                    {selectedRequest.lat && selectedRequest.long && mapsConfig?.google_maps_api_key && (
+                                                        <div className="rounded-lg overflow-hidden h-64 bg-slate-900">
+                                                            <RequestDetailMap
+                                                                lat={selectedRequest.lat}
+                                                                lng={selectedRequest.long}
+                                                                matchedAsset={(selectedRequest as any).matched_asset}
+                                                                mapLayers={mapLayers}
+                                                                apiKey={mapsConfig.google_maps_api_key}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {/* Fallback for no API key */}
+                                                    {selectedRequest.lat && selectedRequest.long && !mapsConfig?.google_maps_api_key && (
+                                                        <div className="rounded-lg overflow-hidden h-48 bg-slate-900">
+                                                            <iframe
+                                                                width="100%"
+                                                                height="100%"
+                                                                style={{ border: 0 }}
+                                                                loading="lazy"
+                                                                src={`https://www.google.com/maps?q=${selectedRequest.lat},${selectedRequest.long}&z=17&output=embed`}
+                                                            />
+                                                        </div>
+                                                    )}
 
-                                                {/* Matched Asset Info - Below Map */}
-                                                {(selectedRequest as any).matched_asset && (
-                                                    <div className="mt-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                                                        {/* Clear header label */}
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500/70">🔗 Matched Asset</span>
-                                                            {(selectedRequest as any).matched_asset.distance_meters && (
-                                                                <span className="text-xs text-white/40 ml-auto">
-                                                                    {(selectedRequest as any).matched_asset.distance_meters < 1
-                                                                        ? '<1m away'
-                                                                        : `${Math.round((selectedRequest as any).matched_asset.distance_meters)}m away`}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <div className="w-3 h-3 rounded bg-emerald-500" />
-                                                            <span className="text-sm font-medium text-emerald-400">
-                                                                {(selectedRequest as any).matched_asset.layer_name}
-                                                            </span>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                                                            {(selectedRequest as any).matched_asset.asset_id && (
-                                                                <>
-                                                                    <span className="text-white/40">Asset ID</span>
-                                                                    <span className="text-white/80 font-mono">{(selectedRequest as any).matched_asset.asset_id}</span>
-                                                                </>
-                                                            )}
-                                                            {(selectedRequest as any).matched_asset.asset_type && (
-                                                                <>
-                                                                    <span className="text-white/40">Type</span>
-                                                                    <span className="text-white/80">{(selectedRequest as any).matched_asset.asset_type}</span>
-                                                                </>
-                                                            )}
-                                                            {(selectedRequest as any).matched_asset.properties &&
-                                                                Object.entries((selectedRequest as any).matched_asset.properties)
-                                                                    .filter(([key, value]) => {
-                                                                        // Exclude common ID fields
-                                                                        if (['id', 'asset_id', 'name', 'layer_name', 'objectid', 'fid', 'gid'].includes(key.toLowerCase())) return false;
-                                                                        // Exclude purely numeric values (likely IDs)
-                                                                        if (typeof value === 'number' && String(value).match(/^\d+$/)) return false;
-                                                                        // Exclude null/undefined/empty
-                                                                        if (value === null || value === undefined || value === '') return false;
-                                                                        return true;
-                                                                    })
-                                                                    .slice(0, 6)
-                                                                    .map(([key, value]) => (
-                                                                        <React.Fragment key={key}>
-                                                                            <span className="text-white/40 truncate">
-                                                                                {key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim()}
-                                                                            </span>
-                                                                            <span className="text-white/80 truncate">
-                                                                                {String(value)}
-                                                                            </span>
-                                                                        </React.Fragment>
-                                                                    ))
-                                                            }
-                                                        </div>
-
-                                                        {/* Asset History - Related Reports */}
-                                                        <div className="mt-3 pt-3 border-t border-emerald-500/20">
+                                                    {/* Matched Asset Info - Below Map */}
+                                                    {(selectedRequest as any).matched_asset && (
+                                                        <div className="mt-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                                                            {/* Clear header label */}
                                                             <div className="flex items-center gap-2 mb-2">
-                                                                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500/70">📋 Asset History</span>
-                                                                {isLoadingAssetHistory && (
-                                                                    <div className="w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                                                                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500/70">🔗 Matched Asset</span>
+                                                                {(selectedRequest as any).matched_asset.distance_meters && (
+                                                                    <span className="text-xs text-white/40 ml-auto">
+                                                                        {(selectedRequest as any).matched_asset.distance_meters < 1
+                                                                            ? '<1m away'
+                                                                            : `${Math.round((selectedRequest as any).matched_asset.distance_meters)}m away`}
+                                                                    </span>
                                                                 )}
                                                             </div>
-                                                            {assetRelatedRequests.length > 0 ? (
-                                                                <div className="space-y-2">
-                                                                    <p className="text-xs text-emerald-400/80">
-                                                                        {assetRelatedRequests.length} other report{assetRelatedRequests.length !== 1 ? 's' : ''} linked to this asset
-                                                                    </p>
-                                                                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                                                                        {assetRelatedRequests.slice(0, 5).map((r) => (
-                                                                            <button
-                                                                                key={r.service_request_id}
-                                                                                onClick={() => loadRequestDetail(r.service_request_id)}
-                                                                                className="w-full text-left p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors group"
-                                                                            >
-                                                                                <div className="flex items-center justify-between">
-                                                                                    <span className="text-xs font-mono text-emerald-400 group-hover:text-emerald-300">{r.service_request_id}</span>
-                                                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${r.status === 'closed' ? 'bg-green-500/20 text-green-400' :
-                                                                                        r.status === 'in_progress' ? 'bg-amber-500/20 text-amber-400' :
-                                                                                            'bg-red-500/20 text-red-400'
-                                                                                        }`}>{r.status.replace('_', ' ')}</span>
-                                                                                </div>
-                                                                                <p className="text-xs text-white/60 truncate mt-0.5">{r.service_name}</p>
-                                                                                <p className="text-[10px] text-white/40 mt-0.5">
-                                                                                    {new Date(r.requested_datetime).toLocaleDateString()}
-                                                                                </p>
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                    {assetRelatedRequests.length > 5 && (
-                                                                        <p className="text-[10px] text-white/40 text-center">
-                                                                            +{assetRelatedRequests.length - 5} more reports
-                                                                        </p>
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <div className="w-3 h-3 rounded bg-emerald-500" />
+                                                                <span className="text-sm font-medium text-emerald-400">
+                                                                    {(selectedRequest as any).matched_asset.layer_name}
+                                                                </span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                                                                {(selectedRequest as any).matched_asset.asset_id && (
+                                                                    <>
+                                                                        <span className="text-white/40">Asset ID</span>
+                                                                        <span className="text-white/80 font-mono">{(selectedRequest as any).matched_asset.asset_id}</span>
+                                                                    </>
+                                                                )}
+                                                                {(selectedRequest as any).matched_asset.asset_type && (
+                                                                    <>
+                                                                        <span className="text-white/40">Type</span>
+                                                                        <span className="text-white/80">{(selectedRequest as any).matched_asset.asset_type}</span>
+                                                                    </>
+                                                                )}
+                                                                {(selectedRequest as any).matched_asset.properties &&
+                                                                    Object.entries((selectedRequest as any).matched_asset.properties)
+                                                                        .filter(([key, value]) => {
+                                                                            // Exclude common ID fields
+                                                                            if (['id', 'asset_id', 'name', 'layer_name', 'objectid', 'fid', 'gid'].includes(key.toLowerCase())) return false;
+                                                                            // Exclude purely numeric values (likely IDs)
+                                                                            if (typeof value === 'number' && String(value).match(/^\d+$/)) return false;
+                                                                            // Exclude null/undefined/empty
+                                                                            if (value === null || value === undefined || value === '') return false;
+                                                                            return true;
+                                                                        })
+                                                                        .slice(0, 6)
+                                                                        .map(([key, value]) => (
+                                                                            <React.Fragment key={key}>
+                                                                                <span className="text-white/40 truncate">
+                                                                                    {key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim()}
+                                                                                </span>
+                                                                                <span className="text-white/80 truncate">
+                                                                                    {String(value)}
+                                                                                </span>
+                                                                            </React.Fragment>
+                                                                        ))
+                                                                }
+                                                            </div>
+
+                                                            {/* Asset History - Related Reports */}
+                                                            <div className="mt-3 pt-3 border-t border-emerald-500/20">
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500/70">📋 Asset History</span>
+                                                                    {isLoadingAssetHistory && (
+                                                                        <div className="w-3 h-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
                                                                     )}
                                                                 </div>
-                                                            ) : !isLoadingAssetHistory ? (
-                                                                <p className="text-xs text-white/40">
-                                                                    No previous reports for this asset
-                                                                </p>
-                                                            ) : null}
+                                                                {assetRelatedRequests.length > 0 ? (
+                                                                    <div className="space-y-2">
+                                                                        <p className="text-xs text-emerald-400/80">
+                                                                            {assetRelatedRequests.length} other report{assetRelatedRequests.length !== 1 ? 's' : ''} linked to this asset
+                                                                        </p>
+                                                                        <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                                                            {assetRelatedRequests.slice(0, 5).map((r) => (
+                                                                                <button
+                                                                                    key={r.service_request_id}
+                                                                                    onClick={() => loadRequestDetail(r.service_request_id)}
+                                                                                    className="w-full text-left p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors group"
+                                                                                >
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <span className="text-xs font-mono text-emerald-400 group-hover:text-emerald-300">{r.service_request_id}</span>
+                                                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${r.status === 'closed' ? 'bg-green-500/20 text-green-400' :
+                                                                                            r.status === 'in_progress' ? 'bg-amber-500/20 text-amber-400' :
+                                                                                                'bg-red-500/20 text-red-400'
+                                                                                            }`}>{r.status.replace('_', ' ')}</span>
+                                                                                    </div>
+                                                                                    <p className="text-xs text-white/60 truncate mt-0.5">{r.service_name}</p>
+                                                                                    <p className="text-[10px] text-white/40 mt-0.5">
+                                                                                        {new Date(r.requested_datetime).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                        {assetRelatedRequests.length > 5 && (
+                                                                            <p className="text-[10px] text-white/40 text-center">
+                                                                                +{assetRelatedRequests.length - 5} more reports
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                ) : !isLoadingAssetHistory ? (
+                                                                    <p className="text-xs text-white/40">
+                                                                        No previous reports for this asset
+                                                                    </p>
+                                                                ) : null}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                                                    )}
+                                                </div>
+                                            )
+                                        }
 
 
                                         {/* ═══ SECTION 4: Timeline ═══ */}
