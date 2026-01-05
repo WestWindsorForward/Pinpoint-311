@@ -205,7 +205,7 @@ async def analyze_with_gemini(
         
         # Build the API endpoint
         # Gemini 3 models are currently available on global endpoints
-        endpoint = f"https://global-aiplatform.googleapis.com/v1/projects/{project_id}/locations/global/publishers/google/models/gemini-3-flash-preview:generateContent"
+        endpoint = f"https://aiplatform.googleapis.com/v1/projects/{project_id}/locations/global/publishers/google/models/gemini-3-flash-preview:generateContent"
         
         # Build the request payload
         contents = []
