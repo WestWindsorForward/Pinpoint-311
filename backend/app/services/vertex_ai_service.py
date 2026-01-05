@@ -93,11 +93,13 @@ def build_analysis_prompt(
     # Add historical context
     if historical_context:
         prompt += f"""
-## Historical Context & Trends
+## Historical Context & Evidence
 - **Previous reports at this location**: {historical_context.get('recurrence_count', 0)}
-- **Similar active reports nearby (within 500m)**: {historical_context.get('nearby_similar', 0)}
-- **Duplicate Density (Nodal reporting within 20m)**: {historical_context.get('duplicate_density', 0)} reports
-- **Past resolution quality at this address**: {historical_context.get('past_resolution_quality', 'No previous history')}
+- **Evidence (Address-based)**: {historical_context.get('recent_address_reports', 'None')}
+- **Past resolution quality (Address)**: {historical_context.get('past_resolution_quality', 'No previous history')}
+- **Similar active reports (500m radius)**: {historical_context.get('nearby_similar', 0)}
+- **Evidence (Nearby IDs)**: {historical_context.get('nearby_similar_ids', 'None')}
+- **Duplicate Density (within 20m)**: {historical_context.get('duplicate_density', 0)} reports
 """
 
     # Add spatial context
@@ -105,7 +107,7 @@ def build_analysis_prompt(
         prompt += f"""
 ## Spatial & Environmental Context
 - **Proximity to Critical Infrastructure**: {spatial_context.get('critical_infrastructure', 'None identified within 50ft')}
-- **Nearby active outages (e.g. Streetlights)**: {spatial_context.get('nearby_outages', 0)} detected within 100m
+- **Nearby active outages**: {spatial_context.get('nearby_outages', 0)} detected within 100m
 - **Area profile**: {spatial_context.get('area_type', 'Unknown')} (High Traffic: {spatial_context.get('is_high_traffic', 'N/A')})
 - **Vulnerable population impact**: {spatial_context.get('vulnerable_pop_prox', 'Low')}
 """
@@ -120,10 +122,10 @@ def build_analysis_prompt(
 Analyze the provided description, photos, and deep context to provide a professional triage assessment.
 
 ### Diagnostic Instructions:
-1. **Critical Proximity**: If within 50ft of a hospital, school, or fire station, urgency must be elevated.
-2. **Chronic vs One-off**: Use recurrence data and past resolution quality to determine if this is a systemic failure.
-3. **Nodal Reporting**: High duplicate density indicates high public frustration/visibility.
-4. **Weather Multiplier**: If storming or extreme weather is noted, elevate priority for drainage or debris issues.
+1. **Evidence Citing**: For every diagnostic context claim (Infrastructure, Trend, Weather), you MUST cite specific raw data or report IDs provided above. 
+2. **Critical Proximity**: If within 50ft of a hospital, school, or fire station, urgency must be elevated.
+3. **Chronic vs One-off**: Use recurrence data and past resolution quality to determine if this is a systemic failure.
+4. **Nodal Reporting**: High duplicate density indicates high public frustration/visibility. Citing specific nearby IDs increases trust.
 5. **Visual Assessment**: Analyze photos for physical scale, required effort, and blockage severity.
 
 Provide your analysis in the following JSON format ONLY:
@@ -140,9 +142,18 @@ Provide your analysis in the following JSON format ONLY:
   }},
   "content_flags": ["<inappropriate_content|malicious_intent|obscene_language|none>"],
   "diagnostic_context": {{
-    "infrastructure_proximity": "<details>",
-    "historical_trend": "<details>",
-    "weather_impact": "<impact if any>",
+    "infrastructure_proximity": {{
+      "details": "<desc>",
+      "evidence": "<specific citation from spatial data>"
+    }},
+    "historical_trend": {{
+      "details": "<desc>",
+      "evidence": "<citation of specific previous report IDs or dates>"
+    }},
+    "weather_impact": {{
+      "details": "<desc>",
+      "evidence": "<citation from real-time weather scenario>"
+    }},
     "nodal_density": "<low|medium|high>"
   }},
   "quantitative_metrics": {{
@@ -326,23 +337,26 @@ async def get_historical_context(db, address: str, service_code: str, lat: Optio
     }
     
     try:
-        # 1. Chronic Factor: Count reports at this address in last 90 days
-        if address:
+            # 1. Chronic Factor: Count reports at this address in last 90 days
             three_months_ago = datetime.now() - timedelta(days=90)
-            result = await db.execute(
-                select(func.count(ServiceRequest.id)).where(
-                    ServiceRequest.address == address,
-                    ServiceRequest.requested_datetime >= three_months_ago,
-                    ServiceRequest.deleted_at.is_(None)
-                )
-            )
-            count_recent = result.scalar() or 0
-            context["recurrence_count"] = count_recent
-            context["chronic_factor"] = count_recent >= 5  # High recurrence threshold
+            addr_history_query = select(ServiceRequest.id, ServiceRequest.service_request_id, ServiceRequest.requested_datetime).where(
+                ServiceRequest.address == address,
+                ServiceRequest.requested_datetime >= three_months_ago,
+                ServiceRequest.deleted_at.is_(None)
+            ).order_by(ServiceRequest.requested_datetime.desc())
+            
+            addr_result = await db.execute(addr_history_query)
+            addr_history = addr_result.all()
+            
+            context["recurrence_count"] = len(addr_history)
+            context["chronic_factor"] = len(addr_history) >= 5
+            context["recent_address_reports"] = [
+                {"id": r[1], "date": r[2].strftime('%Y-%m-%d')} for r in addr_history[:3]
+            ]
             
             # 2. Past Resolution Quality (Last closed report at this address)
             last_res = await db.execute(
-                select(ServiceRequest.closed_substatus, ServiceRequest.completion_message, ServiceRequest.status)
+                select(ServiceRequest.service_request_id, ServiceRequest.closed_substatus, ServiceRequest.completion_message, ServiceRequest.status)
                 .where(
                     ServiceRequest.address == address,
                     ServiceRequest.status == "closed",
@@ -354,8 +368,9 @@ async def get_historical_context(db, address: str, service_code: str, lat: Optio
             row = last_res.first()
             if row:
                 context["past_resolution_quality"] = {
-                    "substatus": row[0],
-                    "message": row[1]
+                    "request_id": row[0],
+                    "substatus": row[1],
+                    "message": row[2]
                 }
         
         # 3. Nodal reporting / Proximity Similarity
@@ -365,14 +380,17 @@ async def get_historical_context(db, address: str, service_code: str, lat: Optio
             point = func.ST_SetSRID(func.ST_MakePoint(long, lat), 4326)
             
             # Nearby similar (500m) - context for duplicate check
-            nearby_query = select(func.count(ServiceRequest.id)).where(
+            nearby_query = select(ServiceRequest.service_request_id).where(
                 ServiceRequest.service_code == service_code,
                 ServiceRequest.status.in_(["open", "in_progress"]),
                 ServiceRequest.deleted_at.is_(None),
                 func.ST_DWithin(cast(ServiceRequest.location, Geography), cast(point, Geography), 500)
-            )
+            ).limit(5)
+            
             nearby_result = await db.execute(nearby_query)
-            context["nearby_similar"] = nearby_result.scalar() or 0
+            nearby_rows = nearby_result.all()
+            context["nearby_similar"] = len(nearby_rows)
+            context["nearby_similar_ids"] = [r[0] for r in nearby_rows[:3]]
             
             # Duplicate Density (Nodal - within 15m)
             nodal_query = select(func.count(ServiceRequest.id)).where(

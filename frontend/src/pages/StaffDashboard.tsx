@@ -1513,27 +1513,54 @@ export default function StaffDashboard() {
                                                                     {ai.diagnostic_context.infrastructure_proximity && (
                                                                         <div className="px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10 flex items-start gap-2.5">
                                                                             <Shield className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
-                                                                            <div>
+                                                                            <div className="flex-1">
                                                                                 <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tight">Infrastructure Proximity</p>
-                                                                                <p className="text-[11px] text-blue-200/70">{ai.diagnostic_context.infrastructure_proximity}</p>
+                                                                                <p className="text-[11px] text-blue-200/70">
+                                                                                    {typeof ai.diagnostic_context.infrastructure_proximity === 'object'
+                                                                                        ? ai.diagnostic_context.infrastructure_proximity.details
+                                                                                        : ai.diagnostic_context.infrastructure_proximity}
+                                                                                </p>
+                                                                                {ai.diagnostic_context.infrastructure_proximity?.evidence && (
+                                                                                    <p className="mt-1 text-[9px] text-blue-400/50 font-medium italic">
+                                                                                        Evidence: {ai.diagnostic_context.infrastructure_proximity.evidence}
+                                                                                    </p>
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     )}
                                                                     {ai.diagnostic_context.historical_trend && (
                                                                         <div className="px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 flex items-start gap-2.5">
                                                                             <History className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
-                                                                            <div>
+                                                                            <div className="flex-1">
                                                                                 <p className="text-[9px] font-bold text-amber-400 uppercase tracking-tight">Historical Trend</p>
-                                                                                <p className="text-[11px] text-amber-200/70">{ai.diagnostic_context.historical_trend}</p>
+                                                                                <p className="text-[11px] text-amber-200/70">
+                                                                                    {typeof ai.diagnostic_context.historical_trend === 'object'
+                                                                                        ? ai.diagnostic_context.historical_trend.details
+                                                                                        : ai.diagnostic_context.historical_trend}
+                                                                                </p>
+                                                                                {ai.diagnostic_context.historical_trend?.evidence && (
+                                                                                    <p className="mt-1 text-[9px] text-amber-400/50 font-medium italic">
+                                                                                        Evidence: {ai.diagnostic_context.historical_trend.evidence}
+                                                                                    </p>
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     )}
                                                                     {ai.diagnostic_context.weather_impact && ai.diagnostic_context.weather_impact !== 'None' && (
                                                                         <div className="px-3 py-2 rounded-lg bg-primary-500/5 border border-primary-500/10 flex items-start gap-2.5">
                                                                             <Cloud className="w-3.5 h-3.5 text-primary-400 mt-0.5 flex-shrink-0" />
-                                                                            <div>
+                                                                            <div className="flex-1">
                                                                                 <p className="text-[9px] font-bold text-primary-400 uppercase tracking-tight">Weather Criticality</p>
-                                                                                <p className="text-[11px] text-primary-200/70">{ai.diagnostic_context.weather_impact}</p>
+                                                                                <p className="text-[11px] text-primary-200/70">
+                                                                                    {typeof ai.diagnostic_context.weather_impact === 'object'
+                                                                                        ? ai.diagnostic_context.weather_impact.details
+                                                                                        : ai.diagnostic_context.weather_impact}
+                                                                                </p>
+                                                                                {ai.diagnostic_context.weather_impact?.evidence && (
+                                                                                    <p className="mt-1 text-[9px] text-primary-400/50 font-medium italic">
+                                                                                        Evidence: {ai.diagnostic_context.weather_impact.evidence}
+                                                                                    </p>
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     )}
