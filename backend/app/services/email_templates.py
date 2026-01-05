@@ -171,10 +171,12 @@ def build_status_update_email(
     old_status: str,
     new_status: str,
     completion_message: Optional[str],
+    completion_photo_url: Optional[str],
     portal_url: str
 ) -> Dict[str, str]:
     """
     Build email for status update notification.
+    Includes completion photo if provided (for closed requests).
     """
     tracking_url = f"{portal_url}/track/{request_id}"
     
@@ -185,6 +187,16 @@ def build_status_update_email(
     }
     
     status_config = status_configs.get(new_status, {"label": new_status.replace("_", " ").title(), "color": "#64748b", "bg": "#f1f5f9", "icon": "circle"})
+    
+    # Build completion photo section if available
+    completion_photo_section = ""
+    if completion_photo_url and new_status == "closed":
+        completion_photo_section = f'''
+        <div style="margin-bottom: 24px; text-align: center;">
+            <p style="margin: 0 0 12px 0; color: #166534; font-size: 13px; font-weight: 600;">Completion Photo</p>
+            <img src="{completion_photo_url}" alt="Completion photo" style="max-width: 100%; height: auto; border-radius: 12px; border: 2px solid #dcfce7; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        </div>
+        '''
     
     content = f"""
         <div style="text-align: center; margin-bottom: 24px;">
@@ -215,6 +227,8 @@ def build_status_update_email(
         </div>
         ''' if completion_message and new_status == 'closed' else ''}
         
+        {completion_photo_section}
+        
         <div style="text-align: center;">
             <a href="{tracking_url}" style="display: inline-block; background-color: {primary_color}; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">View Request Details</a>
         </div>
@@ -234,6 +248,7 @@ Your request status has been updated to: {status_config['label']}
 
 Category: {service_name}
 {f"Resolution Notes: {completion_message}" if completion_message and new_status == 'closed' else ""}
+{f"Completion Photo: {completion_photo_url}" if completion_photo_url and new_status == 'closed' else ""}
 
 View details at: {tracking_url}
 """

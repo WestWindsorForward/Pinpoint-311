@@ -260,6 +260,7 @@ class NotificationService:
         old_status: str,
         new_status: str,
         completion_message: Optional[str],
+        completion_photo_url: Optional[str],
         email: Optional[str],
         phone: Optional[str],
         township_name: str,
@@ -267,7 +268,7 @@ class NotificationService:
         primary_color: str,
         portal_url: str
     ):
-        """Send branded status update notification"""
+        """Send branded status update notification with completion photo support"""
         from app.services.email_templates import build_status_update_email, build_sms_status_update
         
         # Build branded email
@@ -280,6 +281,7 @@ class NotificationService:
             old_status=old_status,
             new_status=new_status,
             completion_message=completion_message,
+            completion_photo_url=completion_photo_url,
             portal_url=portal_url
         )
         
