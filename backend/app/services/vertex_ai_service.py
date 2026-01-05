@@ -530,10 +530,16 @@ async def get_spatial_context(db, lat: float, long: float, service_code: str) ->
         if not spatial_info["critical_infrastructure"]:
             try:
                 import httpx
-                import os
                 import logging
+                from app.models import SystemSecret
                 
-                google_maps_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+                # Fetch Google Maps API key from database (same as gis.py)
+                secret_result = await db.execute(
+                    select(SystemSecret).where(SystemSecret.key_name == "GOOGLE_MAPS_API_KEY")
+                )
+                secret = secret_result.scalar_one_or_none()
+                google_maps_key = secret.key_value if secret and secret.is_configured else None
+                
                 logging.info(f"[Critical Infrastructure] Google Maps API key available: {bool(google_maps_key)}")
                 
                 if google_maps_key:
@@ -563,7 +569,7 @@ async def get_spatial_context(db, lat: float, long: float, service_code: str) ->
                                     logging.info(f"[Critical Infrastructure] Detected: {place_name}")
                                     break  # One match is enough
                 else:
-                    logging.warning("[Critical Infrastructure] GOOGLE_MAPS_API_KEY not set, skipping Google Places fallback")
+                    logging.warning("[Critical Infrastructure] GOOGLE_MAPS_API_KEY not configured in system secrets")
             except Exception as e:
                 import logging
                 logging.warning(f"Google Places API fallback failed: {e}")
