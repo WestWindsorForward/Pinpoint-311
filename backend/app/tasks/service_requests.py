@@ -130,7 +130,10 @@ def analyze_request(self, request_id: int):
                 "matched_asset": request.matched_asset,
             }
             
-            # Get spatial & environmental context
+            # Get historical & spatial context
+            historical_context = await get_historical_context(
+                db, request.lat, request.long, request.service_code, request.address
+            )
             spatial_context = await get_spatial_context(
                 db, request.lat, request.long, request.service_code
             )
