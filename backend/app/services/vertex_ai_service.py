@@ -108,8 +108,8 @@ def build_analysis_prompt(
 - **Previous reports at this location**: {historical_context.get('recurrence_count', 0)}
 - **Evidence (Address-based)**: {historical_context.get('recent_address_reports', 'None')}
 - **Past resolution quality (Address)**: {historical_context.get('past_resolution_quality', 'No previous history')}
-- **Similar active reports (500m radius)**: {historical_context.get('nearby_similar', 0)}
-- **Evidence (Nearby IDs)**: {historical_context.get('nearby_similar_ids', 'None')}
+- **Similar active reports (geo + category + content matched)**: {len(historical_context.get('similar_reports', []))}
+- **Matched Similar Report IDs**: {[r['id'] for r in historical_context.get('similar_reports', [])] if historical_context.get('similar_reports') else 'None'}
 - **Duplicate Density (within 20m)**: {historical_context.get('duplicate_density', 0)} reports
 """
 

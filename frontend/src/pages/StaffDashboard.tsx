@@ -1469,10 +1469,6 @@ export default function StaffDashboard() {
                                                                             <span className="text-white/80 font-medium">{ai.photo_assessment.physical_scale}</span>
                                                                         </div>
                                                                         <div className="flex justify-between items-center text-xs">
-                                                                            <span className="text-white/40">Estimated Effort</span>
-                                                                            <span className="text-white/80 font-medium">{ai.photo_assessment.estimated_effort}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between items-center text-xs">
                                                                             <span className="text-white/40">Blocking Severity</span>
                                                                             <span className={`font-bold ${ai.photo_assessment.blocking_severity === 'full_block' ? 'text-red-400' :
                                                                                 ai.photo_assessment.blocking_severity === 'partial' ? 'text-amber-400' : 'text-green-400'

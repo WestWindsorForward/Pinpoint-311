@@ -179,6 +179,11 @@ def analyze_request(self, request_id: int):
                 logger.error(f"[AI Analysis] Error from Vertex AI: {analysis_result['_error']}")
                 print(f"[AI Analysis] Error from Vertex AI: {analysis_result['_error']}")
             
+            # Add similar_reports from historical context to the stored result
+            # These are already filtered by geo (500m) + category + description similarity (>25%)
+            if historical_context.get("similar_reports"):
+                analysis_result["similar_reports"] = historical_context["similar_reports"]
+            
             # Store the analysis
             request.ai_analysis = analysis_result
             request.priority = min(10, max(1, int(analysis_result.get("priority_score", 5))))
