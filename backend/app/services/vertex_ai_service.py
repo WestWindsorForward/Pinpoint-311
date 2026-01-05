@@ -587,10 +587,8 @@ async def get_spatial_context(db, lat: float, long: float, service_code: str) ->
                                             f"{place_type}: {place_name} ({int(distance_m)}m)"
                                         )
                                         logging.info(f"[Critical Infrastructure] Detected via Nominatim: {place_name} at {int(distance_m)}m")
-                                        break  # Take first match within 300m
-                                
-                                if spatial_info["critical_infrastructure"]:
-                                    break  # Stop searching if we found something
+                                        break  # Take first match within 300m for this type
+                                # Continue searching for other infrastructure types (don't break outer loop)
                         
                         # Rate limit: Nominatim requests 1 req/sec max
                         await asyncio.sleep(0.2)
