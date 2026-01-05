@@ -1289,9 +1289,9 @@ export default function StaffDashboard() {
 
                 {/* List/Detail View */}
                 {currentView !== 'statistics' && currentView !== 'dashboard' && (
-                    <div className="flex-1 flex min-h-0">
+                    <div className="flex-1 flex min-h-0 h-full">
                         {/* Request List Panel */}
-                        <div className="w-full lg:w-96 flex flex-col border-r border-white/10 lg:h-[calc(100vh-theme(spacing.16))] lg:overflow-hidden">
+                        <div className="w-full lg:w-96 flex flex-col border-r border-white/10 h-full overflow-hidden">
                             {/* List Header with Quick Stats */}
                             <div className="p-4 border-b border-white/10 space-y-3">
                                 <div className="flex items-center justify-between">
@@ -1485,7 +1485,7 @@ export default function StaffDashboard() {
                         {/* Detail Panel - Shows as overlay on mobile, side panel on desktop */}
                         <div
                             ref={detailPanelRef}
-                            className={`${selectedRequest ? 'fixed inset-0 z-50 lg:relative lg:inset-auto overflow-y-auto overscroll-contain touch-pan-y' : 'hidden'} lg:flex flex-1 flex-col bg-slate-900 lg:overflow-y-auto lg:h-[calc(100vh-theme(spacing.16))]`}
+                            className={`${selectedRequest ? 'fixed inset-0 z-50 lg:relative lg:inset-auto overflow-y-auto overscroll-contain touch-pan-y' : 'hidden'} lg:flex flex-1 flex-col bg-slate-900 lg:overflow-y-auto h-full`}
                         >
                             {/* Mobile Back Button */}
                             {selectedRequest && (
