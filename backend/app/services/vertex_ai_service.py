@@ -431,10 +431,14 @@ async def get_historical_context(db, address: str, service_code: str, lat: Optio
                     # Use SequenceMatcher for text similarity between descriptions
                     similarity = SequenceMatcher(None, description.lower(), candidate_desc.lower()).ratio()
                     if similarity > 0.25:  # 25% content match threshold
+                        # Build justification explaining why this report is similar
+                        similarity_pct = int(similarity * 100)
+                        justification = f"Within 500m • Same category • {similarity_pct}% description match"
                         similar_reports.append({
                             "id": candidate_id,
                             "description": candidate_desc[:100] + ("..." if len(candidate_desc) > 100 else ""),
-                            "similarity": round(similarity, 2)
+                            "similarity": round(similarity, 2),
+                            "justification": justification
                         })
             
             # Sort by similarity and take top 3
@@ -484,23 +488,76 @@ async def get_spatial_context(db, lat: float, long: float, service_code: str) ->
     try:
         point = func.ST_SetSRID(func.ST_MakePoint(long, lat), 4326)
         
-        # 1. Proximity to Critical Infrastructure & Zones (MapLayers)
-        # We query MapLayer for any layers within 50m to find nearby assets/zones
+        # 1. Proximity to Critical Infrastructure & Zones (MapLayers with GeoJSON)
+        # Query each layer with critical keywords and check spatial proximity using PostGIS
         layers = await db.execute(select(MapLayer).where(MapLayer.is_active == True))
         all_layers = layers.scalars().all()
         
         for layer in all_layers:
             # Check if layer name suggests critical infrastructure
             name_lower = layer.name.lower()
-            critical_keywords = ["hospital", "fire station", "school", "emergency", "assisted living", "elderly"]
+            critical_keywords = ["hospital", "fire station", "fire", "school", "emergency", "assisted living", "elderly", "police", "ems"]
             
-            # Simple heuristic: if the layer is active and matches keywords, note it
             if any(kw in name_lower for kw in critical_keywords):
-                # In a full spatial implementation, we'd use ST_Intersects or ST_DWithin on the GeoJSON features
-                # For now, we note potential proximity if keywords match and we can't do deeper geometry checks
-                # (Assuming the system might have pre-matched or we can check layer properties)
-                if layer.routing_mode != "none":
-                    spatial_info["critical_infrastructure"].append(layer.name)
+                # Use PostGIS to check if request point is within 50m of any feature in this layer's GeoJSON
+                if layer.geojson and layer.geojson.get("features"):
+                    try:
+                        # Check each feature in the GeoJSON for proximity
+                        for feature in layer.geojson.get("features", [])[:50]:  # Limit to 50 features per layer
+                            if feature.get("geometry"):
+                                import json
+                                geom_json = json.dumps(feature["geometry"])
+                                # Use raw SQL to check distance with PostGIS
+                                proximity_query = text("""
+                                    SELECT ST_Distance(
+                                        ST_SetSRID(ST_MakePoint(:long, :lat), 4326)::geography,
+                                        ST_GeomFromGeoJSON(:geom)::geography
+                                    ) as distance_m
+                                """)
+                                result = await db.execute(proximity_query, {"lat": lat, "long": long, "geom": geom_json})
+                                row = result.fetchone()
+                                if row and row.distance_m is not None and row.distance_m <= 50:  # 50 meters
+                                    # Found a critical infrastructure within 50m!
+                                    feature_name = feature.get("properties", {}).get("name", layer.name)
+                                    spatial_info["critical_infrastructure"].append(f"{layer.name}: {feature_name} ({int(row.distance_m)}m)")
+                                    break  # Only need one match per layer
+                    except Exception as e:
+                        # If PostGIS query fails, log but continue
+                        import logging
+                        logging.warning(f"Failed to check spatial proximity for layer {layer.name}: {e}")
+
+        # Fallback: If no critical infrastructure found from GeoJSON layers, use Google Places API
+        if not spatial_info["critical_infrastructure"]:
+            try:
+                import httpx
+                import os
+                
+                google_maps_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+                if google_maps_key:
+                    # Google Places Nearby Search for critical infrastructure types
+                    critical_place_types = ["fire_station", "hospital", "police", "school"]
+                    
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        for place_type in critical_place_types:
+                            places_url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+                            params = {
+                                "location": f"{lat},{long}",
+                                "radius": 50,  # 50 meters
+                                "type": place_type,
+                                "key": google_maps_key
+                            }
+                            response = await client.get(places_url, params=params)
+                            if response.status_code == 200:
+                                data = response.json()
+                                if data.get("results"):
+                                    # Found a nearby critical infrastructure via Google Maps
+                                    place = data["results"][0]  # Take the closest one
+                                    place_name = place.get("name", place_type.replace("_", " ").title())
+                                    spatial_info["critical_infrastructure"].append(f"{place_type.replace('_', ' ').title()}: {place_name} (via Google Maps)")
+                                    break  # One match is enough
+            except Exception as e:
+                import logging
+                logging.warning(f"Google Places API fallback failed: {e}")
 
         # 2. Lighting / Outages (Streetlight reports within 100m)
         outage_query = select(func.count(ServiceRequest.id)).where(

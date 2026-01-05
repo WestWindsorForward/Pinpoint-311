@@ -1571,12 +1571,13 @@ export default function StaffDashboard() {
                                                                     <div className="flex-1">
                                                                         <p className="text-[9px] font-bold text-purple-400 uppercase tracking-tight">Similar Reports</p>
                                                                         <div className="mt-1 space-y-1">
-                                                                            {ai.similar_reports.map((report: { id: string; description: string; similarity: number }) => (
+                                                                            {ai.similar_reports.map((report: { id: string; description: string; similarity: number; justification?: string }) => (
                                                                                 <button
                                                                                     key={report.id}
                                                                                     onClick={() => {
                                                                                         window.location.hash = `detail/${report.id}`;
                                                                                     }}
+                                                                                    title={report.justification || `${Math.round(report.similarity * 100)}% match`}
                                                                                     className="w-full text-left px-2 py-1.5 rounded bg-purple-500/10 hover:bg-purple-500/20 transition-colors group"
                                                                                 >
                                                                                     <div className="flex items-center justify-between gap-2">
@@ -1584,6 +1585,9 @@ export default function StaffDashboard() {
                                                                                         <span className="text-[9px] text-purple-400/60">{Math.round(report.similarity * 100)}% match</span>
                                                                                     </div>
                                                                                     <p className="text-[9px] text-purple-200/50 mt-0.5 line-clamp-1">{report.description}</p>
+                                                                                    {report.justification && (
+                                                                                        <p className="text-[8px] text-purple-400/40 mt-0.5 italic">{report.justification}</p>
+                                                                                    )}
                                                                                 </button>
                                                                             ))}
                                                                         </div>
