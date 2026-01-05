@@ -689,10 +689,7 @@ export default function StaffDashboardMap({
                                     <input
                                         type="checkbox"
                                         checked={departmentFilters[0] ?? true}
-                                        onChange={(e) => {
-                                            console.log('[DEPT CHECKBOX] Clicked! Value:', e.target.checked);
-                                            setDepartmentFilters(prev => ({ ...prev, [0]: e.target.checked }));
-                                        }}
+                                        onChange={(e) => setDepartmentFilters(prev => ({ ...prev, [0]: e.target.checked }))}
                                         className="w-5 h-5 rounded border-2 border-white/20 bg-transparent text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
                                     />
                                     <span className="text-sm text-white/70 truncate group-hover:text-white transition-colors italic">
