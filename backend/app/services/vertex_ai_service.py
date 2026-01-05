@@ -281,9 +281,12 @@ async def analyze_with_gemini(
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
+                    print(f"[Vertex AI] API Error ({response.status}): {error_text}")
                     raise Exception(f"Vertex AI API error ({response.status}): {error_text}")
                 
-                result = await response.json()
+                response_text = await response.text()
+                print(f"[Vertex AI] Raw Response: {response_text[:1000]}")
+                result = json.loads(response_text)
         
         # Extract the text response
         if 'candidates' in result and result['candidates']:
