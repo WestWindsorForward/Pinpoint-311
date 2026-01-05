@@ -344,7 +344,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                                         height="100%"
                                         style={{ border: 0 }}
                                         loading="lazy"
-                                        src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${selectedRequest.lat},${selectedRequest.long}&zoom=17`}
+                                        src={`https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=${selectedRequest.lat},${selectedRequest.long}&zoom=17&maptype=satellite`}
                                         allowFullScreen
                                     />
                                 </div>
