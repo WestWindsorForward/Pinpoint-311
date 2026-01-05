@@ -446,11 +446,28 @@ def send_comment_notification_task(request_id: int, comment_author: str, comment
 
 @celery_app.task
 def send_department_notification(request_id: int, department_email: str):
-    """Notify department of new request"""
+    """Notify department staff based on their individual notification preferences"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     async def _notify():
+        from app.models import SystemSettings, Department
+        
         async with SessionLocal() as db:
             await configure_notifications(db)
             
+            # Get system settings for branding and module checks
+            settings_result = await db.execute(select(SystemSettings).limit(1))
+            settings = settings_result.scalar_one_or_none()
+            
+            modules = settings.modules if settings else {}
+            sms_enabled_globally = modules.get('sms_alerts', False)
+            
+            township_name = settings.township_name if settings else "Your Township"
+            custom_domain = settings.custom_domain if settings else None
+            portal_url = f"https://{custom_domain}" if custom_domain else "http://localhost:5173"
+            
+            # Get the request
             result = await db.execute(
                 select(ServiceRequest).where(ServiceRequest.id == request_id)
             )
@@ -458,30 +475,110 @@ def send_department_notification(request_id: int, department_email: str):
             if not request:
                 return {"error": "Request not found"}
             
-            subject = f"New Service Request: #{request.service_request_id} - {request.service_name}"
-            body_html = f"""
-            <html>
-            <body style="font-family: Arial, sans-serif;">
-                <h2>New Service Request Received</h2>
-                <p><strong>Request ID:</strong> {request.service_request_id}</p>
-                <p><strong>Category:</strong> {request.service_name}</p>
-                <p><strong>Description:</strong></p>
-                <p>{request.description}</p>
-                <p><strong>Address:</strong> {request.address or 'Not provided'}</p>
-                <p><strong>Submitted:</strong> {request.requested_datetime}</p>
-                <hr>
-                <p>Please log in to the staff dashboard to manage this request.</p>
-            </body>
-            </html>
-            """
-            
-            notification_service.send_email(
-                to=department_email,
-                subject=subject,
-                body_html=body_html
+            # Find staff members who should receive this notification
+            # Get department by email to find staff members
+            dept_result = await db.execute(
+                select(Department).where(Department.email == department_email)
             )
+            department = dept_result.scalar_one_or_none()
             
-            return {"status": "sent", "to": department_email}
+            notified_staff = []
+            
+            if department:
+                # Query staff in this department with their notification preferences
+                from app.models import User, user_departments
+                staff_result = await db.execute(
+                    select(User)
+                    .join(user_departments)
+                    .where(user_departments.c.department_id == department.id)
+                    .where(User.is_active == True)
+                )
+                staff_members = staff_result.scalars().all()
+                
+                for staff in staff_members:
+                    prefs = staff.notification_preferences or {}
+                    
+                    # Check if they want new request notifications
+                    if not prefs.get('email_new_requests', True) and not prefs.get('sms_new_requests', False):
+                        continue
+                    
+                    # Build notification content
+                    subject = f"📋 New Request: {request.service_name}"
+                    staff_link = f"{portal_url}/staff#request/{request.service_request_id}"
+                    
+                    body_html = f"""
+                    <html>
+                    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 24px; border-radius: 12px 12px 0 0;">
+                            <h2 style="margin: 0;">📋 New Request Assigned</h2>
+                            <p style="margin: 8px 0 0 0; opacity: 0.9;">{township_name} 311</p>
+                        </div>
+                        <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+                            <p style="margin: 0 0 16px 0;"><strong>Hi {staff.full_name or staff.username},</strong></p>
+                            <p style="margin: 0 0 16px 0;">A new service request has been submitted to your department:</p>
+                            
+                            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <p style="margin: 0 0 8px 0;"><strong>Request ID:</strong> {request.service_request_id}</p>
+                                <p style="margin: 0 0 8px 0;"><strong>Category:</strong> {request.service_name}</p>
+                                <p style="margin: 0 0 8px 0;"><strong>Address:</strong> {request.address or 'Not provided'}</p>
+                                <p style="margin: 0;"><strong>Description:</strong></p>
+                                <p style="margin: 8px 0 0 0; color: #475569;">{request.description[:200]}{'...' if len(request.description or '') > 200 else ''}</p>
+                            </div>
+                            
+                            <a href="{staff_link}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 500;">View Request →</a>
+                        </div>
+                    </body>
+                    </html>
+                    """
+                    
+                    # Send email if enabled
+                    if prefs.get('email_new_requests', True) and staff.email:
+                        notification_service.send_email(
+                            to=staff.email,
+                            subject=subject,
+                            body_html=body_html
+                        )
+                        notified_staff.append({"email": staff.email, "type": "email"})
+                    
+                    # Send SMS if enabled globally and by user preference
+                    if sms_enabled_globally and prefs.get('sms_new_requests', False) and staff.phone:
+                        short_desc = (request.description or "")[:50]
+                        sms_message = f"""📋 {township_name} 311
+New Request: {request.service_name}
+"{short_desc}..."
+📍 {request.address or 'No address'}
+
+🔗 {staff_link}"""
+                        await notification_service.send_sms(staff.phone, sms_message)
+                        notified_staff.append({"phone": staff.phone, "type": "sms"})
+            
+            # Also send to department email as fallback/archive
+            if department_email and not notified_staff:
+                subject = f"New Service Request: #{request.service_request_id} - {request.service_name}"
+                body_html = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif;">
+                    <h2>New Service Request Received</h2>
+                    <p><strong>Request ID:</strong> {request.service_request_id}</p>
+                    <p><strong>Category:</strong> {request.service_name}</p>
+                    <p><strong>Description:</strong></p>
+                    <p>{request.description}</p>
+                    <p><strong>Address:</strong> {request.address or 'Not provided'}</p>
+                    <p><strong>Submitted:</strong> {request.requested_datetime}</p>
+                    <hr>
+                    <p>Please log in to the staff dashboard to manage this request.</p>
+                </body>
+                </html>
+                """
+                notification_service.send_email(
+                    to=department_email,
+                    subject=subject,
+                    body_html=body_html
+                )
+                notified_staff.append({"email": department_email, "type": "fallback"})
+            
+            logger.info(f"[Dept Notification] Sent to {len(notified_staff)} recipients for request {request.service_request_id}")
+            return {"status": "sent", "recipients": notified_staff}
     
     try:
         return run_async(_notify())
