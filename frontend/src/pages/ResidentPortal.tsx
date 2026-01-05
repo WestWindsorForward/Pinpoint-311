@@ -182,14 +182,12 @@ export default function ResidentPortal() {
 
         // Load departments and users for map filters
         api.getDepartments().then((depts) => {
-            console.log('[ResidentPortal] Loaded departments:', depts.length, depts);
             setDepartments(depts);
-        }).catch((err) => { console.error('[ResidentPortal] Failed to load departments:', err); });
+        }).catch(() => { });
 
         api.getPublicStaffList().then((userList) => {
-            console.log('[ResidentPortal] Loaded users:', userList.length, userList);
             setUsers(userList);
-        }).catch((err) => { console.error('[ResidentPortal] Failed to load public staff:', err); });
+        }).catch(() => { });
     }, []);
 
 
@@ -247,27 +245,21 @@ export default function ResidentPortal() {
 
     // Check if address matches road-based blocking rules
     const checkRoadBasedBlocking = (address: string, service: ServiceDefinition) => {
-        console.log('checkRoadBasedBlocking called:', { address, routing_mode: service.routing_mode, routing_config: service.routing_config });
-
         if (service.routing_mode !== 'road_based' || !address) {
-            console.log('Skipping road-based check - not road_based mode or no address');
             return;
         }
 
         const config = service.routing_config;
         if (!config) {
-            console.log('No routing_config found');
             return;
         }
 
         const addressLower = address.toLowerCase();
         const defaultHandler = config.default_handler || 'township';
-        console.log('Road-based check:', { addressLower, defaultHandler, exclusion_list: config.exclusion_list, inclusion_list: config.inclusion_list });
 
         if (defaultHandler === 'township') {
             // Check exclusion list - if address matches, block
             const exclusionList = config.exclusion_list || [];
-            console.log('Checking exclusion list:', exclusionList);
 
             // Match road names - require the full road name to be in the address
             const matchesExclusion = exclusionList.some(road => {
@@ -275,7 +267,6 @@ export default function ResidentPortal() {
                 // Exact substring match only - the road name must appear in the address
                 return addressLower.includes(roadLower);
             });
-            console.log('Matches exclusion:', matchesExclusion);
 
             if (matchesExclusion) {
                 setIsBlocked(true);
@@ -289,7 +280,6 @@ export default function ResidentPortal() {
         } else {
             // Third party default - check inclusion list - if NOT in list, block
             const inclusionList = config.inclusion_list || [];
-            console.log('Checking inclusion list:', inclusionList);
 
             // Match road names - require the full road name to be in the address
             const matchesInclusion = inclusionList.some(road => {
@@ -297,7 +287,6 @@ export default function ResidentPortal() {
                 // Exact substring match only - the road name must appear in the address
                 return addressLower.includes(roadLower);
             });
-            console.log('Matches inclusion:', matchesInclusion);
 
             if (!matchesInclusion) {
                 setIsBlocked(true);
@@ -345,7 +334,6 @@ export default function ResidentPortal() {
                     properties: selectedAsset.properties,
                     distance_meters: 0, // Exact selection, no distance
                 };
-                console.log('User selected asset:', matchedAsset);
             }
             // Note: No automatic proximity detection - user must explicitly select an asset
 
@@ -366,20 +354,6 @@ export default function ResidentPortal() {
             setIsSubmitting(false);
         }
     };
-
-    // Haversine distance calculation (meters)
-    const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-        const R = 6371000; // Earth radius in meters
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLng = (lng2 - lng1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    };
-
-
     const handleReset = () => {
         setStep('categories');
         setSelectedService(null);
@@ -803,7 +777,6 @@ export default function ResidentPortal() {
                                                             onOutOfBounds={() => setIsLocationOutOfBounds(true)}
                                                             onAssetSelect={(asset) => {
                                                                 setSelectedAsset(asset);
-                                                                console.log('Asset selected for report:', asset);
                                                             }}
                                                             onChange={(newLocation) => {
                                                                 setLocation(newLocation);

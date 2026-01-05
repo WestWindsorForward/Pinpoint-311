@@ -549,11 +549,8 @@ export default function GoogleMapsLocationPicker({
                                     });
                                 } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
                                     // Skip polygon layers - only point layers are supported
-                                    console.log(`Skipping polygon geometry in layer: ${layer.name}`);
                                 }
                             });
-
-                            console.log(`Rendered layer: ${layer.name} (${layer.layer_type})`);
                         } catch (e) {
                             console.warn(`Failed to render layer ${layer.name}:`, e);
                         }

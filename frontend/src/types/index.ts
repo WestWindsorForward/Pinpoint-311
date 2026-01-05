@@ -108,6 +108,10 @@ export interface ServiceRequest {
     deleted_at: string | null;
     deleted_by: string | null;
     custom_fields?: Record<string, string | string[]>;
+    // AI Analysis (optional, for sorting purposes)
+    ai_analysis?: Record<string, unknown> | null;
+    vertex_ai_priority_score?: number | null;
+    manual_priority_score?: number | null;
 }
 
 // Public-facing request (no personal information)

@@ -5,7 +5,6 @@ import {
     Menu,
     X,
     Search,
-    Plus,
     AlertCircle,
     CheckCircle,
     Clock,
@@ -17,19 +16,15 @@ import {
     Mail,
     Phone,
     User,
-    Calendar,
     BarChart3,
     MessageSquare,
     Trash2,
-    Eye,
-    EyeOff,
     Send,
     Camera,
     Link,
     Link2,
     Brain,
     LayoutDashboard,
-    Users,
     ChevronDown,
     ChevronLeft,
     Check,
@@ -47,7 +42,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { api, MapLayer } from '../services/api';
 import { ServiceRequest, ServiceRequestDetail, ServiceDefinition, Statistics, AdvancedStatistics, RequestComment, ClosedSubstatus, User as UserType, Department, AuditLogEntry } from '../types';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Tooltip, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts';
 import StaffDashboardMap from '../components/StaffDashboardMap';
 import RequestDetailMap from '../components/RequestDetailMap';
 import { usePageNavigation } from '../hooks/usePageNavigation';
@@ -453,7 +448,6 @@ export default function StaffDashboard() {
             setServices(servicesData);
             setDepartments(depts);
             setUsers(usersData);
-            console.log('Loaded users:', usersData.length, usersData);  // Debug log
             setMapLayers(layers);
             setMapsConfig(config);
         } catch (err) {
@@ -547,7 +541,6 @@ export default function StaffDashboard() {
             setAuditLog(logData);
         } catch (err) {
             // Fallback - audit log may not exist for older requests
-            console.log('Audit log not available (may be older request):', err);
             setAuditLog([]);
         }
     };
@@ -658,8 +651,6 @@ export default function StaffDashboard() {
         loadRequestDetail(requestId);
         setCurrentView('active'); // Switch to list view to see details
     };
-
-    const COLORS = ['#ef4444', '#f59e0b', '#22c55e'];
 
     return (
         <div className="min-h-screen flex">
