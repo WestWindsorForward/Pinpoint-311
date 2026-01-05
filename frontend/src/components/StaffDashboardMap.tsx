@@ -228,10 +228,6 @@ export default function StaffDashboardMap({
         const map = mapInstanceRef.current;
         if (!map) return;
 
-        console.log('[StaffDashboardMap] updateMarkers called');
-        console.log('[StaffDashboardMap] departmentFilters:', departmentFilters);
-        console.log('[StaffDashboardMap] staffFilters:', staffFilters);
-
         // Clear existing markers
         markersRef.current.forEach(m => m.setMap(null));
         markersRef.current = [];
@@ -252,9 +248,7 @@ export default function StaffDashboardMap({
             if (Object.keys(departmentFilters).length > 0) {
                 // Convert to number for comparison (filter keys are numbers)
                 const deptKey = Number(requestDeptId) || 0;
-                console.log('[FILTER DEBUG] Request dept ID:', requestDeptId, '-> key:', deptKey, 'filter value:', departmentFilters[deptKey]);
                 if (departmentFilters[deptKey] === false) {
-                    console.log('[FILTER DEBUG] Hiding request due to dept filter');
                     return false;
                 }
             }
@@ -262,9 +256,7 @@ export default function StaffDashboardMap({
             // Staff filter - only filter if users are loaded
             const requestStaff = (r as any).assigned_to ?? '';
             if (Object.keys(staffFilters).length > 0) {
-                console.log('[FILTER DEBUG] Request staff:', requestStaff, 'filter value:', staffFilters[requestStaff]);
                 if (staffFilters[requestStaff] === false) {
-                    console.log('[FILTER DEBUG] Hiding request due to staff filter');
                     return false;
                 }
             }
