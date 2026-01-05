@@ -48,29 +48,48 @@ class TwilioProvider(SMSProvider):
 
 
 class GenericHTTPSMSProvider(SMSProvider):
-    """Generic HTTP-based SMS provider for any API"""
+    """Generic HTTP-based SMS provider for any API (supports Textbelt, etc.)"""
     
     def __init__(self, api_url: str, api_key: str, from_number: str):
         self.api_url = api_url
         self.api_key = api_key
         self.from_number = from_number
+        # Detect if this is Textbelt based on URL
+        self.is_textbelt = "textbelt" in api_url.lower()
     
     async def send_sms(self, to: str, message: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    self.api_url,
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "to": to,
-                        "from": self.from_number,
-                        "message": message
-                    }
-                )
-                return response.is_success
+                if self.is_textbelt:
+                    # Textbelt format: phone, message, key (no auth header)
+                    response = await client.post(
+                        self.api_url,
+                        data={
+                            "phone": to,
+                            "message": message,
+                            "key": self.api_key
+                        }
+                    )
+                    # Textbelt returns JSON with "success": true/false
+                    if response.is_success:
+                        result = response.json()
+                        return result.get("success", False)
+                    return False
+                else:
+                    # Standard format with Bearer auth
+                    response = await client.post(
+                        self.api_url,
+                        headers={
+                            "Authorization": f"Bearer {self.api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "to": to,
+                            "from": self.from_number,
+                            "message": message
+                        }
+                    )
+                    return response.is_success
         except Exception as e:
             print(f"HTTP SMS error: {e}")
             return False
