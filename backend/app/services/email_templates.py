@@ -272,37 +272,45 @@ def build_comment_email(
 ) -> Dict[str, str]:
     """
     Build email for new public comment notification.
+    Uses table-based layout for email client compatibility.
     """
     tracking_url = f"{portal_url}/track/{request_id}"
+    author_initial = comment_author[0].upper() if comment_author else "S"
     
     content = f"""
         <div style="text-align: center; margin-bottom: 24px;">
-            <div style="display: inline-block; background-color: #dbeafe; border-radius: 50%; padding: 16px; margin-bottom: 16px;">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
+            <div style="display: inline-block; background-color: #dbeafe; border-radius: 50%; width: 56px; height: 56px; line-height: 56px; margin-bottom: 16px;">
+                <span style="color: #3b82f6; font-size: 24px;">💬</span>
             </div>
             <h2 style="margin: 0 0 8px 0; color: #1e293b; font-size: 22px; font-weight: 600;">New Update on Your Request</h2>
-            <p style="margin: 0; color: #64748b; font-size: 15px;">Request #{request_id} • {service_name}</p>
+            <p style="margin: 0; color: {primary_color}; font-size: 15px; font-weight: 500;">Request #{request_id} • {service_name}</p>
         </div>
         
-        <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-            <div style="display: flex; align-items: flex-start; gap: 12px;">
-                <div style="background-color: {primary_color}; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; flex-shrink: 0;">
-                    {comment_author[0].upper()}
-                </div>
-                <div style="flex: 1;">
-                    <p style="margin: 0 0 4px 0; color: #1e293b; font-size: 14px; font-weight: 600;">{comment_author}</p>
-                    <p style="margin: 0; color: #64748b; font-size: 12px;">Staff Member</p>
-                </div>
-            </div>
-            <div style="margin-top: 16px; padding: 16px; background-color: white; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <p style="margin: 0; color: #1e293b; font-size: 15px; line-height: 1.6;">{comment_content}</p>
+        <div style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 16px;">
+                <tr>
+                    <td width="48" valign="top" style="padding-right: 12px;">
+                        <div style="background-color: {primary_color}; color: white; width: 44px; height: 44px; border-radius: 50%; text-align: center; line-height: 44px; font-weight: 600; font-size: 18px;">
+                            {author_initial}
+                        </div>
+                    </td>
+                    <td valign="middle">
+                        <p style="margin: 0 0 2px 0; color: #1e293b; font-size: 16px; font-weight: 600;">{comment_author}</p>
+                        <p style="margin: 0; color: {primary_color}; font-size: 13px; font-weight: 500;">Staff Member</p>
+                    </td>
+                </tr>
+            </table>
+            
+            <div style="background-color: white; border-radius: 8px; padding: 16px; border-left: 4px solid {primary_color};">
+                <p style="margin: 0; color: #1e293b; font-size: 15px; line-height: 1.7;">"{comment_content}"</p>
             </div>
         </div>
         
         <div style="text-align: center;">
             <a href="{tracking_url}" style="display: inline-block; background-color: {primary_color}; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">View Full Conversation</a>
+            <p style="margin: 16px 0 0 0; color: #94a3b8; font-size: 13px;">
+                or visit: <a href="{tracking_url}" style="color: {primary_color};">{tracking_url}</a>
+            </p>
         </div>
     """
     
@@ -310,7 +318,8 @@ def build_comment_email(
         township_name=township_name,
         logo_url=logo_url,
         primary_color=primary_color,
-        content=content
+        content=content,
+        footer_text=f"You're receiving this because you submitted a request to {township_name}."
     )
     
     text = f"""
