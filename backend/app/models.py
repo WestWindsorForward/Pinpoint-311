@@ -165,6 +165,7 @@ class ServiceRequest(Base):
     vertex_ai_summary = Column(Text)  # AI-generated summary
     vertex_ai_classification = Column(String(100))  # AI category classification
     vertex_ai_priority_score = Column(Float)  # AI priority recommendation (1-10)
+    manual_priority_score = Column(Float)  # Human override priority (1-10), takes precedence over AI
     vertex_ai_analyzed_at = Column(DateTime(timezone=True))
 
 

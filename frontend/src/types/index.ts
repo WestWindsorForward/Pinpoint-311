@@ -152,6 +152,7 @@ export interface ServiceRequestDetail extends ServiceRequest {
     vertex_ai_summary: string | null;
     vertex_ai_classification: string | null;
     vertex_ai_priority_score: number | null;
+    manual_priority_score: number | null;  // Human override priority
     vertex_ai_analyzed_at: string | null;
 }
 

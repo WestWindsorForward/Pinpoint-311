@@ -169,6 +169,7 @@ class ServiceRequestUpdate(BaseModel):
     staff_notes: Optional[str] = None
     assigned_department_id: Optional[int] = None  # Assign to department
     assigned_to: Optional[str] = None  # Assign to specific staff
+    manual_priority_score: Optional[float] = Field(None, ge=1, le=10)  # Human override priority
     # Closed sub-status fields (when status = closed)
     closed_substatus: Optional[ClosedSubstatus] = None
     completion_message: Optional[str] = None
@@ -254,6 +255,7 @@ class ServiceRequestDetailResponse(ServiceRequestResponse):
     vertex_ai_summary: Optional[str] = None
     vertex_ai_classification: Optional[str] = None
     vertex_ai_priority_score: Optional[float] = None
+    manual_priority_score: Optional[float] = None  # Human override priority
     vertex_ai_analyzed_at: Optional[datetime] = None
 
 
