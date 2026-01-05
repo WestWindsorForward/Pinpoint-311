@@ -86,10 +86,8 @@ def build_confirmation_email(
     
     content = f"""
         <div style="text-align: center; margin-bottom: 24px;">
-            <div style="display: inline-block; background-color: #dcfce7; border-radius: 50%; padding: 16px; margin-bottom: 16px;">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
+            <div style="display: inline-block; background-color: #dcfce7; border-radius: 50%; width: 64px; height: 64px; line-height: 64px; margin-bottom: 16px;">
+                <span style="font-size: 32px;">✓</span>
             </div>
             <h2 style="margin: 0 0 8px 0; color: #1e293b; font-size: 22px; font-weight: 600;">Request Received!</h2>
             <p style="margin: 0; color: #64748b; font-size: 15px;">Your report has been submitted successfully</p>
