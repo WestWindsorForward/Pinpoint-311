@@ -226,10 +226,6 @@ export default function StaffDashboard() {
 
         // Sort by priority score (higher = more urgent), then assignment, then date
         filtered.sort((a, b) => {
-            // Get effective priority: manual override takes precedence over AI score
-            const getEffectivePriority = (r: ServiceRequest) =>
-                r.manual_priority_score ?? r.vertex_ai_priority_score ?? 5; // Default to 5 if no score
-
             // Assignment priority: assigned to me -> my department -> others
             const getAssignmentPriority = (r: ServiceRequest) => {
                 if (user && r.assigned_to === user.username) return 0; // Assigned specifically to me
@@ -239,8 +235,17 @@ export default function StaffDashboard() {
             };
 
             // Primary: Higher priority score = more urgent (descending)
-            const priorityA = getEffectivePriority(a);
-            const priorityB = getEffectivePriority(b);
+            // Note: getEffectivePriority is defined above and handles manual > vertex_ai > ai_analysis.priority_score
+            const priorityA =
+                a.manual_priority_score ??
+                a.vertex_ai_priority_score ??
+                ((a.ai_analysis as any)?.priority_score) ??
+                5;
+            const priorityB =
+                b.manual_priority_score ??
+                b.vertex_ai_priority_score ??
+                ((b.ai_analysis as any)?.priority_score) ??
+                5;
             if (priorityA !== priorityB) return priorityB - priorityA; // Higher score first
 
             // Secondary: Assignment priority (ascending - me first)
@@ -273,11 +278,22 @@ export default function StaffDashboard() {
         return { assignedToMe, inMyDepartment, total };
     }, [allRequests, currentView, user, userDepartmentIds]);
 
-    // Filter requests by priority for the map
+    // Helper to get effective priority score (checks multiple sources)
+    const getEffectivePriority = (r: ServiceRequest): number => {
+        // Priority precedence: manual > flat vertex_ai > nested ai_analysis.priority_score > default 5
+        if (r.manual_priority_score != null) return r.manual_priority_score;
+        if (r.vertex_ai_priority_score != null) return r.vertex_ai_priority_score;
+        // Check nested ai_analysis for priority_score
+        const aiAnalysis = r.ai_analysis as any;
+        if (aiAnalysis?.priority_score != null) return aiAnalysis.priority_score;
+        return 5; // Default
+    };
+
+    // Filter requests by priority for the map and list
     const mapFilteredRequests = useMemo(() => {
         if (mapPriorityFilter === 'all') return allRequests;
         return allRequests.filter(r => {
-            const priority = (r as any).manual_priority_score ?? (r as any).vertex_ai_priority_score ?? 5;
+            const priority = getEffectivePriority(r);
             if (mapPriorityFilter === 'high') return priority >= 8;
             if (mapPriorityFilter === 'medium') return priority >= 5 && priority < 8;
             if (mapPriorityFilter === 'low') return priority < 5;
@@ -291,9 +307,10 @@ export default function StaffDashboard() {
         setFilterDepartment(null);
         setFilterService(null);
         setFilterAssignment('all');
+        setMapPriorityFilter('all');
     };
 
-    const hasActiveFilters = searchQuery.trim() || filterDepartment !== null || filterService !== null || filterAssignment !== 'all';
+    const hasActiveFilters = searchQuery.trim() || filterDepartment !== null || filterService !== null || filterAssignment !== 'all' || mapPriorityFilter !== 'all';
 
     useEffect(() => {
         // Initial load - only fetch once
@@ -758,21 +775,8 @@ export default function StaffDashboard() {
                 {/* Dashboard View */}
                 {currentView === 'dashboard' && (
                     <div className="flex-1 flex flex-col p-4 lg:p-6 overflow-auto">
-                        {/* Map Section with Priority Filter */}
-                        <div className="flex-1 min-h-[400px] lg:min-h-[500px] mb-6 rounded-xl overflow-hidden relative">
-                            {/* Priority Filter Dropdown */}
-                            <div className="absolute top-4 right-4 z-10">
-                                <select
-                                    value={mapPriorityFilter}
-                                    onChange={(e) => setMapPriorityFilter(e.target.value as 'all' | 'high' | 'medium' | 'low')}
-                                    className="px-3 py-2 rounded-lg bg-slate-800/90 backdrop-blur-sm border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
-                                >
-                                    <option value="all">All Priorities ({allRequests.length})</option>
-                                    <option value="high">🔴 High Priority (8-10)</option>
-                                    <option value="medium">🟡 Medium (5-7)</option>
-                                    <option value="low">🟢 Low (1-4)</option>
-                                </select>
-                            </div>
+                        {/* Map Section */}
+                        <div className="flex-1 min-h-[400px] lg:min-h-[500px] mb-6 rounded-xl overflow-hidden">
                             {mapsConfig?.google_maps_api_key ? (
                                 <StaffDashboardMap
                                     apiKey={mapsConfig.google_maps_api_key}
@@ -1330,6 +1334,21 @@ export default function StaffDashboard() {
                                                 {services.map(s => (
                                                     <option key={s.service_code} value={s.service_code}>{s.service_name}</option>
                                                 ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Priority Filter */}
+                                        <div>
+                                            <label className="text-xs text-white/50 mb-1 block">Priority Level</label>
+                                            <select
+                                                value={mapPriorityFilter}
+                                                onChange={(e) => setMapPriorityFilter(e.target.value as 'all' | 'high' | 'medium' | 'low')}
+                                                className="glass-input text-sm py-2"
+                                            >
+                                                <option value="all">All Priorities</option>
+                                                <option value="high">🔴 High (8-10)</option>
+                                                <option value="medium">🟡 Medium (5-7)</option>
+                                                <option value="low">🟢 Low (1-4)</option>
                                             </select>
                                         </div>
 
