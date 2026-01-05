@@ -696,15 +696,21 @@ export default function AdminConsole() {
                     {/* Header */}
                     <div className="p-6 border-b border-white/10">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => {
+                                    setCurrentTab('branding');
+                                    window.location.hash = '';
+                                }}
+                                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                            >
                                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center">
                                     <Sparkles className="w-5 h-5 text-white" />
                                 </div>
-                                <div>
+                                <div className="text-left">
                                     <h2 className="font-semibold text-white">Admin Console</h2>
                                     <p className="text-xs text-white/50">{settings?.township_name}</p>
                                 </div>
-                            </div>
+                            </button>
                             <button
                                 onClick={() => setSidebarOpen(false)}
                                 className="lg:hidden p-2 hover:bg-white/10 rounded-lg"

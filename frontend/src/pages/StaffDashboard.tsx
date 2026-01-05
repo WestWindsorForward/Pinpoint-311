@@ -685,7 +685,14 @@ export default function StaffDashboard() {
                     {/* Sidebar Header */}
                     <div className="p-6 border-b border-white/10">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => {
+                                    setCurrentView('dashboard');
+                                    setSelectedRequest(null);
+                                    window.location.hash = '';
+                                }}
+                                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                            >
                                 {settings?.logo_url ? (
                                     <img src={settings.logo_url} alt="Logo" className="h-8 w-auto" />
                                 ) : (
@@ -693,11 +700,11 @@ export default function StaffDashboard() {
                                         <Sparkles className="w-5 h-5 text-white" />
                                     </div>
                                 )}
-                                <div>
+                                <div className="text-left">
                                     <h2 className="font-semibold text-white">Staff Command</h2>
                                     <p className="text-xs text-white/50">{settings?.township_name}</p>
                                 </div>
-                            </div>
+                            </button>
                             <div className="flex items-center gap-2">
                                 {/* Activity Feed Bell */}
                                 <button

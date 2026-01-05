@@ -438,7 +438,16 @@ export default function ResidentPortal() {
         <div className="min-h-screen flex flex-col">
             {/* Navigation */}
             <nav className="glass-sidebar py-4 px-6 flex items-center justify-between sticky top-0 z-40">
-                <div className="flex items-center gap-3">
+                <button
+                    onClick={() => {
+                        setShowTrackingView(false);
+                        setStep('categories');
+                        setSelectedService(null);
+                        updateHash('');
+                        scrollToTop('instant');
+                    }}
+                    className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                >
                     {settings?.logo_url ? (
                         <img src={settings.logo_url} alt="Logo" className="h-10 w-auto" />
                     ) : (
@@ -449,7 +458,7 @@ export default function ResidentPortal() {
                     <h1 className="text-xl font-semibold text-white hidden sm:block">
                         {settings?.township_name || 'Township 311'}
                     </h1>
-                </div>
+                </button>
 
                 <Link
                     to="/login"
