@@ -532,6 +532,7 @@ async def get_spatial_context(db, lat: float, long: float, service_code: str) ->
                 import httpx
                 import logging
                 import math
+                import asyncio
                 
                 logging.info(f"[Critical Infrastructure] Using Nominatim fallback for {lat},{long}")
                 
