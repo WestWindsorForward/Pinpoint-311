@@ -337,42 +337,42 @@ async def get_historical_context(db, address: str, service_code: str, lat: Optio
     }
     
     try:
-            # 1. Chronic Factor: Count reports at this address in last 90 days
-            three_months_ago = datetime.now() - timedelta(days=90)
-            addr_history_query = select(ServiceRequest.id, ServiceRequest.service_request_id, ServiceRequest.requested_datetime).where(
-                ServiceRequest.address == address,
-                ServiceRequest.requested_datetime >= three_months_ago,
-                ServiceRequest.deleted_at.is_(None)
-            ).order_by(ServiceRequest.requested_datetime.desc())
-            
-            addr_result = await db.execute(addr_history_query)
-            addr_history = addr_result.all()
-            
-            context["recurrence_count"] = len(addr_history)
-            context["chronic_factor"] = len(addr_history) >= 5
-            context["recent_address_reports"] = [
-                {"id": r[1], "date": r[2].strftime('%Y-%m-%d')} for r in addr_history[:3]
-            ]
-            
-            # 2. Past Resolution Quality (Last closed report at this address)
-            last_res = await db.execute(
-                select(ServiceRequest.service_request_id, ServiceRequest.closed_substatus, ServiceRequest.completion_message, ServiceRequest.status)
-                .where(
-                    ServiceRequest.address == address,
-                    ServiceRequest.status == "closed",
-                    ServiceRequest.deleted_at.is_(None)
-                )
-                .order_by(ServiceRequest.closed_datetime.desc())
-                .limit(1)
-            )
-            row = last_res.first()
-            if row:
-                context["past_resolution_quality"] = {
-                    "request_id": row[0],
-                    "substatus": row[1],
-                    "message": row[2]
-                }
+        # 1. Chronic Factor: Count reports at this address in last 90 days
+        three_months_ago = datetime.now() - timedelta(days=90)
+        addr_history_query = select(ServiceRequest.id, ServiceRequest.service_request_id, ServiceRequest.requested_datetime).where(
+            ServiceRequest.address == address,
+            ServiceRequest.requested_datetime >= three_months_ago,
+            ServiceRequest.deleted_at.is_(None)
+        ).order_by(ServiceRequest.requested_datetime.desc())
         
+        addr_result = await db.execute(addr_history_query)
+        addr_history = addr_result.all()
+        
+        context["recurrence_count"] = len(addr_history)
+        context["chronic_factor"] = len(addr_history) >= 5
+        context["recent_address_reports"] = [
+            {"id": r[1], "date": r[2].strftime('%Y-%m-%d')} for r in addr_history[:3]
+        ]
+        
+        # 2. Past Resolution Quality (Last closed report at this address)
+        last_res = await db.execute(
+            select(ServiceRequest.service_request_id, ServiceRequest.closed_substatus, ServiceRequest.completion_message, ServiceRequest.status)
+            .where(
+                ServiceRequest.address == address,
+                ServiceRequest.status == "closed",
+                ServiceRequest.deleted_at.is_(None)
+            )
+            .order_by(ServiceRequest.closed_datetime.desc())
+            .limit(1)
+        )
+        row = last_res.first()
+        if row:
+            context["past_resolution_quality"] = {
+                "request_id": row[0],
+                "substatus": row[1],
+                "message": row[2]
+            }
+
         # 3. Nodal reporting / Proximity Similarity
         if lat is not None and long is not None:
             from geoalchemy2 import Geography
