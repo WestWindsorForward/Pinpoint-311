@@ -269,8 +269,6 @@ async def analyze_with_gemini(
             ]
         }
         
-        import sys
-        
         # Make the API call
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -283,12 +281,9 @@ async def analyze_with_gemini(
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
-                    print(f"[Vertex AI] API Error ({response.status}): {error_text}", file=sys.stderr)
                     raise Exception(f"Vertex AI API error ({response.status}): {error_text}")
                 
-                response_text = await response.text()
-                print(f"[Vertex AI] Raw Response: {response_text[:2000]}", file=sys.stderr)
-                result = json.loads(response_text)
+                result = await response.json()
         
         # Extract the text response from all parts
         if 'candidates' in result and result['candidates']:
@@ -297,27 +292,21 @@ async def analyze_with_gemini(
             
             for part in parts:
                 if 'text' in part:
-                    # Append text from this part
                     text_response += part['text']
             
-            print(f"[Vertex AI] Combined Text Response: {text_response[:2000]}", file=sys.stderr)
-            
             # Parse JSON from response (handle markdown code blocks)
-            # Look for the last JSON block if multiple exist, or just the main one
             json_match = re.search(r'```json\s*(.*?)\s*```', text_response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
             else:
                 json_str = text_response.strip()
             
-            print(f"[Vertex AI] Parsed JSON String: {json_str[:1000]}", file=sys.stderr)
             return json.loads(json_str)
         else:
             raise Exception("No response candidates from Vertex AI")
             
     except Exception as e:
         # Return error information for debugging
-        print(f"[Vertex AI] General Error: {str(e)}", file=sys.stderr)
         return {
             "priority_score": 5.0,
             "priority_justification": f"AI analysis failed: {str(e)[:100]}",
