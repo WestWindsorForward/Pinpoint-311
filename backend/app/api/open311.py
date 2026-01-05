@@ -341,8 +341,11 @@ async def create_request(
     await db.commit()
     
     # Trigger Celery task for AI analysis
-    from app.tasks.service_requests import analyze_request
+    from app.tasks.service_requests import analyze_request, send_branded_notification
     analyze_request.delay(service_request.id)
+    
+    # Send branded confirmation email to resident
+    send_branded_notification.delay(service_request.id, "confirmation")
     
     return service_request
 
@@ -489,6 +492,16 @@ async def update_request_status(
             db.add(audit_entry)
     
     await db.commit()
+    
+    # Send notification if status changed
+    if "status" in update_dict and update_dict["status"] and update_dict["status"].value != old_status:
+        from app.tasks.service_requests import send_branded_notification
+        send_branded_notification.delay(
+            request.id, 
+            "status_update", 
+            old_status=old_status,
+            completion_message=update_dict.get("completion_message")
+        )
     
     # Reload with relationship for response
     await db.refresh(request)

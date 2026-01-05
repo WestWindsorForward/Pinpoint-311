@@ -33,6 +33,15 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default="staff")  # admin, staff
     is_active = Column(Boolean, default=True)
+    notification_preferences = Column(JSON, default={
+        "email_new_requests": True,
+        "email_status_changes": True,
+        "email_comments": True,
+        "email_assigned_only": False,
+        "sms_new_requests": False,
+        "sms_status_changes": False
+    })
+    phone = Column(String(50))  # Staff phone for SMS alerts
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Staff can be assigned to multiple departments

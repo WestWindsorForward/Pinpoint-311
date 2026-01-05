@@ -519,6 +519,29 @@ class ApiClient {
         const queryString = params.toString() ? `?${params.toString()}` : '';
         return this.request(`/open311/v2/requests/asset/${encodeURIComponent(assetId)}/related${queryString}`);
     }
+
+    // Notification Preferences
+    async getNotificationPreferences(): Promise<NotificationPreferences> {
+        return this.request<NotificationPreferences>('/users/me/notification-preferences');
+    }
+
+    async updateNotificationPreferences(prefs: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+        return this.request<NotificationPreferences>('/users/me/notification-preferences', {
+            method: 'PUT',
+            body: JSON.stringify(prefs),
+        });
+    }
+}
+
+// Notification Preferences type
+export interface NotificationPreferences {
+    email_new_requests: boolean;
+    email_status_changes: boolean;
+    email_comments: boolean;
+    email_assigned_only: boolean;
+    sms_new_requests: boolean;
+    sms_status_changes: boolean;
+    phone: string | null;
 }
 
 export const api = new ApiClient();

@@ -194,8 +194,43 @@ class NotificationService:
             return False
         return self._email_provider.send_email(to, subject, body_html, body_text)
     
+    def send_request_confirmation_branded(
+        self,
+        request_id: str,
+        service_name: str,
+        description: str,
+        address: Optional[str],
+        email: str,
+        phone: Optional[str],
+        township_name: str,
+        logo_url: Optional[str],
+        primary_color: str,
+        portal_url: str
+    ):
+        """Send branded confirmation for a new service request"""
+        from app.services.email_templates import build_confirmation_email, build_sms_confirmation
+        
+        # Build branded email
+        email_content = build_confirmation_email(
+            township_name=township_name,
+            logo_url=logo_url,
+            primary_color=primary_color,
+            request_id=request_id,
+            service_name=service_name,
+            description=description,
+            address=address,
+            portal_url=portal_url
+        )
+        
+        # Send email
+        if email:
+            self.send_email(email, email_content["subject"], email_content["html"], email_content["text"])
+        
+        # Send SMS - removed as not in scope for confirmation
+    
     def send_request_confirmation(self, request_id: str, email: str, phone: Optional[str] = None):
-        """Send confirmation for a new service request"""
+        """Legacy confirmation - now calls branded version with defaults"""
+        # This is a fallback for legacy calls - will use basic template
         subject = f"Request #{request_id} Received"
         body_html = f"""
         <html>
@@ -218,6 +253,43 @@ class NotificationService:
         if email:
             self.send_email(email, subject, body_html, body_text)
     
+    async def send_status_update_branded(
+        self,
+        request_id: str,
+        service_name: str,
+        old_status: str,
+        new_status: str,
+        completion_message: Optional[str],
+        email: Optional[str],
+        phone: Optional[str],
+        township_name: str,
+        logo_url: Optional[str],
+        primary_color: str,
+        portal_url: str
+    ):
+        """Send branded status update notification"""
+        from app.services.email_templates import build_status_update_email, build_sms_status_update
+        
+        # Build branded email
+        email_content = build_status_update_email(
+            township_name=township_name,
+            logo_url=logo_url,
+            primary_color=primary_color,
+            request_id=request_id,
+            service_name=service_name,
+            old_status=old_status,
+            new_status=new_status,
+            completion_message=completion_message,
+            portal_url=portal_url
+        )
+        
+        if email:
+            self.send_email(email, email_content["subject"], email_content["html"], email_content["text"])
+        
+        if phone:
+            sms_message = build_sms_status_update(request_id, new_status, township_name)
+            await self.send_sms(phone, sms_message)
+    
     async def send_status_update(
         self,
         request_id: str,
@@ -225,7 +297,7 @@ class NotificationService:
         email: Optional[str] = None,
         phone: Optional[str] = None
     ):
-        """Send status update notification"""
+        """Legacy status update - uses basic template"""
         status_text = {
             "open": "is now open and being reviewed",
             "in_progress": "is now being worked on",
@@ -249,7 +321,37 @@ class NotificationService:
         
         if phone:
             await self.send_sms(phone, sms_message)
+    
+    def send_comment_notification(
+        self,
+        request_id: str,
+        service_name: str,
+        comment_author: str,
+        comment_content: str,
+        email: str,
+        township_name: str,
+        logo_url: Optional[str],
+        primary_color: str,
+        portal_url: str
+    ):
+        """Send notification when staff leaves a public comment"""
+        from app.services.email_templates import build_comment_email
+        
+        email_content = build_comment_email(
+            township_name=township_name,
+            logo_url=logo_url,
+            primary_color=primary_color,
+            request_id=request_id,
+            service_name=service_name,
+            comment_author=comment_author,
+            comment_content=comment_content,
+            portal_url=portal_url
+        )
+        
+        if email:
+            self.send_email(email, email_content["subject"], email_content["html"], email_content["text"])
 
 
 # Singleton instance
 notification_service = NotificationService.get_instance()
+

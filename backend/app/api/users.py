@@ -241,3 +241,75 @@ async def reset_password_json(
     await db.refresh(user)
     return user
 
+
+# ============ Notification Preferences ============
+from app.schemas import NotificationPreferencesUpdate
+
+
+class NotificationPreferencesResponse(BaseModel):
+    email_new_requests: bool = True
+    email_status_changes: bool = True
+    email_comments: bool = True
+    email_assigned_only: bool = False
+    sms_new_requests: bool = False
+    sms_status_changes: bool = False
+    phone: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+@router.get("/me/notification-preferences", response_model=NotificationPreferencesResponse)
+async def get_my_notification_preferences(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_staff)
+):
+    """Get current user's notification preferences"""
+    prefs = current_user.notification_preferences or {}
+    return NotificationPreferencesResponse(
+        email_new_requests=prefs.get("email_new_requests", True),
+        email_status_changes=prefs.get("email_status_changes", True),
+        email_comments=prefs.get("email_comments", True),
+        email_assigned_only=prefs.get("email_assigned_only", False),
+        sms_new_requests=prefs.get("sms_new_requests", False),
+        sms_status_changes=prefs.get("sms_status_changes", False),
+        phone=current_user.phone
+    )
+
+
+@router.put("/me/notification-preferences", response_model=NotificationPreferencesResponse)
+async def update_my_notification_preferences(
+    prefs: NotificationPreferencesUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_staff)
+):
+    """Update current user's notification preferences"""
+    # Get current preferences or initialize empty
+    current_prefs = current_user.notification_preferences or {}
+    
+    # Update only the fields that were provided
+    update_data = prefs.model_dump(exclude_unset=True, exclude={"phone"})
+    for key, value in update_data.items():
+        if value is not None:
+            current_prefs[key] = value
+    
+    current_user.notification_preferences = current_prefs
+    
+    # Update phone if provided
+    if prefs.phone is not None:
+        current_user.phone = prefs.phone
+    
+    await db.commit()
+    await db.refresh(current_user)
+    
+    return NotificationPreferencesResponse(
+        email_new_requests=current_prefs.get("email_new_requests", True),
+        email_status_changes=current_prefs.get("email_status_changes", True),
+        email_comments=current_prefs.get("email_comments", True),
+        email_assigned_only=current_prefs.get("email_assigned_only", False),
+        sms_new_requests=current_prefs.get("sms_new_requests", False),
+        sms_status_changes=current_prefs.get("sms_status_changes", False),
+        phone=current_user.phone
+    )
+
+

@@ -291,6 +291,142 @@ def send_notification(request_id: int, notification_type: str):
 
 
 @celery_app.task
+def send_branded_notification(request_id: int, notification_type: str, old_status: str = None, completion_message: str = None):
+    """Send branded notification (email/SMS) using township branding from SystemSettings"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    async def _notify():
+        from app.models import SystemSettings
+        
+        async with SessionLocal() as db:
+            # Configure notification providers
+            await configure_notifications(db)
+            
+            # Get system settings for branding
+            settings_result = await db.execute(select(SystemSettings).limit(1))
+            settings = settings_result.scalar_one_or_none()
+            
+            township_name = settings.township_name if settings else "Your Township"
+            logo_url = settings.logo_url if settings else None
+            primary_color = settings.primary_color if settings else "#6366f1"
+            
+            # Get custom domain for portal URL
+            custom_domain = settings.custom_domain if settings else None
+            portal_url = f"https://{custom_domain}" if custom_domain else "http://localhost:5173"
+            
+            # Get the request
+            result = await db.execute(
+                select(ServiceRequest).where(ServiceRequest.id == request_id)
+            )
+            request = result.scalar_one_or_none()
+            if not request:
+                return {"error": "Request not found"}
+            
+            logger.info(f"[Notification] Sending {notification_type} for request {request.service_request_id} to {request.email}")
+            
+            if notification_type == "confirmation":
+                # Send branded confirmation for new request
+                notification_service.send_request_confirmation_branded(
+                    request_id=str(request.service_request_id),
+                    service_name=request.service_name,
+                    description=request.description or "",
+                    address=request.address,
+                    email=request.email,
+                    phone=request.phone,
+                    township_name=township_name,
+                    logo_url=logo_url,
+                    primary_color=primary_color,
+                    portal_url=portal_url
+                )
+                
+                # Also send SMS if phone provided
+                if request.phone:
+                    from app.services.email_templates import build_sms_confirmation
+                    sms_message = build_sms_confirmation(request.service_request_id, township_name)
+                    await notification_service.send_sms(request.phone, sms_message)
+                    
+            elif notification_type == "status_update":
+                # Send branded status update
+                await notification_service.send_status_update_branded(
+                    request_id=str(request.service_request_id),
+                    service_name=request.service_name,
+                    old_status=old_status or "open",
+                    new_status=request.status,
+                    completion_message=completion_message,
+                    email=request.email,
+                    phone=request.phone,
+                    township_name=township_name,
+                    logo_url=logo_url,
+                    primary_color=primary_color,
+                    portal_url=portal_url
+                )
+            
+            return {"status": "sent", "type": notification_type}
+    
+    try:
+        return run_async(_notify())
+    except Exception as e:
+        logger.error(f"[Notification] Failed: {e}")
+        return {"status": "error", "error": str(e)}
+
+
+@celery_app.task
+def send_comment_notification_task(request_id: int, comment_author: str, comment_content: str):
+    """Send notification when staff leaves a public comment on a request"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    async def _notify():
+        from app.models import SystemSettings
+        
+        async with SessionLocal() as db:
+            # Configure notification providers
+            await configure_notifications(db)
+            
+            # Get system settings for branding
+            settings_result = await db.execute(select(SystemSettings).limit(1))
+            settings = settings_result.scalar_one_or_none()
+            
+            township_name = settings.township_name if settings else "Your Township"
+            logo_url = settings.logo_url if settings else None
+            primary_color = settings.primary_color if settings else "#6366f1"
+            custom_domain = settings.custom_domain if settings else None
+            portal_url = f"https://{custom_domain}" if custom_domain else "http://localhost:5173"
+            
+            # Get the request
+            result = await db.execute(
+                select(ServiceRequest).where(ServiceRequest.id == request_id)
+            )
+            request = result.scalar_one_or_none()
+            if not request:
+                return {"error": "Request not found"}
+            
+            logger.info(f"[Notification] Sending comment notification for request {request.service_request_id} to {request.email}")
+            
+            # Send comment notification
+            notification_service.send_comment_notification(
+                request_id=str(request.service_request_id),
+                service_name=request.service_name,
+                comment_author=comment_author,
+                comment_content=comment_content,
+                email=request.email,
+                township_name=township_name,
+                logo_url=logo_url,
+                primary_color=primary_color,
+                portal_url=portal_url
+            )
+            
+            return {"status": "sent", "type": "comment"}
+    
+    try:
+        return run_async(_notify())
+    except Exception as e:
+        logger.error(f"[Notification] Comment notification failed: {e}")
+        return {"status": "error", "error": str(e)}
+
+
+@celery_app.task
 def send_department_notification(request_id: int, department_email: str):
     """Notify department of new request"""
     async def _notify():
@@ -333,3 +469,4 @@ def send_department_notification(request_id: int, department_email: str):
         return run_async(_notify())
     except Exception as e:
         return {"status": "error", "error": str(e)}
+

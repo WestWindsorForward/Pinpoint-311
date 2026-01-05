@@ -69,6 +69,15 @@ async def create_comment(
     await db.commit()
     await db.refresh(comment)
     
+    # Send notification to resident if comment is public/external
+    if comment_data.visibility.value == "external":
+        from app.tasks.service_requests import send_comment_notification_task
+        send_comment_notification_task.delay(
+            request_id,
+            current_user.full_name or current_user.username,
+            comment_data.content
+        )
+    
     return comment
 
 

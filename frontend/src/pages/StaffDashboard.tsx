@@ -50,6 +50,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, 
 import StaffDashboardMap from '../components/StaffDashboardMap';
 import RequestDetailMap from '../components/RequestDetailMap';
 import { usePageNavigation } from '../hooks/usePageNavigation';
+import NotificationSettings from '../components/NotificationSettings';
 
 type View = 'dashboard' | 'active' | 'in_progress' | 'resolved' | 'statistics';
 
@@ -175,6 +176,9 @@ export default function StaffDashboard() {
 
     // Map priority filter state ('all', 'high', 'medium', 'low')
     const [mapPriorityFilter, setMapPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+
+    // Notification settings modal state
+    const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
     // Get current user's department IDs
     const userDepartmentIds = useMemo(() => {
@@ -741,16 +745,22 @@ export default function StaffDashboard() {
                     {/* User Footer - Sticky */}
                     <div className="sticky bottom-0 p-4 border-t border-white/10 bg-slate-900/90 backdrop-blur-md">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 flex-shrink-0 rounded-full bg-primary-500/30 flex items-center justify-center text-white font-medium">
-                                {user?.full_name?.charAt(0) || user?.username?.charAt(0) || 'U'}
-                            </div>
-                            <div className="min-w-0 flex-1 overflow-hidden">
-                                <p className="font-medium text-white text-sm truncate">{user?.full_name || user?.username}</p>
-                                <p className="text-xs text-white/50 capitalize">{user?.role}</p>
-                                {user?.departments && user.departments.length > 0 && (
-                                    <p className="text-xs text-primary-400 truncate mt-0.5">{user.departments.map(d => d.name).join(', ')}</p>
-                                )}
-                            </div>
+                            <button
+                                onClick={() => setShowNotificationSettings(true)}
+                                className="flex items-center gap-3 flex-1 min-w-0 p-2 -m-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                                title="Notification Settings"
+                            >
+                                <div className="w-10 h-10 flex-shrink-0 rounded-full bg-primary-500/30 flex items-center justify-center text-white font-medium">
+                                    {user?.full_name?.charAt(0) || user?.username?.charAt(0) || 'U'}
+                                </div>
+                                <div className="min-w-0 flex-1 overflow-hidden text-left">
+                                    <p className="font-medium text-white text-sm truncate">{user?.full_name || user?.username}</p>
+                                    <p className="text-xs text-white/50 capitalize">{user?.role}</p>
+                                    {user?.departments && user.departments.length > 0 && (
+                                        <p className="text-xs text-primary-400 truncate mt-0.5">{user.departments.map(d => d.name).join(', ')}</p>
+                                    )}
+                                </div>
+                            </button>
                             <button
                                 onClick={handleLogout}
                                 className="flex-shrink-0 p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -2547,6 +2557,12 @@ export default function StaffDashboard() {
                     </p>
                 </div>
             )}
+            {/* Notification Settings Modal */}
+            <NotificationSettings
+                isOpen={showNotificationSettings}
+                onClose={() => setShowNotificationSettings(false)}
+                userName={user?.full_name || user?.username || 'User'}
+            />
         </div>
     );
 }

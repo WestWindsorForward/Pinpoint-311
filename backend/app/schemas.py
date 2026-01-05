@@ -83,9 +83,22 @@ class UserResponse(UserBase):
     is_active: bool
     created_at: Optional[datetime] = None
     departments: List[DepartmentBrief] = []
+    notification_preferences: Optional[Dict[str, bool]] = None
+    phone: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    """Schema for updating staff notification preferences"""
+    email_new_requests: Optional[bool] = None
+    email_status_changes: Optional[bool] = None
+    email_comments: Optional[bool] = None
+    email_assigned_only: Optional[bool] = None
+    sms_new_requests: Optional[bool] = None
+    sms_status_changes: Optional[bool] = None
+    phone: Optional[str] = None  # For SMS notifications
 
 
 # ============ Department ============
