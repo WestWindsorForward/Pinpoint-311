@@ -40,6 +40,7 @@ Beyond the UI, it features a sophisticated **AI & Geospatial Engine** that autom
 
 The Resident Portal is the public face of the system, designed for zero friction.
 
+### 1. Service Discovery
 - **Visual Grid**: Services are displayed with clear, consistent iconography (Lucide React) for instant recognition.
 - **Service Categories**: Browsable catalog of all available township services.
 
@@ -71,18 +72,18 @@ The Resident Portal is the public face of the system, designed for zero friction
 The Staff Dashboard is the command center for municipal operations, protected by secure JWT authentication.
 
 ### 1. Unified Workspace
-- **Unified Workspace**:
-    - **Live Feed**: Auto-refreshes every 30s; identifying "NEW" requests with badging.
-    - **Split-Pane View**: Independent scrolling for the request list and details panel.
-    - **Interactive Map**: Features "Satellite View" for precise location verification. Includes comprehensive filters for:
-        - **Priority Level** (Critical, High, Normal)
-        - **Department & Assigned Staff**
-        - **Status & Date Range**
-        - **Service Category**
-- **Collaboration Tools**:
-    - **Internal Comments**: Private staff-only notes for coordination.
-    - **External Updates**: Public comments visible to residents via the tracker.
-    - **Staff Preferences**: Each staff member can toggle their own SMS/Email notifications.
+- **Live Feed**: Auto-refreshes every 30s; identifying "NEW" requests with badging.
+- **Split-Pane View**: Independent scrolling for the request list and details panel.
+- **Interactive Map**: Features "Satellite View" for precise location verification. Includes comprehensive filters for:
+    - **Priority Level** (Critical, High, Normal)
+    - **Department & Assigned Staff**
+    - **Status & Date Range**
+    - **Service Category**
+
+### 2. Collaboration Tools
+- **Internal Comments**: Private staff-only notes for coordination.
+- **External Updates**: Public comments visible to residents via the tracker.
+- **Staff Preferences**: Each staff member can toggle their own SMS/Email notifications.
 - **Audit Log**: Immutable history of every action (status change, assignment, comment).
 
 ### 3. Request Management
@@ -118,14 +119,14 @@ A full CMS for managing the municipality's presence without touching code.
 - **Routing Rules**: Assign services to specific departments (e.g., "Potholes" → "DPW").
 - **SLA Definitions**: Set expected response times (e.g., "24 hours" for urgent issues).
 
-### 6. Service Configuration (Admin)
+### 1. Service Configuration
 - **Granular Routing**: Configure each service category (e.g., "Pothole") to:
     - **Township Handled**: Route to internal Public Works department.
     - **Third-Party Handoff**: Direct residents to external agencies (e.g., "This road is state-maintained, please call DOT at...").
     - **Road-Based Logic**: Automatically split jurisdiction based on specific street names (e.g., "Main St" goes to County, "Elm St" stays local).
 - **Custom Questions**: specific follow-up questions (e.g., "Is the dog aggressive?") for each service category to gather precise details.
 
-### 3. System Management
+### 2. System Management
 - **System Updates**: One-click "Pull Updates" to fetch the latest code from GitHub and rebuild containers.
 - **Custom Map Layers**: Upload **GeoJSON** files to visualize township assets (Parks, Storm Drains, Zoning Districts) directly on the staff map.
 - **Domain Configuration**: Automatic HTTPS provisioning via Caddy (Let's Encrypt) for custom domains.
