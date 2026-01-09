@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgis/postgis:15-3.3
+    image: postgis/postgis:15-3.4-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-township}
