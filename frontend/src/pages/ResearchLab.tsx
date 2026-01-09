@@ -296,6 +296,20 @@ export const ResearchLab: React.FC = () => {
         }
     };
 
+    const handleExportDataDictionary = async () => {
+        try {
+            const blob = await api.exportDataDictionary();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `data_dictionary_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+        } catch (err: any) {
+            setError(err.message || 'Export failed');
+        }
+    };
+
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
     };
@@ -735,7 +749,13 @@ export const ResearchLab: React.FC = () => {
                                 Export GeoJSON
                             </Button>
                         </div>
-                        <div className="text-xs text-white/40 flex items-center gap-2">
+                        <div className="border-t border-white/10 pt-4 mt-4">
+                            <Button onClick={handleExportDataDictionary} variant="ghost" className="w-full">
+                                <Database className="w-4 h-4 mr-2" />
+                                Download Data Dictionary (Column Descriptions)
+                            </Button>
+                        </div>
+                        <div className="text-xs text-white/40 flex items-center gap-2 mt-3">
                             <Shield className="w-3 h-3" />
                             All exports exclude personal identifying information
                         </div>

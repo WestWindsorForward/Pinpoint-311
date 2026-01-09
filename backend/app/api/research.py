@@ -1692,6 +1692,131 @@ async def get_data_dictionary(
     }
 
 
+@router.get("/export/data-dictionary")
+async def export_data_dictionary_csv(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_researcher)
+):
+    """
+    Download data dictionary as CSV file.
+    This companion file explains every column in the research exports.
+    Researchers should download this alongside their data export.
+    """
+    if not await check_research_enabled(db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Research Suite is not enabled")
+    
+    # Define all columns in export order with their documentation
+    COLUMN_DICTIONARY = [
+        # Core identifiers
+        ("request_id", "string", "Unique identifier for the service request", "Core"),
+        ("service_code", "string", "Category code for the type of issue (e.g., pothole, streetlight)", "Core"),
+        ("service_name", "string", "Human-readable category name", "Core"),
+        ("infrastructure_category", "string", "Grouped infrastructure type (roads_pavement, stormwater, etc.)", "Core"),
+        ("matched_asset_type", "string", "Type of linked infrastructure asset from GIS layer", "Core"),
+        ("matched_asset_attributes", "JSON string", "Full properties of matched asset (pressure_psi, install_year, etc.)", "Environmental Context Pack"),
+        
+        # Issue details
+        ("description_sanitized", "string", "Issue description with PII removed (phone/email/names redacted)", "Core"),
+        ("description_word_count", "integer", "Word count of original description", "Core"),
+        ("has_photos", "boolean", "Whether request includes photo attachments", "Core"),
+        ("photo_count", "integer", "Number of photos attached to request", "Core"),
+        
+        # AI Analysis
+        ("ai_flagged", "boolean", "Whether AI flagged this request for staff review", "AI/ML Research Pack"),
+        ("ai_flag_reason", "string", "Reason for AI flag (safety, urgent, inappropriate)", "AI/ML Research Pack"),
+        ("ai_priority_score", "float (1-10)", "AI-generated priority score (1=highest)", "AI/ML Research Pack"),
+        ("ai_classification", "string", "AI-assigned service category", "AI/ML Research Pack"),
+        ("ai_summary_sanitized", "string", "AI-generated summary (PII redacted)", "AI/ML Research Pack"),
+        ("ai_analyzed", "boolean", "Whether AI has processed this request", "AI/ML Research Pack"),
+        ("ai_vs_manual_priority_diff", "float", "manual_priority - ai_priority (positive = human prioritized higher)", "AI/ML Research Pack"),
+        
+        # Status & Resolution
+        ("status", "string", "Current status: open, in_progress, closed", "Core"),
+        ("closed_substatus", "string", "How closed: resolved, no_action, third_party", "Core"),
+        ("priority", "integer (1-10)", "Priority level (1=highest, 10=lowest)", "Core"),
+        ("resolution_outcome", "string", "Standardized outcome: completed, no_action_needed, referred_external, etc.", "Core"),
+        
+        # Location (privacy-aware)
+        ("address_anonymized", "string", "Street address with house numbers removed in fuzzed mode", "Core"),
+        ("latitude", "float", "Latitude coordinate (snapped to ~100ft grid in fuzzed mode)", "Core"),
+        ("longitude", "float", "Longitude coordinate (snapped to ~100ft grid in fuzzed mode)", "Core"),
+        ("zone_id", "string", "Anonymous geographic zone (~0.5 mile cells) for clustering", "Core"),
+        
+        # Social Equity Pack
+        ("census_tract_geoid", "string", "11-digit FIPS code from US Census Bureau Geocoder API", "Social Equity Pack"),
+        ("social_vulnerability_index", "float (0-1)", "CDC SVI (0=lowest, 1=highest vulnerability)", "Social Equity Pack"),
+        ("housing_tenure_renter_pct", "float (0-1)", "Renter percentage in zone (derived from GEOID)", "Social Equity Pack"),
+        ("income_quintile", "integer (1-5)", "Anonymized income quintile of zone (1=lowest)", "Social Equity Pack"),
+        ("population_density", "string", "Density category: low, medium, high", "Social Equity Pack"),
+        
+        # Environmental Context Pack
+        ("weather_precip_24h_mm", "float", "Precipitation in 24h before report (mm) from Open-Meteo API", "Environmental Context Pack"),
+        ("weather_temp_max_c", "float", "Max temperature on report day (Celsius) from Open-Meteo API", "Environmental Context Pack"),
+        ("weather_temp_min_c", "float", "Min temperature on report day (Celsius) from Open-Meteo API", "Environmental Context Pack"),
+        ("weather_code", "integer", "WMO weather code (e.g., 0=clear, 61=rain, 71=snow)", "Environmental Context Pack"),
+        ("nearby_asset_age_years", "float", "Age of matched infrastructure asset in years", "Environmental Context Pack"),
+        
+        # Sentiment & Trust Pack
+        ("sentiment_score", "float (-1 to +1)", "NLP sentiment (-1=angry/frustrated, 0=neutral, +1=grateful)", "Sentiment & Trust Pack"),
+        ("is_repeat_report", "boolean", "Text indicates prior report of same issue", "Sentiment & Trust Pack"),
+        ("prior_report_mentioned", "boolean", "Text references a prior ticket/case number", "Sentiment & Trust Pack"),
+        ("frustration_expressed", "boolean", "Text contains trust erosion indicators", "Sentiment & Trust Pack"),
+        
+        # Temporal fields
+        ("submitted_datetime", "ISO8601", "When the request was submitted", "Core"),
+        ("closed_datetime", "ISO8601", "When the request was closed (null if still open)", "Core"),
+        ("updated_datetime", "ISO8601", "When the request was last updated", "Core"),
+        ("submission_hour", "integer (0-23)", "Hour of day when submitted", "Core"),
+        ("submission_day_of_week", "integer (0-6)", "Day of week when submitted (0=Monday)", "Core"),
+        ("submission_month", "integer (1-12)", "Month when submitted", "Core"),
+        ("submission_year", "integer", "Year when submitted", "Core"),
+        ("is_weekend_submission", "boolean", "Whether submitted on Saturday or Sunday", "Core"),
+        ("is_business_hours_submission", "boolean", "Whether submitted Mon-Fri 8am-5pm", "Core"),
+        ("season", "string", "Season at time of submission: winter, spring, summer, fall", "Environmental Context Pack"),
+        
+        # Bureaucratic Friction Pack
+        ("time_to_triage_hours", "float", "Hours from submission to first 'In Progress' status", "Bureaucratic Friction Pack"),
+        ("reassignment_count", "integer", "Number of times request was reassigned between departments", "Bureaucratic Friction Pack"),
+        ("off_hours_submission", "boolean", "Submitted before 6am or after 10pm", "Bureaucratic Friction Pack"),
+        ("escalation_occurred", "boolean", "Priority was manually increased by staff", "Bureaucratic Friction Pack"),
+        ("total_hours_to_resolve", "float", "Total clock hours from submission to closure", "Bureaucratic Friction Pack"),
+        ("business_hours_to_resolve", "float", "Business hours only (Mon-Fri 8am-5pm) to resolve", "Bureaucratic Friction Pack"),
+        ("days_to_first_update", "float", "Days until first staff action/update", "Bureaucratic Friction Pack"),
+        ("status_change_count", "integer", "Total number of status changes", "Bureaucratic Friction Pack"),
+        
+        # Civic Engagement
+        ("submission_channel", "string", "How submitted: portal, phone, walk_in, email", "Core"),
+        ("department_id", "integer", "ID of assigned department", "Core"),
+        ("comment_count", "integer", "Total comments on request (internal + external)", "Core"),
+        ("public_comment_count", "integer", "Public/external comments visible to reporter", "Core"),
+    ]
+    
+    def generate_csv():
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Header row
+        writer.writerow(["column_name", "data_type", "description", "research_pack"])
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+        
+        # Data rows
+        for col_name, col_type, description, pack in COLUMN_DICTIONARY:
+            writer.writerow([col_name, col_type, description, pack])
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+    
+    filename = f"data_dictionary_{datetime.now().strftime('%Y%m%d')}.csv"
+    
+    return StreamingResponse(
+        generate_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @router.get("/code-snippets")
 async def get_code_snippets(
     db: AsyncSession = Depends(get_db),

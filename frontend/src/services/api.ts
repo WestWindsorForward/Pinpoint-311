@@ -579,6 +579,14 @@ class ApiClient {
         if (!response.ok) throw new Error('Export failed');
         return response.blob();
     }
+
+    async exportDataDictionary(): Promise<Blob> {
+        const response = await fetch(`${API_BASE}/research/export/data-dictionary`, {
+            headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {},
+        });
+        if (!response.ok) throw new Error('Export failed');
+        return response.blob();
+    }
 }
 
 // Notification Preferences type
