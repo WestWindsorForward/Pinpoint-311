@@ -4,7 +4,7 @@ export interface User {
     username: string;
     email: string;
     full_name: string | null;
-    role: 'admin' | 'staff';
+    role: 'admin' | 'staff' | 'researcher';
     is_active: boolean;
     created_at?: string;
     departments?: { id: number; name: string }[];
@@ -14,7 +14,7 @@ export interface UserCreate {
     username: string;
     email: string;
     full_name?: string;
-    role: 'admin' | 'staff';
+    role: 'admin' | 'staff' | 'researcher';
     password: string;
     department_ids?: number[];
 }
@@ -233,6 +233,7 @@ export interface SystemSettings {
         ai_analysis: boolean;
         sms_alerts: boolean;
         email_notifications?: boolean;
+        research_portal?: boolean;
     };
     updated_at: string | null;
 }

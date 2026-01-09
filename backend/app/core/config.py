@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "Township 311"
     debug: bool = False
+    
+    # Research Suite (can also be toggled via Admin Console modules)
+    enable_research_suite: bool = False
 
     class Config:
         env_file = ".env"

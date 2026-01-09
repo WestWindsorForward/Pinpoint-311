@@ -531,6 +531,54 @@ class ApiClient {
             body: JSON.stringify(prefs),
         });
     }
+
+    // Research Suite endpoints
+    async getResearchStatus(): Promise<ResearchStatus> {
+        return this.request<ResearchStatus>('/research/status');
+    }
+
+    async getResearchAnalytics(params?: { start_date?: string; end_date?: string; service_code?: string }): Promise<ResearchAnalytics> {
+        const queryParams = new URLSearchParams();
+        if (params?.start_date) queryParams.append('start_date', params.start_date);
+        if (params?.end_date) queryParams.append('end_date', params.end_date);
+        if (params?.service_code) queryParams.append('service_code', params.service_code);
+        const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+        return this.request<ResearchAnalytics>(`/research/analytics${queryString}`);
+    }
+
+    async getResearchCodeSnippets(): Promise<ResearchCodeSnippets> {
+        return this.request<ResearchCodeSnippets>('/research/code-snippets');
+    }
+
+    async exportResearchCSV(params?: { start_date?: string; end_date?: string; service_code?: string; privacy_mode?: string }): Promise<Blob> {
+        const queryParams = new URLSearchParams();
+        if (params?.start_date) queryParams.append('start_date', params.start_date);
+        if (params?.end_date) queryParams.append('end_date', params.end_date);
+        if (params?.service_code) queryParams.append('service_code', params.service_code);
+        if (params?.privacy_mode) queryParams.append('privacy_mode', params.privacy_mode);
+        const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+        const response = await fetch(`${API_BASE}/research/export/csv${queryString}`, {
+            headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {},
+        });
+        if (!response.ok) throw new Error('Export failed');
+        return response.blob();
+    }
+
+    async exportResearchGeoJSON(params?: { start_date?: string; end_date?: string; service_code?: string; privacy_mode?: string }): Promise<Blob> {
+        const queryParams = new URLSearchParams();
+        if (params?.start_date) queryParams.append('start_date', params.start_date);
+        if (params?.end_date) queryParams.append('end_date', params.end_date);
+        if (params?.service_code) queryParams.append('service_code', params.service_code);
+        if (params?.privacy_mode) queryParams.append('privacy_mode', params.privacy_mode);
+        const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+        const response = await fetch(`${API_BASE}/research/export/geojson${queryString}`, {
+            headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {},
+        });
+        if (!response.ok) throw new Error('Export failed');
+        return response.blob();
+    }
 }
 
 // Notification Preferences type
@@ -542,6 +590,31 @@ export interface NotificationPreferences {
     sms_new_requests: boolean;
     sms_status_changes: boolean;
     phone: string | null;
+}
+
+// Research Suite types
+export interface ResearchAnalytics {
+    total_requests: number;
+    status_distribution: Record<string, number>;
+    avg_resolution_hours: number | null;
+    category_distribution: Array<{ code: string; name: string; count: number }>;
+    source_distribution: Record<string, number>;
+    filters_applied: {
+        start_date: string | null;
+        end_date: string | null;
+        service_code: string | null;
+    };
+}
+
+export interface ResearchCodeSnippets {
+    python: string;
+    r: string;
+}
+
+export interface ResearchStatus {
+    enabled: boolean;
+    user: string;
+    role: string;
 }
 
 export const api = new ApiClient();
@@ -570,5 +643,3 @@ export interface MapLayer {
     created_at?: string;
     updated_at?: string;
 }
-
-

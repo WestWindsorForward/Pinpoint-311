@@ -95,3 +95,13 @@ async def get_current_admin(current_user = Depends(get_current_user)):
             detail="Admin access required",
         )
     return current_user
+
+
+async def get_current_researcher(current_user = Depends(get_current_user)):
+    """Require researcher or admin role for Research Suite access"""
+    if current_user.role not in ["researcher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Researcher access required",
+        )
+    return current_user

@@ -4,6 +4,7 @@ import { SettingsProvider } from './context/SettingsContext';
 import ResidentPortal from './pages/ResidentPortal';
 import StaffDashboard from './pages/StaffDashboard';
 import AdminConsole from './pages/AdminConsole';
+import { ResearchLab } from './pages/ResearchLab';
 import Login from './pages/Login';
 
 // Protected route wrapper
@@ -12,7 +13,7 @@ function ProtectedRoute({
     requiredRole
 }: {
     children: React.ReactNode;
-    requiredRole?: 'staff' | 'admin';
+    requiredRole?: 'staff' | 'admin' | 'researcher';
 }) {
     const { isAuthenticated, isLoading, user } = useAuth();
 
@@ -29,6 +30,10 @@ function ProtectedRoute({
     }
 
     if (requiredRole === 'admin' && user?.role !== 'admin') {
+        return <Navigate to="/staff" replace />;
+    }
+
+    if (requiredRole === 'researcher' && user?.role !== 'researcher' && user?.role !== 'admin') {
         return <Navigate to="/staff" replace />;
     }
 
@@ -61,6 +66,14 @@ function AppRoutes() {
                 element={
                     <ProtectedRoute requiredRole="staff">
                         <StaffDashboard />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/research"
+                element={
+                    <ProtectedRoute requiredRole="researcher">
+                        <ResearchLab />
                     </ProtectedRoute>
                 }
             />

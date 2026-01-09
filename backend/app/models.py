@@ -295,3 +295,28 @@ class MapLayer(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
+class ResearchAccessLog(Base):
+    """Audit trail for research data access - tracks who downloaded what and when"""
+    __tablename__ = "research_access_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    username = Column(String(100), nullable=False)
+    
+    # Action type: export_csv, export_geojson, query, view_analytics
+    action = Column(String(50), nullable=False)
+    
+    # Query parameters used (filters, date range, etc.)
+    parameters = Column(JSON)
+    
+    # Number of records accessed
+    record_count = Column(Integer)
+    
+    # Whether fuzzed (privacy mode) or exact location was used
+    privacy_mode = Column(String(20), default="fuzzed")  # fuzzed, exact
+    
+    # When
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationship
+    user = relationship("User", backref="research_access_logs")

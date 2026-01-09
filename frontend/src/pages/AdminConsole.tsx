@@ -52,6 +52,7 @@ import {
     Info,
     Layers,
     Upload,
+    BarChart3,
     type LucideIcon,
 } from 'lucide-react';
 import { Button, Card, Modal, Input, Select, Badge } from '../components/ui';
@@ -194,7 +195,7 @@ export default function AdminConsole() {
     const [secretValues, setSecretValues] = useState<Record<string, string>>({});
 
     // Modules state
-    const [modules, setModules] = useState({ ai_analysis: false, sms_alerts: false, email_notifications: false });
+    const [modules, setModules] = useState({ ai_analysis: false, sms_alerts: false, email_notifications: false, research_portal: false });
 
     // Maps tab state
     const [mapsApiKey, setMapsApiKey] = useState<string | null>(null);
@@ -268,6 +269,7 @@ export default function AdminConsole() {
                 ai_analysis: settings.modules?.ai_analysis || false,
                 sms_alerts: settings.modules?.sms_alerts || false,
                 email_notifications: settings.modules?.email_notifications || false,
+                research_portal: settings.modules?.research_portal || false,
             });
         }
     }, [settings]);
@@ -1648,6 +1650,30 @@ export default function AdminConsole() {
                                             >
                                                 <div
                                                     className={`w-6 h-6 rounded-full bg-white transition-transform ${modules.email_notifications ? 'translate-x-7' : 'translate-x-1'
+                                                        }`}
+                                                />
+                                            </button>
+                                        </div>
+                                    </Card>
+
+                                    <Card>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                                                    <BarChart3 className="w-6 h-6 text-amber-400" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-semibold text-white">Research Portal</h3>
+                                                    <p className="text-sm text-white/50">Enable researcher access to anonymized data exports</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setModules((p) => ({ ...p, research_portal: !p.research_portal }))}
+                                                className={`w-14 h-8 rounded-full transition-colors ${modules.research_portal ? 'bg-primary-500' : 'bg-white/20'
+                                                    }`}
+                                            >
+                                                <div
+                                                    className={`w-6 h-6 rounded-full bg-white transition-transform ${modules.research_portal ? 'translate-x-7' : 'translate-x-1'
                                                         }`}
                                                 />
                                             </button>
