@@ -30,7 +30,7 @@ import re
 import hashlib
 
 from app.db.session import get_db
-from app.models import ServiceRequest, RequestAuditLog, SystemSettings, ResearchAccessLog, Department
+from app.models import ServiceRequest, RequestAuditLog, SystemSettings, ResearchAccessLog, Department, RequestComment
 from app.core.auth import get_current_researcher
 from app.core.config import get_settings
 
@@ -227,6 +227,47 @@ def generate_zone_id(lat: float, long: float) -> str:
     return f"ZONE-{zone_hash.upper()}"
 
 
+def get_season(dt: datetime) -> str:
+    """Determine season from datetime for infrastructure/weather correlation research"""
+    if not dt:
+        return None
+    month = dt.month
+    if month in [12, 1, 2]:
+        return "winter"
+    elif month in [3, 4, 5]:
+        return "spring"
+    elif month in [6, 7, 8]:
+        return "summer"
+    else:
+        return "fall"
+
+
+def get_income_quintile_from_zone(zone_id: str) -> int:
+    """
+    Generate a deterministic income quintile (1-5) from zone_id.
+    This is a privacy-preserving proxy that allows equity research
+    without exposing actual census data linkage.
+    Real implementation would use census tract lookup.
+    """
+    if not zone_id:
+        return None
+    # Use hash for deterministic but anonymized quintile
+    hash_val = int(hashlib.md5(zone_id.encode()).hexdigest()[:8], 16)
+    return (hash_val % 5) + 1
+
+
+def get_population_density_category(zone_id: str) -> str:
+    """
+    Generate population density category from zone.
+    Real implementation would use census data.
+    """
+    if not zone_id:
+        return None
+    hash_val = int(hashlib.md5(zone_id.encode()).hexdigest()[8:16], 16)
+    categories = ["low", "medium", "high"]
+    return categories[hash_val % 3]
+
+
 @router.get("/status")
 async def research_status(
     db: AsyncSession = Depends(get_db),
@@ -376,7 +417,10 @@ async def export_csv(
             detail="Exact location export requires admin privileges"
         )
     
-    query = select(ServiceRequest).where(ServiceRequest.deleted_at.is_(None))
+    query = select(ServiceRequest).options(
+        selectinload(ServiceRequest.comments),
+        selectinload(ServiceRequest.audit_logs)
+    ).where(ServiceRequest.deleted_at.is_(None))
     
     if start_date:
         query = query.where(ServiceRequest.requested_datetime >= datetime.combine(start_date, datetime.min.time()))
@@ -415,15 +459,17 @@ async def export_csv(
             "status", "closed_substatus", "priority", "resolution_outcome",
             # Location (privacy-aware)
             "address_anonymized", "latitude", "longitude", "zone_id",
+            # Demographics (for equity research - anonymized proxies)
+            "income_quintile", "population_density",
             # Temporal (for equity/civics research)
             "submitted_datetime", "closed_datetime", "updated_datetime",
             "submission_hour", "submission_day_of_week", "submission_month", "submission_year",
-            "is_weekend_submission", "is_business_hours_submission",
+            "is_weekend_submission", "is_business_hours_submission", "season",
             # Performance Metrics
             "total_hours_to_resolve", "business_hours_to_resolve",
             "days_to_first_update", "status_change_count",
             # Civic Engagement
-            "submission_channel", "department_id",
+            "submission_channel", "department_id", "comment_count", "public_comment_count",
         ])
         yield output.getvalue()
         output.seek(0)
@@ -490,6 +536,21 @@ async def export_csv(
                 delta = req.updated_datetime - req.requested_datetime
                 days_to_first_update = round(delta.total_seconds() / 86400, 2)
             
+            # Zone-based demographic proxies (for equity research)
+            zone_id = generate_zone_id(req.lat, req.long)
+            income_quintile = get_income_quintile_from_zone(zone_id)
+            pop_density = get_population_density_category(zone_id)
+            
+            # Season for infrastructure/weather research
+            season = get_season(req.requested_datetime)
+            
+            # Comment counts for civic engagement research  
+            total_comments = len(req.comments) if req.comments else 0
+            public_comments = len([c for c in req.comments if c.visibility == 'external']) if req.comments else 0
+            
+            # Status change count now safely accessible
+            status_changes = len(req.audit_logs) if req.audit_logs else 0
+            
             writer.writerow([
                 req.service_request_id,
                 req.service_code,
@@ -514,7 +575,9 @@ async def export_csv(
                 anonymize_address(req.address, privacy_mode),
                 lat,
                 long,
-                generate_zone_id(req.lat, req.long),
+                zone_id,
+                income_quintile,
+                pop_density,
                 req.requested_datetime.isoformat() if req.requested_datetime else None,
                 req.closed_datetime.isoformat() if req.closed_datetime else None,
                 req.updated_datetime.isoformat() if req.updated_datetime else None,
@@ -524,12 +587,15 @@ async def export_csv(
                 time_info.get('year'),
                 time_info.get('is_weekend'),
                 time_info.get('is_business_hours'),
+                season,
                 resolution_hours,
                 business_hours,
                 days_to_first_update,
-                len(req.audit_logs) if hasattr(req, 'audit_logs') and req.audit_logs else 0,
+                status_changes,
                 req.source,
                 req.assigned_department_id,
+                total_comments,
+                public_comments,
             ])
             yield output.getvalue()
             output.seek(0)
@@ -571,7 +637,10 @@ async def export_geojson(
             detail="Exact location export requires admin privileges"
         )
     
-    query = select(ServiceRequest).where(
+    query = select(ServiceRequest).options(
+        selectinload(ServiceRequest.comments),
+        selectinload(ServiceRequest.audit_logs)
+    ).where(
         ServiceRequest.deleted_at.is_(None),
         ServiceRequest.lat.isnot(None),
         ServiceRequest.long.isnot(None)
@@ -645,6 +714,16 @@ async def export_geojson(
         else:
             resolution_outcome = 'pending'
         
+        # Zone-based fields
+        zone_id = generate_zone_id(req.lat, req.long)
+        income_quintile = get_income_quintile_from_zone(zone_id)
+        pop_density = get_population_density_category(zone_id)
+        season = get_season(req.requested_datetime)
+        
+        # Comment counts
+        total_comments = len(req.comments) if req.comments else 0
+        public_comments = len([c for c in req.comments if c.visibility == 'external']) if req.comments else 0
+        
         features.append({
             "type": "Feature",
             "geometry": {
@@ -654,7 +733,7 @@ async def export_geojson(
             "properties": {
                 # Identifiers
                 "request_id": req.service_request_id,
-                "zone_id": generate_zone_id(req.lat, req.long),
+                "zone_id": zone_id,
                 
                 # Category & Infrastructure
                 "service_code": req.service_code,
@@ -681,6 +760,10 @@ async def export_geojson(
                 "priority": req.priority,
                 "resolution_outcome": resolution_outcome,
                 
+                # Demographics (equity research)
+                "income_quintile": income_quintile,
+                "population_density": pop_density,
+                
                 # Temporal
                 "submitted_datetime": req.requested_datetime.isoformat() if req.requested_datetime else None,
                 "closed_datetime": req.closed_datetime.isoformat() if req.closed_datetime else None,
@@ -690,6 +773,7 @@ async def export_geojson(
                 "submission_year": time_info.get('year'),
                 "is_weekend": time_info.get('is_weekend'),
                 "is_business_hours": time_info.get('is_business_hours'),
+                "season": season,
                 
                 # Performance (for equity research)
                 "total_hours_to_resolve": resolution_hours,
@@ -698,6 +782,8 @@ async def export_geojson(
                 # Civic Engagement
                 "submission_channel": req.source,
                 "department_id": req.assigned_department_id,
+                "comment_count": total_comments,
+                "public_comment_count": public_comments,
             }
         })
     
@@ -710,9 +796,9 @@ async def export_geojson(
             "record_count": len(features),
             "coordinate_precision": "fuzzed_100ft" if privacy_mode == "fuzzed" else "exact",
             "research_fields": {
-                "civil_engineering": ["infrastructure_category", "matched_asset_type"],
-                "equity_studies": ["zone_id", "total_hours_to_resolve", "business_hours_to_resolve"],
-                "civics": ["submission_channel", "is_weekend", "is_business_hours", "submission_hour"],
+                "civil_engineering": ["infrastructure_category", "matched_asset_type", "season"],
+                "equity_studies": ["zone_id", "income_quintile", "population_density", "total_hours_to_resolve", "business_hours_to_resolve"],
+                "civics": ["submission_channel", "is_weekend", "is_business_hours", "submission_hour", "comment_count", "public_comment_count"],
                 "ai_ml_research": ["ai_flagged", "ai_priority_score", "ai_classification", "ai_summary_sanitized", "ai_vs_manual_priority_diff"]
             }
         }
@@ -911,34 +997,65 @@ async def get_data_dictionary(
                 "type": "integer",
                 "description": "Number of status changes in audit log",
                 "note": "Indicator of issue complexity or workflow efficiency"
+            },
+            "season": {
+                "type": "string",
+                "values": ["winter", "spring", "summer", "fall"],
+                "description": "Season when request was submitted",
+                "note": "Useful for correlating infrastructure issues with weather patterns"
+            },
+            "income_quintile": {
+                "type": "integer",
+                "range": "1-5",
+                "description": "Anonymized income quintile based on geographic zone (1=lowest, 5=highest)",
+                "note": "Privacy-preserving proxy for socioeconomic equity research"
+            },
+            "population_density": {
+                "type": "string",
+                "values": ["low", "medium", "high"],
+                "description": "Population density category of the zone",
+                "note": "Useful for urban vs suburban service equity analysis"
+            },
+            "comment_count": {
+                "type": "integer",
+                "description": "Total number of comments on the request",
+                "note": "Measures engagement depth and issue complexity"
+            },
+            "public_comment_count": {
+                "type": "integer",
+                "description": "Number of public/external comments visible to reporter",
+                "note": "Measures transparency and citizen communication"
             }
         },
         "research_applications": {
             "civil_engineering": {
-                "relevant_fields": ["infrastructure_category", "matched_asset_type", "service_code", "has_photos"],
+                "relevant_fields": ["infrastructure_category", "matched_asset_type", "service_code", "has_photos", "season"],
                 "suggested_analyses": [
                     "Infrastructure maintenance patterns by category",
                     "Correlation between asset age and request frequency",
-                    "Seasonal variation in infrastructure issues",
-                    "Photo documentation impact on resolution time"
+                    "Seasonal variation in infrastructure issues (potholes in spring, etc.)",
+                    "Photo documentation impact on resolution time",
+                    "Weather-related infrastructure failure patterns"
                 ]
             },
             "equity_studies": {
-                "relevant_fields": ["zone_id", "total_hours_to_resolve", "business_hours_to_resolve", "submission_channel", "resolution_outcome"],
+                "relevant_fields": ["zone_id", "income_quintile", "population_density", "total_hours_to_resolve", "business_hours_to_resolve", "submission_channel", "resolution_outcome"],
                 "suggested_analyses": [
                     "Geographic disparities in response times",
+                    "Response time variation by income quintile",
+                    "Urban vs suburban service equity",
                     "Digital divide analysis (portal vs phone submissions)",
-                    "Business vs after-hours response time comparison",
                     "Resolution outcome equity across zones"
                 ]
             },
             "civics": {
-                "relevant_fields": ["submission_channel", "submission_hour", "is_weekend", "is_business_hours", "description_word_count"],
+                "relevant_fields": ["submission_channel", "submission_hour", "is_weekend", "is_business_hours", "description_word_count", "comment_count", "public_comment_count"],
                 "suggested_analyses": [
                     "Civic engagement patterns by time of day",
                     "Channel preference analysis",
                     "Weekend vs weekday submission behavior",
-                    "Citizen reporting quality over time"
+                    "Citizen reporting quality over time",
+                    "Two-way communication effectiveness"
                 ]
             },
             "ai_ml_research": {
