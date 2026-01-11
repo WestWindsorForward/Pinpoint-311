@@ -874,7 +874,7 @@ export default function StaffDashboard() {
                                 className="text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 <Card className="text-center border-blue-500/30 hover:border-blue-500/60 cursor-pointer transition-colors">
-                                    <p className="text-3xl font-bold text-blue-400">{dashboardStats.deptActive}</p>
+                                    <p className="text-3xl font-bold text-blue-200">{dashboardStats.deptActive}</p>
                                     <p className="text-white/60 text-sm">Your Department</p>
                                 </Card>
                             </button>
@@ -883,7 +883,7 @@ export default function StaffDashboard() {
                                 className="text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 <Card className="text-center border-red-500/30 hover:border-red-500/60 cursor-pointer transition-colors">
-                                    <p className="text-3xl font-bold text-red-400">{dashboardStats.totalActive}</p>
+                                    <p className="text-3xl font-bold text-red-200">{dashboardStats.totalActive}</p>
                                     <p className="text-white/60 text-sm">All Open</p>
                                 </Card>
                             </button>
@@ -892,7 +892,7 @@ export default function StaffDashboard() {
                                 className="text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 <Card className="text-center border-amber-500/30 hover:border-amber-500/60 cursor-pointer transition-colors">
-                                    <p className="text-3xl font-bold text-amber-400">{dashboardStats.totalInProgress}</p>
+                                    <p className="text-3xl font-bold text-amber-200">{dashboardStats.totalInProgress}</p>
                                     <p className="text-white/60 text-sm">In Progress</p>
                                 </Card>
                             </button>
