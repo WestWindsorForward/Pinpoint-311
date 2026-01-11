@@ -1580,30 +1580,32 @@ export default function StaffDashboard() {
                                             <button onClick={() => handleStatusChange('closed')} className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${selectedRequest.status === 'closed' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-white/20' : 'bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white'}`}>Closed</button>
                                         </div>
 
-                                        {/* Row 4: Legal Hold Toggle */}
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    const updated = await api.updateRequest(selectedRequest.service_request_id, {
-                                                        flagged: !selectedRequest.flagged
-                                                    });
-                                                    setSelectedRequest(updated);
-                                                    setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
-                                                } catch (err) {
-                                                    console.error('Failed to toggle legal hold:', err);
-                                                }
-                                            }}
-                                            className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${selectedRequest.flagged
-                                                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 ring-2 ring-white/20'
-                                                : 'bg-white/5 border border-white/10 text-white/70 hover:bg-amber-500/20 hover:text-amber-400 hover:border-amber-500/30'
-                                                }`}
-                                            aria-label={selectedRequest.flagged ? 'Remove legal hold' : 'Place on legal hold'}
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-                                            </svg>
-                                            {selectedRequest.flagged ? 'Under Legal Hold' : 'Place on Legal Hold'}
-                                        </button>
+                                        {/* Row 4: Legal Hold Toggle (Admin Only) */}
+                                        {user?.role === 'admin' && (
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const updated = await api.updateRequest(selectedRequest.service_request_id, {
+                                                            flagged: !selectedRequest.flagged
+                                                        });
+                                                        setSelectedRequest(updated);
+                                                        setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
+                                                    } catch (err) {
+                                                        console.error('Failed to toggle legal hold:', err);
+                                                    }
+                                                }}
+                                                className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${selectedRequest.flagged
+                                                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 ring-2 ring-white/20'
+                                                    : 'bg-white/5 border border-white/10 text-white/70 hover:bg-amber-500/20 hover:text-amber-400 hover:border-amber-500/30'
+                                                    }`}
+                                                aria-label={selectedRequest.flagged ? 'Remove legal hold' : 'Place on legal hold'}
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                                                </svg>
+                                                {selectedRequest.flagged ? 'Under Legal Hold' : 'Place on Legal Hold'}
+                                            </button>
+                                        )}
                                     </div>
 
                                     {/* Scrollable Content - Professional Government Styling */}

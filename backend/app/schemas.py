@@ -187,6 +187,8 @@ class ServiceRequestUpdate(BaseModel):
     closed_substatus: Optional[ClosedSubstatus] = None
     completion_message: Optional[str] = None
     completion_photo_url: Optional[str] = None
+    # Legal hold (admin only)
+    flagged: Optional[bool] = None
 
 
 class ServiceRequestDelete(BaseModel):

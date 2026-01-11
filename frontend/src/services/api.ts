@@ -163,9 +163,12 @@ class ApiClient {
     }
 
     // Service Requests (Staff)
-    async getRequests(status?: string): Promise<ServiceRequest[]> {
-        const params = status ? `?status=${status}` : '';
-        return this.request<ServiceRequest[]>(`/open311/v2/requests.json${params}`);
+    async getRequests(status?: string, includeDeleted?: boolean): Promise<ServiceRequest[]> {
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (includeDeleted) params.append('include_deleted', 'true');
+        const queryString = params.toString() ? `?${params.toString()}` : '';
+        return this.request<ServiceRequest[]>(`/open311/v2/requests.json${queryString}`);
     }
 
     async getRequestDetail(requestId: string): Promise<ServiceRequestDetail> {

@@ -418,11 +418,16 @@ async def update_request_status(
     
     update_dict = update_data.model_dump(exclude_unset=True)
     
+    # Restrict flagged (legal hold) to admin only
+    if "flagged" in update_dict and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only administrators can toggle legal hold status")
+    
     # Track old values for audit log
     old_status = request.status
     old_department_id = request.assigned_department_id
     old_assigned_to = request.assigned_to
     old_department_name = request.assigned_department.name if request.assigned_department else None
+    old_flagged = request.flagged
     
     for field, value in update_dict.items():
         if value is not None:
@@ -490,6 +495,18 @@ async def update_request_status(
                 actor_name=current_user.username
             )
             db.add(audit_entry)
+    
+    # Legal hold change
+    if "flagged" in update_dict and update_dict["flagged"] != old_flagged:
+        audit_entry = RequestAuditLog(
+            service_request_id=request.id,
+            action="legal_hold",
+            old_value="enabled" if old_flagged else "disabled",
+            new_value="enabled" if update_dict["flagged"] else "disabled",
+            actor_type="admin",
+            actor_name=current_user.username
+        )
+        db.add(audit_entry)
     
     await db.commit()
     
