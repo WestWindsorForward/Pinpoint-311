@@ -37,10 +37,52 @@ The Township 311 platform is designed for on-premises deployment within municipa
 
 | Feature | Implementation |
 |---------|----------------|
-| Password Storage | bcrypt one-way hashing |
-| Session Management | JWT tokens with configurable expiration |
+| Password Storage | bcrypt one-way hashing with automatic salting |
+| Session Management | JWT tokens with configurable expiration (default 8 hours) |
 | Endpoint Security | FastAPI role-based dependency injection |
 | Login Protection | Per-user authentication with salted hashes |
+
+### Encryption at Rest
+
+All sensitive data stored in the `system_secrets` table is encrypted before database storage:
+
+| Property | Value |
+|----------|-------|
+| Algorithm | Fernet (AES-128-CBC with HMAC-SHA256) |
+| Key Derivation | PBKDF2 from `SECRET_KEY` environment variable |
+| Key Size | 256-bit derived key |
+| Implementation | `cryptography` library (PyCA) |
+| Location | `backend/app/core/encryption.py` |
+
+**Protected Secrets:**
+- Google Maps API Key
+- Twilio Account SID / Auth Token
+- SMTP Credentials (username, password)
+- Vertex AI Service Account JSON
+- SMS HTTP API Keys
+
+### Rate Limiting
+
+API endpoints are protected against abuse:
+
+| Limit | Value |
+|-------|-------|
+| Default | 500 requests/minute per IP |
+| Implementation | slowapi middleware |
+| Response on Exceeded | HTTP 429 with Retry-After header |
+
+### Security Headers
+
+All API responses include government-grade security headers:
+
+| Header | Value | Purpose |
+|--------|-------|---------|
+| X-Frame-Options | DENY | Prevent clickjacking |
+| X-Content-Type-Options | nosniff | Prevent MIME sniffing |
+| X-XSS-Protection | 1; mode=block | Legacy XSS protection |
+| Referrer-Policy | strict-origin-when-cross-origin | Control referrer leakage |
+| Content-Security-Policy | frame-ancestors 'none' | Prevent framing |
+| Cache-Control | no-store (API routes) | Prevent caching sensitive data |
 
 ### Infrastructure Security
 
@@ -49,7 +91,7 @@ The Township 311 platform is designed for on-premises deployment within municipa
 | Transport | Automatic HTTPS via Caddy (Let's Encrypt) |
 | API Secrets | Environment isolation, never in version control |
 | Database | PostgreSQL in private Docker network |
-| CORS | Configured for API protection |
+| CORS | Configurable Cross-Origin Resource Sharing |
 
 ### Input Validation
 - Pydantic schema validation on all API inputs

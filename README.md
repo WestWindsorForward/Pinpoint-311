@@ -300,15 +300,38 @@ All research fields are computed on-the-fly using real APIs:
 The frontend uses a unique **Atomic Page Architecture**. Instead of deep component trees, pages like `ResidentPortal.tsx` and `StaffDashboard.tsx` are self-contained "atoms" that manage their own complex state. This reduces prop-drilling and makes the codebase easier to audit for security.
 
 ### 🔒 Security Standards
-- **Encryption at Rest**: All API keys and sensitive secrets are encrypted using Fernet (AES-128-CBC) before database storage. Encryption keys are derived from the application's `SECRET_KEY` using PBKDF2.
-- **PII Protection**: Personally Identifiable Information is encrypted at rest and redacted from public API feeds.
+
+#### Encryption at Rest
+All API keys and sensitive secrets (Google Maps, Twilio, SMTP, Vertex AI credentials) are encrypted before storage:
+- **Algorithm**: Fernet symmetric encryption (AES-128-CBC with HMAC-SHA256)
+- **Key Derivation**: PBKDF2 using application's `SECRET_KEY` environment variable
+- **Migration**: Legacy plain text values automatically encrypted on first update
+- **Location**: All sensitive data in `system_secrets` table stored as encrypted ciphertext
+
+#### API Security
+- **Rate Limiting**: slowapi middleware (500 requests/minute per IP)
+- **Security Headers**:
+  - `X-Frame-Options: DENY` - Prevents clickjacking
+  - `X-Content-Type-Options: nosniff` - Prevents MIME sniffing
+  - `X-XSS-Protection: 1; mode=block` - Legacy XSS protection
+  - `Referrer-Policy: strict-origin-when-cross-origin` - Controls referrer info
+  - `Content-Security-Policy: frame-ancestors 'none'` - Prevents framing
+  - `Cache-Control: no-store` - Prevents caching of API responses
+
+#### Access Control
+- **PII Protection**: Personally Identifiable Information redacted from public API feeds
 - **RBAC**: Role-Based Access Control with three tiers:
   - `Staff`: View requests, add comments, update status
   - `Researcher`: Read-only access to sanitized, anonymized data exports
   - `Admin`: Full system configuration, user management, exact location access
-- **Rate Limiting**: API endpoints protected via slowapi (500 requests/minute default).
-- **Security Headers**: All responses include X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, and Content-Security-Policy headers.
-- **SQL Injection Proof**: Usage of SQLAlchemy ORM prevents injection vulnerabilities.
+- **JWT Authentication**: Stateless tokens with configurable expiration (default 8 hours)
+- **Password Hashing**: bcrypt with automatic salting
+
+#### Infrastructure Security
+- **SQL Injection Proof**: SQLAlchemy ORM prevents injection vulnerabilities
+- **CORS**: Configurable Cross-Origin Resource Sharing
+- **Input Validation**: Pydantic schema validation on all API inputs
+- **Audit Logging**: Immutable trail of all request lifecycle events
 
 ### ♿ Accessibility Compliance (WCAG 2.2 AA)
 The platform is designed to meet **WCAG 2.2 Level AA** accessibility standards:
