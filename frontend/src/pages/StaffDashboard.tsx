@@ -2260,6 +2260,13 @@ export default function StaffDashboard() {
                                                                 actionConfig = { color: 'bg-indigo-500', text: `Assigned to ${entry.new_value}` };
                                                             } else if (entry.action === 'comment_added') {
                                                                 actionConfig = { color: 'bg-teal-500', text: 'Comment added' };
+                                                            } else if (entry.action === 'legal_hold') {
+                                                                // Show if legal hold was enabled or removed
+                                                                const isEnabled = entry.new_value === 'true' || entry.new_value === 'True';
+                                                                actionConfig = {
+                                                                    color: isEnabled ? 'bg-amber-500' : 'bg-gray-500',
+                                                                    text: isEnabled ? '⚖️ Legal Hold Enabled' : '⚖️ Legal Hold Removed'
+                                                                };
                                                             } else {
                                                                 actionConfig = { color: 'bg-gray-500', text: entry.action };
                                                             }

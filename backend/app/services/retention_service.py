@@ -343,12 +343,9 @@ async def get_retention_stats(
     eligible_result = await db.execute(eligible_query)
     eligible_count = eligible_result.scalar() or 0
     
-    # Count records under legal hold
+    # Count records under legal hold (any flagged record, regardless of status)
     held_query = select(func.count(ServiceRequest.id)).where(
         and_(
-            ServiceRequest.status == "closed",
-            ServiceRequest.closed_datetime.isnot(None),
-            ServiceRequest.closed_datetime < cutoff_date,
             ServiceRequest.archived_at.is_(None),
             ServiceRequest.deleted_at.is_(None),
             ServiceRequest.flagged == True
