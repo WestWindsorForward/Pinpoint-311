@@ -2200,10 +2200,10 @@ export default function AdminConsole() {
                                                             {req.deleted_at ? new Date(req.deleted_at).toLocaleDateString() : 'N/A'}
                                                         </span>
                                                     </div>
-                                                    {req.deletion_reason && (
+                                                    {req.delete_justification && (
                                                         <div className="mt-2 bg-black/20 rounded p-2">
                                                             <span className="text-xs text-white/50">Deletion Reason:</span>
-                                                            <p className="text-sm text-red-300">{req.deletion_reason}</p>
+                                                            <p className="text-sm text-red-300">{req.delete_justification}</p>
                                                         </div>
                                                     )}
                                                     <p className="text-xs text-white/40 mt-2">
