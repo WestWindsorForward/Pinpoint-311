@@ -693,6 +693,7 @@ export default function AdminConsole() {
             <aside
                 className={`fixed lg:static inset-y-0 left-0 z-50 w-72 glass-sidebar transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
+                aria-label="Admin console navigation"
             >
                 <div className="flex flex-col h-full">
                     {/* Header */}
@@ -704,9 +705,10 @@ export default function AdminConsole() {
                                     window.location.hash = '';
                                 }}
                                 className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                                aria-label="Go to admin home"
                             >
                                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center">
-                                    <Sparkles className="w-5 h-5 text-white" />
+                                    <Sparkles className="w-5 h-5 text-white" aria-hidden="true" />
                                 </div>
                                 <div className="text-left">
                                     <h2 className="font-semibold text-white">Admin Console</h2>
@@ -716,14 +718,15 @@ export default function AdminConsole() {
                             <button
                                 onClick={() => setSidebarOpen(false)}
                                 className="lg:hidden p-2 hover:bg-white/10 rounded-lg"
+                                aria-label="Close navigation menu"
                             >
-                                <X className="w-5 h-5 text-white/60" />
+                                <X className="w-5 h-5 text-white/60" aria-hidden="true" />
                             </button>
                         </div>
                     </div>
 
                     {/* Menu */}
-                    <nav className="flex-1 p-4 space-y-2">
+                    <nav className="flex-1 p-4 space-y-2" aria-label="Admin configuration">
                         <p className="text-xs font-medium text-white/40 uppercase tracking-wider px-3 mb-3">
                             Configuration
                         </p>
@@ -789,14 +792,18 @@ export default function AdminConsole() {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div id="main-content" role="main" className="flex-1 flex flex-col min-w-0">
                 {/* Mobile Header */}
                 <header className="lg:hidden glass-sidebar p-4 flex items-center justify-between sticky top-0 z-30">
-                    <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-white/10 rounded-lg">
-                        <Menu className="w-6 h-6 text-white" />
+                    <button
+                        onClick={() => setSidebarOpen(true)}
+                        className="p-2 hover:bg-white/10 rounded-lg"
+                        aria-label="Open navigation menu"
+                    >
+                        <Menu className="w-6 h-6 text-white" aria-hidden="true" />
                     </button>
                     <h1 className="font-semibold text-white">Admin Console</h1>
-                    <div className="w-10" />
+                    <div className="w-10" aria-hidden="true" />
                 </header>
 
                 {/* Content */}
