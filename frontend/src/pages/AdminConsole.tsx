@@ -2141,8 +2141,8 @@ export default function AdminConsole() {
                                         {/* Archival Stats */}
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                                                <div className="text-blue-400 text-sm">Eligible for Archival</div>
-                                                <div className="text-2xl font-bold text-blue-400">{retentionPolicy.stats.eligible_for_archival}</div>
+                                                <div className="text-blue-300 text-sm">Eligible for Archival</div>
+                                                <div className="text-2xl font-bold text-blue-300">{retentionPolicy.stats.eligible_for_archival}</div>
                                             </div>
                                             <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
                                                 <div className="text-amber-400 text-sm">Under Legal Hold</div>
