@@ -249,6 +249,88 @@ async def run_retention_now(
     }
 
 
+@router.get("/retention/export")
+async def export_for_public_records(
+    start_date: str = None,
+    end_date: str = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_admin)
+):
+    """
+    Export records for OPRA/FOIA/public records requests.
+    Uses state-specific format based on configured retention policy.
+    """
+    from app.services.retention_service import get_retention_policy
+    from app.models import ServiceRequest
+    from datetime import datetime
+    import csv
+    import io
+    from fastapi.responses import StreamingResponse
+    
+    # Get current state policy
+    result = await db.execute(select(SystemSettings).limit(1))
+    settings = result.scalar_one_or_none()
+    state_code = settings.retention_state_code if settings else "NJ"
+    policy = get_retention_policy(state_code)
+    
+    # Build query
+    query = select(ServiceRequest).where(
+        ServiceRequest.deleted_at.is_(None)
+    ).order_by(ServiceRequest.requested_datetime.desc())
+    
+    if start_date:
+        query = query.where(ServiceRequest.requested_datetime >= datetime.fromisoformat(start_date))
+    if end_date:
+        query = query.where(ServiceRequest.requested_datetime <= datetime.fromisoformat(end_date))
+    
+    result = await db.execute(query)
+    records = result.scalars().all()
+    
+    # Generate CSV with state-specific header
+    output = io.StringIO()
+    
+    # Write header with public records law info
+    output.write(f"# {policy['public_records_law']} EXPORT\n")
+    output.write(f"# State: {policy['name']} ({state_code})\n")
+    output.write(f"# Generated: {datetime.utcnow().isoformat()}Z\n")
+    output.write(f"# Total Records: {len(records)}\n")
+    output.write(f"# Exported by: {current_user.username}\n")
+    output.write("#\n")
+    
+    writer = csv.writer(output)
+    writer.writerow([
+        "Request ID", "Service Type", "Status", "Submitted Date", 
+        "Street Address", "City", "State", "Description",
+        "Resolution Date", "Resolution Notes"
+    ])
+    
+    for r in records:
+        writer.writerow([
+            r.service_request_id,
+            r.service_name,
+            r.status,
+            r.requested_datetime.isoformat() if r.requested_datetime else "",
+            r.address or "",
+            r.city or "",
+            r.state or "",
+            r.description or "[Archived]" if r.archived_at else r.description or "",
+            r.closed_datetime.isoformat() if r.closed_datetime else "",
+            r.completion_message or ""
+        ])
+    
+    output.seek(0)
+    
+    # Create filename with law name
+    law_abbrev = policy['public_records_law'].split('(')[0].strip().replace(' ', '_')
+    filename = f"{law_abbrev}_export_{datetime.utcnow().strftime('%Y%m%d')}.csv"
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 # ============ Statistics ============
 
 @router.get("/statistics", response_model=StatisticsResponse)

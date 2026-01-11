@@ -267,7 +267,7 @@ export default function AdminConsole() {
     }>>([]);
     const [retentionPolicy, setRetentionPolicy] = useState<{
         state_code: string;
-        policy: { name: string; retention_days: number; retention_years: number; source: string };
+        policy: { name: string; retention_days: number; retention_years: number; source: string; public_records_law: string };
         override_days: number | null;
         effective_days: number;
         mode: 'anonymize' | 'delete';
@@ -2258,6 +2258,21 @@ export default function AdminConsole() {
                                             disabled={isRunningRetention}
                                         >
                                             {isRunningRetention ? 'Running...' : 'Run Retention Now'}
+                                        </Button>
+
+                                        <Button
+                                            variant="secondary"
+                                            onClick={async () => {
+                                                try {
+                                                    await api.exportForPublicRecords();
+                                                    setSaveMessage('Export downloaded successfully');
+                                                    setTimeout(() => setSaveMessage(null), 3000);
+                                                } catch (err) {
+                                                    console.error('Export failed:', err);
+                                                }
+                                            }}
+                                        >
+                                            Export for {retentionPolicy?.policy?.public_records_law?.split('(')[0]?.trim() || 'FOIA'}
                                         </Button>
                                     </div>
                                 </Card>

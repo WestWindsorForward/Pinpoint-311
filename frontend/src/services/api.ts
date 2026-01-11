@@ -613,6 +613,30 @@ class ApiClient {
     async runRetentionNow(): Promise<{ status: string; task_id: string; message: string }> {
         return this.request('/system/retention/run', { method: 'POST' });
     }
+
+    async exportForPublicRecords(startDate?: string, endDate?: string): Promise<void> {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        const queryString = params.toString() ? `?${params.toString()}` : '';
+
+        const response = await fetch(`/api/system/retention/export${queryString}`, {
+            headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {},
+        });
+
+        if (!response.ok) throw new Error('Export failed');
+
+        // Trigger download
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        const filename = contentDisposition?.match(/filename=(.+)/)?.[1] || 'public_records_export.csv';
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
 }
 
 // Notification Preferences type
@@ -685,6 +709,7 @@ export interface RetentionState {
     retention_days: number;
     retention_years: number;
     source: string;
+    public_records_law: string;
 }
 
 export interface RetentionPolicyConfig {
@@ -695,6 +720,7 @@ export interface RetentionPolicyConfig {
         retention_days: number;
         retention_years: number;
         source: string;
+        public_records_law: string;
     };
     override_days: number | null;
     effective_days: number;
