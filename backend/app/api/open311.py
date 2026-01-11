@@ -598,7 +598,7 @@ async def delete_request(
     request.updated_datetime = datetime.utcnow()
     
     # Add audit log entry
-    audit_entry = AuditLog(
+    audit_entry = RequestAuditLog(
         service_request_id=request.id,
         action="deleted",
         actor_type="staff",
@@ -639,7 +639,7 @@ async def restore_request(
     request.updated_datetime = datetime.utcnow()
     
     # Add audit log entry
-    audit_entry = AuditLog(
+    audit_entry = RequestAuditLog(
         service_request_id=request.id,
         action="restored",
         actor_type="staff",
