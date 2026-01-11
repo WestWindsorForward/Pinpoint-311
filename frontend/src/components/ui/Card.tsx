@@ -16,6 +16,14 @@ export const Card: React.FC<CardProps> = ({
 }) => {
     const baseStyles = 'glass-card p-6';
 
+    // Handle keyboard Enter/Space for accessibility
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onClick();
+        }
+    };
+
     if (hover || onClick) {
         return (
             <motion.div
@@ -23,6 +31,10 @@ export const Card: React.FC<CardProps> = ({
                 whileTap={onClick ? { scale: 0.98 } : undefined}
                 className={`${baseStyles} cursor-pointer ${className}`}
                 onClick={onClick}
+                // ADA accessibility: make clickable cards keyboard accessible
+                tabIndex={onClick ? 0 : undefined}
+                role={onClick ? 'button' : undefined}
+                onKeyDown={onClick ? handleKeyDown : undefined}
             >
                 {children}
             </motion.div>
