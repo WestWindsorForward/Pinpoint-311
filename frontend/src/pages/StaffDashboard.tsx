@@ -670,7 +670,7 @@ export default function StaffDashboard() {
 
             {/* Sidebar */}
             <aside
-                className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-50 w-72 h-screen glass-sidebar transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed lg:static lg:flex-shrink-0 inset-y-0 left-0 z-50 w-72 glass-sidebar transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
                 aria-label="Staff portal navigation"
             >
