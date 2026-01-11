@@ -2206,9 +2206,29 @@ export default function AdminConsole() {
                                                             <p className="text-sm text-red-300">{req.delete_justification}</p>
                                                         </div>
                                                     )}
-                                                    <p className="text-xs text-white/40 mt-2">
-                                                        Deleted by: {req.deleted_by || 'Unknown'}
-                                                    </p>
+                                                    <div className="flex items-center justify-between mt-2">
+                                                        <p className="text-xs text-white/40">
+                                                            Deleted by: {req.deleted_by || 'Unknown'}
+                                                        </p>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (window.confirm(`Restore request ${req.service_request_id}? This will make it visible to staff again.`)) {
+                                                                    try {
+                                                                        await api.restoreRequest(req.service_request_id);
+                                                                        // Remove from deleted list
+                                                                        setDeletedRequests(prev => prev.filter(r => r.id !== req.id));
+                                                                    } catch (err) {
+                                                                        console.error('Failed to restore:', err);
+                                                                        alert('Failed to restore request');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="px-3 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30 transition-colors flex items-center gap-1"
+                                                        >
+                                                            <RotateCcw className="w-3 h-3" />
+                                                            Restore
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>

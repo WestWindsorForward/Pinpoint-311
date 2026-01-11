@@ -603,6 +603,47 @@ async def delete_request(
     return {"message": "Request deleted", "request_id": request_id}
 
 
+@router.post("/requests/{request_id}/restore")
+async def restore_request(
+    request_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_staff)
+):
+    """Restore a soft-deleted service request (staff/admin)"""
+    result = await db.execute(
+        select(ServiceRequest).where(ServiceRequest.service_request_id == request_id)
+    )
+    request = result.scalar_one_or_none()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if not request.deleted_at:
+        raise HTTPException(status_code=400, detail="Request is not deleted")
+    
+    # Restore the request
+    request.deleted_at = None
+    request.deleted_by = None
+    request.delete_justification = None
+    request.updated_datetime = datetime.utcnow()
+    
+    # Add audit log entry
+    audit_entry = AuditLog(
+        service_request_id=request.id,
+        action="restored",
+        actor_type="staff",
+        actor_id=current_user.id,
+        actor_name=current_user.username,
+        new_value=f"Restored by {current_user.username}",
+        timestamp=datetime.utcnow()
+    )
+    db.add(audit_entry)
+    
+    await db.commit()
+    await db.refresh(request)
+    
+    return {"message": "Request restored", "request_id": request_id}
+
+
 @router.get("/requests/asset/{asset_id}/related")
 async def get_asset_related_requests(
     asset_id: str,
