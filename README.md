@@ -333,6 +333,31 @@ All API keys and sensitive secrets (Google Maps, Twilio, SMTP, Vertex AI credent
 - **Input Validation**: Pydantic schema validation on all API inputs
 - **Audit Logging**: Immutable trail of all request lifecycle events
 
+### 📋 Document Retention Engine
+
+The platform includes an automated **Document Retention Engine** that enforces state-specific record retention policies:
+
+#### State Retention Policies (Built-in)
+| State | Retention Period | Source |
+|-------|------------------|--------|
+| Texas | 10 years | TX State Library & Archives |
+| NJ, PA, WI | 7 years | State public records laws |
+| NY, MI, WA, CT | 6 years | State archives |
+| CA, FL, NC, VA, OH, IL, AZ, NM, OR, CO, IN, MO, MA, GA | 3-5 years | State schedules |
+
+#### Features
+- **Admin-configurable**: Select state or set custom retention period (Admin Console → Retention)
+- **Legal hold protection**: Flagged records are NEVER archived regardless of age
+- **Anonymize or delete**: Choose between PII anonymization or permanent deletion
+- **Automatic enforcement**: Daily Celery task archives expired records
+- **Audit compliant**: Full logging of all archival actions
+
+#### API Endpoints
+- `GET /api/system/retention/states` - List all supported states
+- `GET /api/system/retention/policy` - Get current configuration
+- `POST /api/system/retention/policy` - Update retention settings
+- `POST /api/system/retention/run` - Manually trigger retention enforcement
+
 ### ♿ Accessibility Compliance (WCAG 2.2 AA)
 The platform is designed to meet **WCAG 2.2 Level AA** accessibility standards:
 
