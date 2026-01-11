@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -7,7 +7,11 @@ interface ModalProps {
     onClose: () => void;
     title?: string;
     children: React.ReactNode;
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'sm' | 'md' | 'lg' | 'xl';
+    /** Element to return focus to when modal closes */
+    triggerRef?: React.RefObject<HTMLElement>;
+    /** Description for screen readers */
+    'aria-describedby'?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -16,13 +20,22 @@ export const Modal: React.FC<ModalProps> = ({
     title,
     children,
     size = 'md',
+    triggerRef,
+    'aria-describedby': ariaDescribedBy,
 }) => {
+    const modalRef = useRef<HTMLDivElement>(null);
+    const previousActiveElement = useRef<HTMLElement | null>(null);
+    const modalId = useId();
+    const titleId = title ? `${modalId}-title` : undefined;
+
     const sizeStyles = {
         sm: 'max-w-sm',
         md: 'max-w-lg',
         lg: 'max-w-2xl',
+        xl: 'max-w-4xl',
     };
 
+    // Handle body scroll lock
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -33,6 +46,67 @@ export const Modal: React.FC<ModalProps> = ({
             document.body.style.overflow = 'unset';
         };
     }, [isOpen]);
+
+    // Focus management
+    useEffect(() => {
+        if (isOpen) {
+            // Store the previously focused element
+            previousActiveElement.current = document.activeElement as HTMLElement;
+
+            // Focus the modal or first focusable element
+            setTimeout(() => {
+                const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                if (focusableElements && focusableElements.length > 0) {
+                    focusableElements[0].focus();
+                } else {
+                    modalRef.current?.focus();
+                }
+            }, 50);
+        } else {
+            // Return focus to trigger element or previous element
+            if (triggerRef?.current) {
+                triggerRef.current.focus();
+            } else if (previousActiveElement.current) {
+                previousActiveElement.current.focus();
+            }
+        }
+    }, [isOpen, triggerRef]);
+
+    // Handle Escape key - WCAG 2.1.2 No Keyboard Trap
+    const handleKeyDown = useCallback((event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            onClose();
+        }
+
+        // Focus trap
+        if (event.key === 'Tab' && modalRef.current) {
+            const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (event.shiftKey && document.activeElement === firstElement) {
+                event.preventDefault();
+                lastElement?.focus();
+            } else if (!event.shiftKey && document.activeElement === lastElement) {
+                event.preventDefault();
+                firstElement?.focus();
+            }
+        }
+    }, [onClose]);
+
+    useEffect(() => {
+        if (isOpen) {
+            document.addEventListener('keydown', handleKeyDown);
+        }
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, handleKeyDown]);
 
     return (
         <AnimatePresence>
@@ -45,27 +119,56 @@ export const Modal: React.FC<ModalProps> = ({
                         exit={{ opacity: 0 }}
                         onClick={onClose}
                         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        aria-hidden="true"
                     />
 
                     {/* Modal Container - centered with flexbox */}
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+                        role="presentation"
+                    >
                         <motion.div
+                            ref={modalRef}
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className={`w-full ${sizeStyles[size]} glass-card p-0 pointer-events-auto max-h-[90vh] overflow-auto`}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby={titleId}
+                            aria-describedby={ariaDescribedBy}
+                            tabIndex={-1}
                         >
                             {/* Header */}
                             {title && (
                                 <div className="flex items-center justify-between p-6 border-b border-white/10 sticky top-0 glass-card">
-                                    <h2 className="text-xl font-semibold text-white">{title}</h2>
+                                    <h2
+                                        id={titleId}
+                                        className="text-xl font-semibold text-white"
+                                    >
+                                        {title}
+                                    </h2>
                                     <button
                                         onClick={onClose}
-                                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                                        className="p-2 rounded-lg hover:bg-white/10 transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                                        aria-label="Close dialog"
+                                        type="button"
                                     >
-                                        <X className="w-5 h-5 text-white/60" />
+                                        <X className="w-5 h-5 text-white/60" aria-hidden="true" />
                                     </button>
                                 </div>
+                            )}
+
+                            {/* Close button when no title */}
+                            {!title && (
+                                <button
+                                    onClick={onClose}
+                                    className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 transition-colors z-10 focus-visible:ring-2 focus-visible:ring-amber-400"
+                                    aria-label="Close dialog"
+                                    type="button"
+                                >
+                                    <X className="w-5 h-5 text-white/60" aria-hidden="true" />
+                                </button>
                             )}
 
                             {/* Content */}

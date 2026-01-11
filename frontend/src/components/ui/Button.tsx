@@ -1,12 +1,18 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps {
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
     size?: 'sm' | 'md' | 'lg';
     isLoading?: boolean;
     leftIcon?: React.ReactNode;
     rightIcon?: React.ReactNode;
+    children?: React.ReactNode;
+    className?: string;
+    disabled?: boolean;
+    type?: 'button' | 'submit' | 'reset';
+    onClick?: React.MouseEventHandler<HTMLButtonElement>;
+    'aria-label'?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -18,9 +24,11 @@ export const Button: React.FC<ButtonProps> = ({
     rightIcon,
     className = '',
     disabled,
-    ...props
+    type = 'button',
+    onClick,
+    'aria-label': ariaLabel,
 }) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50';
+    const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900';
 
     const variantStyles = {
         primary: 'glass-button',
@@ -35,22 +43,39 @@ export const Button: React.FC<ButtonProps> = ({
         lg: 'px-6 py-3 text-base min-h-[52px]',
     };
 
+    const isDisabled = disabled || isLoading;
+
+    const motionProps: HTMLMotionProps<'button'> = {
+        whileHover: isDisabled ? undefined : { scale: 1.02 },
+        whileTap: isDisabled ? undefined : { scale: 0.98 },
+    };
+
     return (
         <motion.button
-            whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
-            whileTap={{ scale: disabled || isLoading ? 1 : 0.98 }}
-            className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : ''
+            {...motionProps}
+            className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
-            disabled={disabled || isLoading}
-            {...props}
+            disabled={isDisabled}
+            type={type}
+            onClick={onClick}
+            aria-disabled={isDisabled || undefined}
+            aria-busy={isLoading || undefined}
+            aria-label={ariaLabel}
         >
             {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                <>
+                    <div
+                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"
+                        role="status"
+                        aria-label="Loading"
+                    />
+                    <span className="sr-only">Loading, please wait...</span>
+                </>
             ) : leftIcon ? (
-                <span className="mr-2">{leftIcon}</span>
+                <span className="mr-2" aria-hidden="true">{leftIcon}</span>
             ) : null}
             {children}
-            {rightIcon && <span className="ml-2">{rightIcon}</span>}
+            {rightIcon && <span className="ml-2" aria-hidden="true">{rightIcon}</span>}
         </motion.button>
     );
 };

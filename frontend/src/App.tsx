@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { AccessibilityProvider } from './context/AccessibilityContext';
 import ResidentPortal from './pages/ResidentPortal';
 import StaffDashboard from './pages/StaffDashboard';
 import AdminConsole from './pages/AdminConsole';
@@ -19,8 +20,9 @@ function ProtectedRoute({
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center" role="status" aria-label="Loading">
                 <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                <span className="sr-only">Loading, please wait...</span>
             </div>
         );
     }
@@ -85,11 +87,13 @@ function AppRoutes() {
 export default function App() {
     return (
         <BrowserRouter>
-            <SettingsProvider>
-                <AuthProvider>
-                    <AppRoutes />
-                </AuthProvider>
-            </SettingsProvider>
+            <AccessibilityProvider>
+                <SettingsProvider>
+                    <AuthProvider>
+                        <AppRoutes />
+                    </AuthProvider>
+                </SettingsProvider>
+            </AccessibilityProvider>
         </BrowserRouter>
     );
 }
