@@ -593,9 +593,9 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                             </div>
                         ) : comments.length === 0 ? (
                             <div className="text-center py-8">
-                                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-white/20" />
-                                <p className="text-white/40">No comments yet</p>
-                                <p className="text-white/30 text-sm">Be the first to share an update!</p>
+                                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-white/60" />
+                                <p className="text-white/70">No comments yet</p>
+                                <p className="text-white/60 text-sm">Be the first to share an update!</p>
                             </div>
                         ) : (
                             comments.map((comment, index) => {

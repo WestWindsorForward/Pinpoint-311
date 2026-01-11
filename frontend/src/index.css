@@ -329,6 +329,17 @@ body {
     /* Override to lighter shade for contrast */
 }
 
+/* Primary color text overrides for darker backgrounds */
+.text-primary-300 {
+    color: rgb(199, 210, 254) !important;
+    /* #c7d2fe (primary-200) - brighter for better contrast */
+}
+
+.text-primary-400\/70 {
+    color: rgba(165, 180, 252, 0.85) !important;
+    /* Increase opacity for better contrast */
+}
+
 /* ========================================
    ADA ACCESSIBILITY STYLES
    WCAG 2.1 AA Compliance
