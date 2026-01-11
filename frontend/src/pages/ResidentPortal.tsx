@@ -411,7 +411,7 @@ export default function ResidentPortal() {
     return (
         <div className="min-h-screen flex flex-col">
             {/* Navigation */}
-            <nav className="glass-sidebar py-4 px-6 flex items-center justify-between sticky top-0 z-40">
+            <nav className="glass-sidebar py-4 px-6 flex items-center justify-between sticky top-0 z-40" aria-label="Main navigation">
                 <button
                     onClick={() => {
                         setShowTrackingView(false);
@@ -421,6 +421,7 @@ export default function ResidentPortal() {
                         scrollToTop('instant');
                     }}
                     className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                    aria-label="Go to home page"
                 >
                     {settings?.logo_url ? (
                         <img src={settings.logo_url} alt="Logo" className="h-10 w-auto" />
@@ -443,7 +444,7 @@ export default function ResidentPortal() {
             </nav>
 
             {/* Main Content */}
-            <main className="flex-1 px-4 py-8 md:px-8 max-w-6xl mx-auto w-full">
+            <main id="main-content" className="flex-1 px-4 py-8 md:px-8 max-w-6xl mx-auto w-full">
                 {/* Tracking View */}
                 {showTrackingView ? (
                     <div className="space-y-6">
@@ -453,6 +454,7 @@ export default function ResidentPortal() {
                                 updateHash('');
                             }}
                             className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+                            aria-label="Go back to home page"
                         >
                             <ArrowLeft className="w-5 h-5" />
                             <span>Back to Home</span>
@@ -524,22 +526,29 @@ export default function ResidentPortal() {
                                         className="max-w-md mx-auto"
                                     >
                                         <div className="relative">
-                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                                            <label htmlFor="service-search" className="sr-only">Search services</label>
+                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" aria-hidden="true" />
                                             <input
+                                                id="service-search"
                                                 type="text"
                                                 placeholder="Search services..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                                 className="glass-input pl-12"
+                                                aria-describedby="search-results-count"
                                             />
                                         </div>
+                                        <p id="search-results-count" className="sr-only" aria-live="polite">
+                                            {filteredServices.length} services found
+                                        </p>
                                     </motion.div>
                                 </div>
 
                                 {/* Service Categories Grid */}
                                 {isLoading ? (
-                                    <div className="flex justify-center py-12">
-                                        <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                                    <div className="flex justify-center py-12" role="status" aria-label="Loading services">
+                                        <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                                        <span className="sr-only">Loading service categories...</span>
                                     </div>
                                 ) : (
                                     <motion.div

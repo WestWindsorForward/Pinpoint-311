@@ -351,8 +351,9 @@ export const ResearchLab: React.FC = () => {
     // Loading state
     if (isEnabled === null) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-                <RefreshCw className="w-8 h-8 text-primary-400 animate-spin" />
+            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center" role="status" aria-label="Loading research portal">
+                <RefreshCw className="w-8 h-8 text-primary-400 animate-spin" aria-hidden="true" />
+                <span className="sr-only">Loading research portal, please wait...</span>
             </div>
         );
     }
@@ -363,8 +364,8 @@ export const ResearchLab: React.FC = () => {
             <header className="glass-card border-b border-white/10 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" onClick={() => navigate(-1)}>
-                            <ArrowLeft className="w-5 h-5" />
+                        <Button variant="ghost" onClick={() => navigate(-1)} aria-label="Go back to previous page">
+                            <ArrowLeft className="w-5 h-5" aria-hidden="true" />
                         </Button>
                         <div>
                             <h1 className="text-xl font-bold text-white flex items-center gap-2">
@@ -407,15 +408,17 @@ export const ResearchLab: React.FC = () => {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="bg-red-500/20 border border-red-500/30 rounded-xl p-4 mb-6"
+                        role="alert"
+                        aria-live="assertive"
                     >
                         <p className="text-red-400">{error}</p>
                     </motion.div>
                 )}
 
                 {/* Research Packs Section */}
-                <div className="mb-8">
-                    <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                        <Database className="w-5 h-5 text-amber-400" />
+                <section className="mb-8" aria-labelledby="research-packs-heading">
+                    <h2 id="research-packs-heading" className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        <Database className="w-5 h-5 text-amber-400" aria-hidden="true" />
                         Research Field Packs ({RESEARCH_PACKS.reduce((sum, p) => sum + p.fields.length, 0)} specialized fields)
                     </h2>
                     <div className="space-y-3">
@@ -434,9 +437,11 @@ export const ResearchLab: React.FC = () => {
                                     <button
                                         onClick={() => setExpandedPack(isExpanded ? null : pack.id)}
                                         className={`w-full px-5 py-4 flex items-center justify-between ${colors.bg} hover:bg-white/5 transition-colors`}
+                                        aria-expanded={isExpanded}
+                                        aria-controls={`pack-content-${pack.id}`}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center`}>
+                                            <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center`} aria-hidden="true">
                                                 <Icon className={`w-5 h-5 ${colors.text}`} />
                                             </div>
                                             <div className="text-left">
@@ -573,7 +578,7 @@ export const ResearchLab: React.FC = () => {
                             </AnimatePresence>
                         </motion.div>
                     </div>
-                </div>
+                </section>
 
                 {/* Query Builder */}
                 <Card className="mb-8">
