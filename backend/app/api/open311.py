@@ -602,10 +602,8 @@ async def delete_request(
         service_request_id=request.id,
         action="deleted",
         actor_type="staff",
-        actor_id=current_user.id,
         actor_name=current_user.username,
-        new_value=delete_data.justification,
-        timestamp=datetime.utcnow()
+        new_value=delete_data.justification
     )
     db.add(audit_entry)
     
@@ -643,10 +641,8 @@ async def restore_request(
         service_request_id=request.id,
         action="restored",
         actor_type="staff",
-        actor_id=current_user.id,
         actor_name=current_user.username,
-        new_value=f"Restored by {current_user.username}",
-        timestamp=datetime.utcnow()
+        new_value=f"Restored by {current_user.username}"
     )
     db.add(audit_entry)
     
