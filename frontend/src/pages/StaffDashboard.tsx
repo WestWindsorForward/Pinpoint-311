@@ -972,11 +972,11 @@ export default function StaffDashboard() {
                                                     <div className="text-sm text-gray-600">High (8-10)</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-3xl font-bold text-yellow-600">{mediumPriority}</div>
+                                                    <div className="text-3xl font-bold text-amber-700">{mediumPriority}</div>
                                                     <div className="text-sm text-gray-600">Medium (5-7)</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-3xl font-bold text-green-600">{lowPriority}</div>
+                                                    <div className="text-3xl font-bold text-green-700">{lowPriority}</div>
                                                     <div className="text-sm text-gray-600">Low (1-4)</div>
                                                 </div>
                                             </div>
@@ -1014,7 +1014,7 @@ export default function StaffDashboard() {
                                     <div className="text-3xl font-bold text-purple-600 mt-2">
                                         {advancedStats?.predictive_insights?.volume_forecast_next_week || 0}
                                     </div>
-                                    <div className="text-xs text-gray-500 mt-1 capitalize">
+                                    <div className="text-xs text-gray-600 mt-1 capitalize">
                                         Trend: {advancedStats?.predictive_insights?.trend_direction || 'N/A'}
                                     </div>
                                 </div>
@@ -1024,7 +1024,7 @@ export default function StaffDashboard() {
                                     <div className="text-3xl font-bold text-green-600 mt-2">
                                         {advancedStats?.avg_resolution_hours?.toFixed(1) || 'N/A'}h
                                     </div>
-                                    <div className="text-xs text-gray-500 mt-1">
+                                    <div className="text-xs text-gray-600 mt-1">
                                         {advancedStats?.resolution_rate?.toFixed(0) || 0}% completion rate
                                     </div>
                                 </div>
@@ -2587,45 +2587,47 @@ export default function StaffDashboard() {
             </Modal>
 
             {/* Premium Photo Lightbox Modal */}
-            {lightboxUrl && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
-                    onClick={() => setLightboxUrl(null)}
-                >
-                    {/* Backdrop with blur */}
-                    <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" />
-
-                    {/* Close button */}
-                    <button
-                        onClick={() => setLightboxUrl(null)}
-                        className="absolute top-4 right-4 md:top-6 md:right-6 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 transition-all duration-300 group"
-                        aria-label="Close image preview"
-                    >
-                        <X className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" aria-hidden="true" />
-                    </button>
-
-                    {/* Image container with premium styling */}
+            {
+                lightboxUrl && (
                     <div
-                        className="relative z-10 max-w-[90vw] max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20"
-                        onClick={(e) => e.stopPropagation()}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+                        onClick={() => setLightboxUrl(null)}
                     >
-                        {/* Gradient glow effect behind image */}
-                        <div className="absolute -inset-1 bg-gradient-to-r from-primary-500/30 via-purple-500/30 to-primary-500/30 blur-xl opacity-50" />
+                        {/* Backdrop with blur */}
+                        <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" />
 
-                        {/* Image */}
-                        <img
-                            src={lightboxUrl}
-                            alt="Full size preview"
-                            className="relative max-w-full max-h-[85vh] object-contain bg-gray-900/50 rounded-2xl"
-                        />
+                        {/* Close button */}
+                        <button
+                            onClick={() => setLightboxUrl(null)}
+                            className="absolute top-4 right-4 md:top-6 md:right-6 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 transition-all duration-300 group"
+                            aria-label="Close image preview"
+                        >
+                            <X className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" aria-hidden="true" />
+                        </button>
+
+                        {/* Image container with premium styling */}
+                        <div
+                            className="relative z-10 max-w-[90vw] max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Gradient glow effect behind image */}
+                            <div className="absolute -inset-1 bg-gradient-to-r from-primary-500/30 via-purple-500/30 to-primary-500/30 blur-xl opacity-50" />
+
+                            {/* Image */}
+                            <img
+                                src={lightboxUrl}
+                                alt="Full size preview"
+                                className="relative max-w-full max-h-[85vh] object-contain bg-gray-900/50 rounded-2xl"
+                            />
+                        </div>
+
+                        {/* Instructions */}
+                        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-sm">
+                            Click anywhere to close
+                        </p>
                     </div>
-
-                    {/* Instructions */}
-                    <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-sm">
-                        Click anywhere to close
-                    </p>
-                </div>
-            )}
+                )
+            }
             {/* Notification Settings Modal */}
             <NotificationSettings
                 isOpen={showNotificationSettings}
@@ -2645,6 +2647,6 @@ export default function StaffDashboard() {
                     setSidebarOpen(false);
                 }}
             />
-        </div>
+        </div >
     );
 }

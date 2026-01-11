@@ -462,6 +462,7 @@ export const ResearchLab: React.FC = () => {
                                     <AnimatePresence>
                                         {isExpanded && (
                                             <motion.div
+                                                id={`pack-content-${pack.id}`}
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: 'auto', opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
@@ -795,7 +796,7 @@ export const ResearchLab: React.FC = () => {
                         </div>
                         {codeSnippets && (
                             <div className="relative">
-                                <pre className="bg-slate-900/50 rounded-lg p-4 text-sm text-green-400 overflow-x-auto max-h-48">
+                                <pre className="bg-slate-900/50 rounded-lg p-4 text-sm text-green-400 overflow-x-auto max-h-48" tabIndex={0} aria-label="Code snippet">
                                     {activeSnippet === 'python'
                                         ? codeSnippets.python
                                         : codeSnippets.r}

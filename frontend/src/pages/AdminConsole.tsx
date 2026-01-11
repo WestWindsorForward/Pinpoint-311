@@ -1612,10 +1612,14 @@ export default function AdminConsole() {
                                                 onClick={() => setModules((p) => ({ ...p, ai_analysis: !p.ai_analysis }))}
                                                 className={`w-14 h-8 rounded-full transition-colors ${modules.ai_analysis ? 'bg-primary-500' : 'bg-white/20'
                                                     }`}
+                                                role="switch"
+                                                aria-checked={modules.ai_analysis}
+                                                aria-label="Toggle AI Analysis"
                                             >
                                                 <div
                                                     className={`w-6 h-6 rounded-full bg-white transition-transform ${modules.ai_analysis ? 'translate-x-7' : 'translate-x-1'
                                                         }`}
+                                                    aria-hidden="true"
                                                 />
                                             </button>
                                         </div>
@@ -1636,10 +1640,14 @@ export default function AdminConsole() {
                                                 onClick={() => setModules((p) => ({ ...p, sms_alerts: !p.sms_alerts }))}
                                                 className={`w-14 h-8 rounded-full transition-colors ${modules.sms_alerts ? 'bg-primary-500' : 'bg-white/20'
                                                     }`}
+                                                role="switch"
+                                                aria-checked={modules.sms_alerts}
+                                                aria-label="Toggle SMS Alerts"
                                             >
                                                 <div
                                                     className={`w-6 h-6 rounded-full bg-white transition-transform ${modules.sms_alerts ? 'translate-x-7' : 'translate-x-1'
                                                         }`}
+                                                    aria-hidden="true"
                                                 />
                                             </button>
                                         </div>
@@ -1660,10 +1668,14 @@ export default function AdminConsole() {
                                                 onClick={() => setModules((p) => ({ ...p, email_notifications: !p.email_notifications }))}
                                                 className={`w-14 h-8 rounded-full transition-colors ${modules.email_notifications ? 'bg-primary-500' : 'bg-white/20'
                                                     }`}
+                                                role="switch"
+                                                aria-checked={modules.email_notifications}
+                                                aria-label="Toggle Email Notifications"
                                             >
                                                 <div
                                                     className={`w-6 h-6 rounded-full bg-white transition-transform ${modules.email_notifications ? 'translate-x-7' : 'translate-x-1'
                                                         }`}
+                                                    aria-hidden="true"
                                                 />
                                             </button>
                                         </div>
@@ -1684,10 +1696,14 @@ export default function AdminConsole() {
                                                 onClick={() => setModules((p) => ({ ...p, research_portal: !p.research_portal }))}
                                                 className={`w-14 h-8 rounded-full transition-colors ${modules.research_portal ? 'bg-primary-500' : 'bg-white/20'
                                                     }`}
+                                                role="switch"
+                                                aria-checked={modules.research_portal}
+                                                aria-label="Toggle Research Portal"
                                             >
                                                 <div
                                                     className={`w-6 h-6 rounded-full bg-white transition-transform ${modules.research_portal ? 'translate-x-7' : 'translate-x-1'
                                                         }`}
+                                                    aria-hidden="true"
                                                 />
                                             </button>
                                         </div>
