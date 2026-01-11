@@ -308,6 +308,24 @@ The frontend uses a unique **Atomic Page Architecture**. Instead of deep compone
 - **Rate Limiting**: API endpoints are protected against flood attacks.
 - **SQL Injection Proof**: Usage of SQLAlchemy ORM prevents injection vulnerabilities.
 
+### ♿ Accessibility Compliance (WCAG 2.2 AA)
+The platform is designed to meet **WCAG 2.2 Level AA** accessibility standards:
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **4.1.2 Name, Role, Value** | All interactive elements (buttons, inputs, toggles) have `aria-label`, `role`, and `aria-checked` attributes |
+| **1.4.3 Contrast Ratio** | All text meets minimum 4.5:1 contrast ratio on light/dark backgrounds |
+| **2.1.1 Keyboard Access** | All interactive elements are keyboard-navigable; scrollable regions have `tabindex` |
+| **1.1.1 Non-text Content** | Icons use `aria-hidden="true"` when paired with text; icon-only buttons have aria-labels |
+| **4.1.1 Parsing** | Valid HTML with proper ARIA attribute values and matching id references |
+
+**Verified Components:**
+- All toggle switches (role="switch", aria-checked, aria-label)
+- All form inputs (aria-label or associated label elements)
+- All icon-only buttons (aria-label + aria-hidden on icons)
+- Scrollable code regions (tabindex=0 for keyboard access)
+- Color contrast verified with WCAG checker tools
+
 ---
 
 ## 📦 Deployment & Setup
