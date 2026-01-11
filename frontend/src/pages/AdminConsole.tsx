@@ -880,8 +880,9 @@ export default function AdminConsole() {
                                                             onClick={() => setBrandingForm((p) => ({ ...p, logo_url: '' }))}
                                                             className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                                                             title="Remove logo"
+                                                            aria-label="Remove logo"
                                                         >
-                                                            <X className="w-4 h-4" />
+                                                            <X className="w-4 h-4" aria-hidden="true" />
                                                         </button>
                                                     )}
                                                 </div>
@@ -919,8 +920,9 @@ export default function AdminConsole() {
                                                             onClick={() => setBrandingForm((p) => ({ ...p, favicon_url: '' }))}
                                                             className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                                                             title="Remove favicon"
+                                                            aria-label="Remove favicon"
                                                         >
-                                                            <X className="w-4 h-4" />
+                                                            <X className="w-4 h-4" aria-hidden="true" />
                                                         </button>
                                                     )}
                                                 </div>
@@ -935,6 +937,7 @@ export default function AdminConsole() {
                                                         value={brandingForm.primary_color || '#6366f1'}
                                                         onChange={(e) => setBrandingForm((p) => ({ ...p, primary_color: e.target.value }))}
                                                         className="w-12 h-12 rounded-lg cursor-pointer bg-transparent"
+                                                        aria-label="Primary color picker"
                                                     />
                                                     <Input
                                                         value={brandingForm.primary_color || '#6366f1'}
@@ -1736,6 +1739,7 @@ export default function AdminConsole() {
                                                     <input
                                                         type="text"
                                                         placeholder="Search for your township..."
+                                                        aria-label="Search for your township"
                                                         value={townshipSearch}
                                                         onChange={(e) => setTownshipSearch(e.target.value)}
                                                         onKeyDown={(e) => {
@@ -1868,6 +1872,7 @@ export default function AdminConsole() {
                                                 <input
                                                     type="file"
                                                     accept=".geojson,.json"
+                                                    aria-label="Upload GeoJSON township boundary file"
                                                     onChange={async (e) => {
                                                         const file = e.target.files?.[0];
                                                         if (!file) return;
