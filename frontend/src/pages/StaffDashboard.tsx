@@ -671,6 +671,7 @@ export default function StaffDashboard() {
             <aside
                 className={`fixed lg:static inset-y-0 left-0 z-50 w-72 glass-sidebar transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
+                aria-label="Staff portal navigation"
             >
                 <div className="flex flex-col h-full">
                     {/* Sidebar Header */}
@@ -683,9 +684,10 @@ export default function StaffDashboard() {
                                     window.location.hash = '';
                                 }}
                                 className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                                aria-label="Go to dashboard home"
                             >
                                 {settings?.logo_url ? (
-                                    <img src={settings.logo_url} alt="Logo" className="h-8 w-auto" />
+                                    <img src={settings.logo_url} alt={`${settings?.township_name || 'Township'} logo`} className="h-8 w-auto" />
                                 ) : (
                                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
                                         <Sparkles className="w-5 h-5 text-white" />
@@ -701,9 +703,9 @@ export default function StaffDashboard() {
                                 <button
                                     onClick={() => setShowActivityFeed(true)}
                                     className="relative p-2 hover:bg-white/10 rounded-lg transition-colors"
-                                    title="Activity Feed"
+                                    aria-label="Open activity feed"
                                 >
-                                    <Bell className="w-5 h-5 text-white/60" />
+                                    <Bell className="w-5 h-5 text-white/60" aria-hidden="true" />
                                     {/* Calculate and show unread count */}
                                     {(() => {
                                         const now = Date.now();
@@ -727,8 +729,9 @@ export default function StaffDashboard() {
                                 <button
                                     onClick={() => setSidebarOpen(false)}
                                     className="lg:hidden p-2 hover:bg-white/10 rounded-lg"
+                                    aria-label="Close navigation menu"
                                 >
-                                    <X className="w-5 h-5 text-white/60" />
+                                    <X className="w-5 h-5 text-white/60" aria-hidden="true" />
                                 </button>
                             </div>
                         </div>
@@ -813,17 +816,18 @@ export default function StaffDashboard() {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div id="main-content" role="main" className="flex-1 flex flex-col min-w-0">
                 {/* Mobile Header */}
                 <header className="lg:hidden glass-sidebar p-4 flex items-center justify-between sticky top-0 z-30">
                     <button
                         onClick={() => setSidebarOpen(true)}
                         className="p-2 hover:bg-white/10 rounded-lg"
+                        aria-label="Open navigation menu"
                     >
-                        <Menu className="w-6 h-6 text-white" />
+                        <Menu className="w-6 h-6 text-white" aria-hidden="true" />
                     </button>
                     <h1 className="font-semibold text-white">Staff Dashboard</h1>
-                    <div className="w-10" />
+                    <div className="w-10" aria-hidden="true" />
                 </header>
 
                 {/* Dashboard View */}
