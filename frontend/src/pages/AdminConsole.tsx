@@ -810,7 +810,7 @@ export default function AdminConsole() {
                                 variant="primary"
                                 size="sm"
                                 className="w-full"
-                                onClick={() => navigate('/app')}
+                                onClick={() => navigate('/staff')}
                             >
                                 Staff Dashboard →
                             </Button>
