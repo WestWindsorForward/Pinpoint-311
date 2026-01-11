@@ -95,7 +95,7 @@ const ICON_LIBRARY: { name: string; icon: LucideIcon }[] = [
     { name: 'Users', icon: Users },
 ];
 
-type Tab = 'branding' | 'users' | 'departments' | 'services' | 'secrets' | 'modules' | 'maps';
+type Tab = 'branding' | 'users' | 'departments' | 'services' | 'secrets' | 'modules' | 'maps' | 'retention';
 
 export default function AdminConsole() {
     const navigate = useNavigate();
@@ -124,7 +124,8 @@ export default function AdminConsole() {
             services: 'Service Categories',
             secrets: 'API Keys',
             modules: 'Modules',
-            maps: 'Maps Configuration'
+            maps: 'Maps Configuration',
+            retention: 'Document Retention'
         };
         updateTitle(tabTitles[currentTab]);
         scrollToTop('instant');
@@ -256,6 +257,27 @@ export default function AdminConsole() {
     const [isUpdating, setIsUpdating] = useState(false);
     const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
+    // Document Retention state
+    const [retentionStates, setRetentionStates] = useState<Array<{
+        code: string;
+        name: string;
+        retention_days: number;
+        retention_years: number;
+        source: string;
+    }>>([]);
+    const [retentionPolicy, setRetentionPolicy] = useState<{
+        state_code: string;
+        policy: { name: string; retention_days: number; retention_years: number; source: string };
+        override_days: number | null;
+        effective_days: number;
+        mode: 'anonymize' | 'delete';
+        stats: { eligible_for_archival: number; under_legal_hold: number; already_archived: number; cutoff_date: string };
+    } | null>(null);
+    const [selectedStateCode, setSelectedStateCode] = useState<string>('');
+    const [selectedMode, setSelectedMode] = useState<'anonymize' | 'delete'>('anonymize');
+    const [isSavingRetention, setIsSavingRetention] = useState(false);
+    const [isRunningRetention, setIsRunningRetention] = useState(false);
+
     useEffect(() => {
         if (settings) {
             setBrandingForm({
@@ -325,7 +347,20 @@ export default function AdminConsole() {
                         console.error('Failed to load Maps config:', err);
                     }
                     break;
-
+                case 'retention':
+                    try {
+                        const [states, policy] = await Promise.all([
+                            api.getRetentionStates(),
+                            api.getRetentionPolicy()
+                        ]);
+                        setRetentionStates(states);
+                        setRetentionPolicy(policy);
+                        setSelectedStateCode(policy.state_code);
+                        setSelectedMode(policy.mode);
+                    } catch (err) {
+                        console.error('Failed to load retention config:', err);
+                    }
+                    break;
 
             }
 
@@ -672,6 +707,7 @@ export default function AdminConsole() {
         { id: 'secrets', icon: Key, label: 'API Keys' },
         { id: 'modules', icon: Puzzle, label: 'Modules' },
         { id: 'maps', icon: MapPin, label: 'Maps' },
+        { id: 'retention', icon: Clock, label: 'Retention' },
     ];
 
     return (
@@ -2070,6 +2106,191 @@ export default function AdminConsole() {
                                 )}
                             </div>
 
+                        )}
+
+                        {/* Document Retention Tab */}
+                        {currentTab === 'retention' && (
+                            <div className="space-y-6">
+                                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                                    <h2 className="text-2xl font-bold text-white mb-2">Document Retention</h2>
+                                    <p className="text-white/60">Configure state-mandated record retention policies</p>
+                                </motion.div>
+
+                                {/* Current Policy Status */}
+                                {retentionPolicy && (
+                                    <Card className="p-6">
+                                        <h3 className="text-lg font-semibold text-white mb-4">Current Policy</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                            <div className="bg-white/5 rounded-lg p-4">
+                                                <div className="text-white/60 text-sm">Active State</div>
+                                                <div className="text-2xl font-bold text-white">{retentionPolicy.policy.name}</div>
+                                                <div className="text-white/40 text-sm">{retentionPolicy.state_code}</div>
+                                            </div>
+                                            <div className="bg-white/5 rounded-lg p-4">
+                                                <div className="text-white/60 text-sm">Retention Period</div>
+                                                <div className="text-2xl font-bold text-amber-400">{retentionPolicy.policy.retention_years} Years</div>
+                                                <div className="text-white/40 text-sm">{retentionPolicy.effective_days.toLocaleString()} days</div>
+                                            </div>
+                                            <div className="bg-white/5 rounded-lg p-4">
+                                                <div className="text-white/60 text-sm">Mode</div>
+                                                <div className="text-2xl font-bold text-white capitalize">{retentionPolicy.mode}</div>
+                                                <div className="text-white/40 text-sm">{retentionPolicy.mode === 'anonymize' ? 'PII removed, stats kept' : 'Permanent deletion'}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Archival Stats */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                                                <div className="text-blue-400 text-sm">Eligible for Archival</div>
+                                                <div className="text-2xl font-bold text-blue-400">{retentionPolicy.stats.eligible_for_archival}</div>
+                                            </div>
+                                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                                                <div className="text-amber-400 text-sm">Under Legal Hold</div>
+                                                <div className="text-2xl font-bold text-amber-400">{retentionPolicy.stats.under_legal_hold}</div>
+                                            </div>
+                                            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                                                <div className="text-green-400 text-sm">Already Archived</div>
+                                                <div className="text-2xl font-bold text-green-400">{retentionPolicy.stats.already_archived}</div>
+                                            </div>
+                                        </div>
+                                        <p className="text-white/40 text-sm mt-4">
+                                            Source: {retentionPolicy.policy.source}
+                                        </p>
+                                    </Card>
+                                )}
+
+                                {/* State Selection */}
+                                <Card className="p-6">
+                                    <h3 className="text-lg font-semibold text-white mb-4">Select State Policy</h3>
+                                    <p className="text-white/60 mb-4">Choose your state to apply the appropriate record retention requirements.</p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-white/70 mb-2">State</label>
+                                            <select
+                                                value={selectedStateCode}
+                                                onChange={(e) => setSelectedStateCode(e.target.value)}
+                                                className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                                aria-label="Select state for retention policy"
+                                            >
+                                                <option value="">Select a state...</option>
+                                                {retentionStates.map((state) => (
+                                                    <option key={state.code} value={state.code} className="bg-slate-800">
+                                                        {state.name} ({state.retention_years} years)
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-white/70 mb-2">Archival Mode</label>
+                                            <select
+                                                value={selectedMode}
+                                                onChange={(e) => setSelectedMode(e.target.value as 'anonymize' | 'delete')}
+                                                className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                                aria-label="Select archival mode"
+                                            >
+                                                <option value="anonymize" className="bg-slate-800">Anonymize (Remove PII, keep statistics)</option>
+                                                <option value="delete" className="bg-slate-800">Delete (Permanent removal)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Selected State Preview */}
+                                    {selectedStateCode && retentionStates.find(s => s.code === selectedStateCode) && (
+                                        <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                                            <div className="flex items-start gap-3">
+                                                <Clock className="w-5 h-5 text-amber-400 mt-0.5" />
+                                                <div>
+                                                    <p className="text-amber-400 font-medium">
+                                                        {retentionStates.find(s => s.code === selectedStateCode)?.name}: {retentionStates.find(s => s.code === selectedStateCode)?.retention_years} year retention
+                                                    </p>
+                                                    <p className="text-white/60 text-sm mt-1">
+                                                        Source: {retentionStates.find(s => s.code === selectedStateCode)?.source}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-4 mt-6">
+                                        <Button
+                                            onClick={async () => {
+                                                if (!selectedStateCode) return;
+                                                setIsSavingRetention(true);
+                                                try {
+                                                    await api.updateRetentionPolicy({
+                                                        state_code: selectedStateCode,
+                                                        mode: selectedMode
+                                                    });
+                                                    await loadTabData();
+                                                    setSaveMessage('Retention policy updated successfully');
+                                                    setTimeout(() => setSaveMessage(null), 3000);
+                                                } catch (err) {
+                                                    console.error('Failed to update retention policy:', err);
+                                                } finally {
+                                                    setIsSavingRetention(false);
+                                                }
+                                            }}
+                                            disabled={!selectedStateCode || isSavingRetention}
+                                            className="bg-gradient-to-r from-amber-400 to-orange-500 text-black"
+                                        >
+                                            {isSavingRetention ? 'Saving...' : 'Confirm & Apply Policy'}
+                                        </Button>
+
+                                        <Button
+                                            variant="secondary"
+                                            onClick={async () => {
+                                                setIsRunningRetention(true);
+                                                try {
+                                                    const result = await api.runRetentionNow();
+                                                    setSaveMessage(`Retention task started: ${result.message}`);
+                                                    setTimeout(() => {
+                                                        setSaveMessage(null);
+                                                        loadTabData();
+                                                    }, 3000);
+                                                } catch (err) {
+                                                    console.error('Failed to run retention:', err);
+                                                } finally {
+                                                    setIsRunningRetention(false);
+                                                }
+                                            }}
+                                            disabled={isRunningRetention}
+                                        >
+                                            {isRunningRetention ? 'Running...' : 'Run Retention Now'}
+                                        </Button>
+                                    </div>
+                                </Card>
+
+                                {/* All States Reference */}
+                                <Card className="p-6">
+                                    <h3 className="text-lg font-semibold text-white mb-4">All State Policies ({retentionStates.length} States)</h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b border-white/10">
+                                                    <th className="text-left py-2 text-white/60">State</th>
+                                                    <th className="text-left py-2 text-white/60">Code</th>
+                                                    <th className="text-left py-2 text-white/60">Retention</th>
+                                                    <th className="text-left py-2 text-white/60">Source</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {retentionStates.map((state) => (
+                                                    <tr key={state.code} className="border-b border-white/5 hover:bg-white/5">
+                                                        <td className="py-2 text-white">{state.name}</td>
+                                                        <td className="py-2 text-white/60">{state.code}</td>
+                                                        <td className="py-2">
+                                                            <span className="text-amber-400 font-medium">{state.retention_years} years</span>
+                                                        </td>
+                                                        <td className="py-2 text-white/40 text-xs">{state.source}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Card>
+                            </div>
                         )}
 
                     </div>
