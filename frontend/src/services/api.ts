@@ -184,6 +184,7 @@ class ApiClient {
             completion_message?: string;
             completion_photo_url?: string;
             manual_priority_score?: number | null;
+            flagged?: boolean;
         }
     ): Promise<ServiceRequestDetail> {
         return this.request<ServiceRequestDetail>(`/open311/v2/requests/${requestId}/status`, {
