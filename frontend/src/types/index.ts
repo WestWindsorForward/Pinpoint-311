@@ -108,9 +108,8 @@ export interface ServiceRequest {
     deleted_at: string | null;
     deleted_by: string | null;
     custom_fields?: Record<string, string | string[]>;
-    // AI Analysis (optional, for sorting purposes)
+    // AI Analysis (optional, for sorting purposes - priority_score is in ai_analysis)
     ai_analysis?: Record<string, unknown> | null;
-    vertex_ai_priority_score?: number | null;
     manual_priority_score?: number | null;
 }
 
@@ -152,11 +151,10 @@ export interface ServiceRequestDetail extends ServiceRequest {
     completion_message: string | null;
     completion_photo_url: string | null;
     delete_justification: string | null;
-    // Vertex AI Analysis placeholders
+    // Vertex AI Analysis (priority_score is in ai_analysis JSON only)
     vertex_ai_summary: string | null;
     vertex_ai_classification: string | null;
-    vertex_ai_priority_score: number | null;
-    manual_priority_score: number | null;  // Human override priority
+    manual_priority_score: number | null;  // Human-approved priority
     vertex_ai_analyzed_at: string | null;
 }
 

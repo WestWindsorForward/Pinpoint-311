@@ -258,12 +258,10 @@ export default function StaffDashboard() {
             // Secondary: Within each group, sort by priority (higher = more urgent, descending)
             const priorityA =
                 a.manual_priority_score ??
-                a.vertex_ai_priority_score ??
                 ((a.ai_analysis as any)?.priority_score) ??
                 5;
             const priorityB =
                 b.manual_priority_score ??
-                b.vertex_ai_priority_score ??
                 ((b.ai_analysis as any)?.priority_score) ??
                 5;
             if (priorityA !== priorityB) return priorityB - priorityA; // Higher score first
@@ -296,10 +294,9 @@ export default function StaffDashboard() {
 
     // Helper to get effective priority score (checks multiple sources)
     const getEffectivePriority = (r: ServiceRequest): number => {
-        // Priority precedence: manual > flat vertex_ai > nested ai_analysis.priority_score > default 5
+        // Priority precedence: manual > ai_analysis.priority_score > default 5
         if (r.manual_priority_score != null) return r.manual_priority_score;
-        if (r.vertex_ai_priority_score != null) return r.vertex_ai_priority_score;
-        // Check nested ai_analysis for priority_score
+        // Check nested ai_analysis for priority_score (AI suggestion)
         const aiAnalysis = r.ai_analysis as any;
         if (aiAnalysis?.priority_score != null) return aiAnalysis.priority_score;
         return 5; // Default
@@ -974,15 +971,15 @@ export default function StaffDashboard() {
                                 {(() => {
                                     // Calculate priority distribution from allRequests
                                     const highPriority = allRequests.filter(r => {
-                                        const p = (r as any).manual_priority_score ?? (r as any).vertex_ai_priority_score ?? 5;
+                                        const p = (r as any).manual_priority_score ?? ((r as any).ai_analysis?.priority_score) ?? 5;
                                         return p >= 8;
                                     }).length;
                                     const mediumPriority = allRequests.filter(r => {
-                                        const p = (r as any).manual_priority_score ?? (r as any).vertex_ai_priority_score ?? 5;
+                                        const p = (r as any).manual_priority_score ?? ((r as any).ai_analysis?.priority_score) ?? 5;
                                         return p >= 5 && p < 8;
                                     }).length;
                                     const lowPriority = allRequests.filter(r => {
-                                        const p = (r as any).manual_priority_score ?? (r as any).vertex_ai_priority_score ?? 5;
+                                        const p = (r as any).manual_priority_score ?? ((r as any).ai_analysis?.priority_score) ?? 5;
                                         return p < 5;
                                     }).length;
                                     const total = allRequests.length || 1;
@@ -1688,7 +1685,7 @@ export default function StaffDashboard() {
                                             {/* AI Analysis - Premium Enhanced Display (Now BELOW Photos) */}
                                             {(() => {
                                                 const ai = selectedRequest.ai_analysis as any;
-                                                const priorityScore = ai?.priority_score ?? selectedRequest.vertex_ai_priority_score ?? null;
+                                                const priorityScore = ai?.priority_score ?? null;
                                                 const qualitativeText = ai?.qualitative_analysis ?? selectedRequest.vertex_ai_summary ?? null;
                                                 const hasError = ai?._error;
 

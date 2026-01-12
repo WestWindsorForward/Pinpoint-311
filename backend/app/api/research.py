@@ -909,10 +909,12 @@ async def export_csv(
                 asset_type = req.matched_asset.get('asset_type') or req.matched_asset.get('layer_name')
             
             # AI analysis data
+            # AI priority is now in ai_analysis JSON, not a separate column
             ai_summary = sanitize_description(req.vertex_ai_summary) if req.vertex_ai_summary else None
+            ai_priority = req.ai_analysis.get('priority_score') if req.ai_analysis else None
             ai_priority_diff = None
-            if req.vertex_ai_priority_score and req.manual_priority_score:
-                ai_priority_diff = round(req.manual_priority_score - req.vertex_ai_priority_score, 2)
+            if ai_priority and req.manual_priority_score:
+                ai_priority_diff = round(req.manual_priority_score - ai_priority, 2)
             
             # Description metrics
             desc_word_count = len(req.description.split()) if req.description else 0
@@ -989,7 +991,7 @@ async def export_csv(
                 photo_count,
                 req.flagged,
                 req.flag_reason,
-                req.vertex_ai_priority_score,
+                ai_priority,  # Now from ai_analysis.priority_score
                 req.vertex_ai_classification,
                 ai_summary,
                 bool(req.vertex_ai_analyzed_at),
@@ -1136,11 +1138,12 @@ async def export_geojson(
         if req.matched_asset and isinstance(req.matched_asset, dict):
             asset_type = req.matched_asset.get('asset_type') or req.matched_asset.get('layer_name')
         
-        # AI analysis data for this record
+        # AI priority is now in ai_analysis JSON, not a separate column
         ai_summary = sanitize_description(req.vertex_ai_summary) if req.vertex_ai_summary else None
+        ai_priority = req.ai_analysis.get('priority_score') if req.ai_analysis else None
         ai_priority_diff = None
-        if req.vertex_ai_priority_score and req.manual_priority_score:
-            ai_priority_diff = round(req.manual_priority_score - req.vertex_ai_priority_score, 2)
+        if ai_priority and req.manual_priority_score:
+            ai_priority_diff = round(req.manual_priority_score - ai_priority, 2)
         
         # Description metrics
         desc_word_count = len(req.description.split()) if req.description else 0
@@ -1217,7 +1220,7 @@ async def export_geojson(
                 # AI Analysis (for ML/NLP research)
                 "ai_flagged": req.flagged,
                 "ai_flag_reason": req.flag_reason,
-                "ai_priority_score": req.vertex_ai_priority_score,
+                "ai_priority_score": ai_priority,  # Now from ai_analysis.priority_score
                 "ai_classification": req.vertex_ai_classification,
                 "ai_summary_sanitized": ai_summary,
                 "ai_analyzed": bool(req.vertex_ai_analyzed_at),

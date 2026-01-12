@@ -228,9 +228,8 @@ class ServiceRequestResponse(BaseModel):
     deleted_at: Optional[datetime] = None
     deleted_by: Optional[str] = None
     delete_justification: Optional[str] = None
-    # Priority fields for sorting/filtering
+    # Priority fields for sorting/filtering (AI score is in ai_analysis.priority_score)
     manual_priority_score: Optional[float] = None
-    vertex_ai_priority_score: Optional[float] = None
     ai_analysis: Optional[Dict[str, Any]] = None
 
     class Config:
@@ -277,11 +276,10 @@ class ServiceRequestDetailResponse(ServiceRequestResponse):
     # Delete justification (for admin view)
     delete_justification: Optional[str] = None
     custom_fields: Optional[Dict[str, Any]] = {}
-    # Vertex AI Analysis placeholders
+    # Vertex AI Analysis (priority_score is in ai_analysis JSON only)
     vertex_ai_summary: Optional[str] = None
     vertex_ai_classification: Optional[str] = None
-    vertex_ai_priority_score: Optional[float] = None
-    manual_priority_score: Optional[float] = None  # Human override priority
+    manual_priority_score: Optional[float] = None  # Human-approved priority
     vertex_ai_analyzed_at: Optional[datetime] = None
 
 

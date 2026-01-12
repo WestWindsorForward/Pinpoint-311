@@ -170,11 +170,12 @@ class ServiceRequest(Base):
     deleted_by = Column(String(100))  # Username who deleted
     delete_justification = Column(Text)
     
-    # Vertex AI Analysis (placeholders for future integration)
+    # Vertex AI Analysis
     vertex_ai_summary = Column(Text)  # AI-generated summary
     vertex_ai_classification = Column(String(100))  # AI category classification
-    vertex_ai_priority_score = Column(Float)  # AI priority recommendation (1-10)
-    manual_priority_score = Column(Float)  # Human override priority (1-10), takes precedence over AI
+    # NOTE: AI priority score is stored ONLY in ai_analysis JSON, not as a separate column
+    # This ensures staff must explicitly accept AI suggestions before they take effect
+    manual_priority_score = Column(Float)  # Human-approved priority (1-10), required for prioritization
     vertex_ai_analyzed_at = Column(DateTime(timezone=True))
     
     # Document retention / archival

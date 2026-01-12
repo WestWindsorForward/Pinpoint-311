@@ -283,7 +283,7 @@ export default function StaffDashboardMap({
             // Priority filter
             if (priorityFilter !== 'all') {
                 const ai = (r as any).ai_analysis;
-                const priority = (r as any).manual_priority_score ?? (r as any).vertex_ai_priority_score ?? ai?.priority_score ?? 5;
+                const priority = (r as any).manual_priority_score ?? ai?.priority_score ?? 5;
                 if (priorityFilter === 'high' && priority < 8) return false;
                 if (priorityFilter === 'medium' && (priority < 5 || priority >= 8)) return false;
                 if (priorityFilter === 'low' && priority >= 5) return false;
