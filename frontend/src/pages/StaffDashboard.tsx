@@ -1449,68 +1449,94 @@ export default function StaffDashboard() {
                                     <div className="text-center py-12 text-white/50">
                                         No incidents found
                                     </div>
-                                ) : (
-                                    <div className="divide-y divide-white/5">
-                                        {sortedRequests.map((request) => (
-                                            <motion.button
-                                                key={request.id}
-                                                onClick={() => loadRequestDetail(request.service_request_id)}
-                                                className={`w-full text-left p-4 hover:bg-white/5 transition-colors ${selectedRequest?.service_request_id === request.service_request_id
-                                                    ? 'bg-white/10'
-                                                    : ''
-                                                    }`}
-                                                whileTap={{ scale: 0.98 }}
-                                            >
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-mono text-xs text-white/50">
-                                                            {request.service_request_id}
+                                ) : (() => {
+                                    // Separate requests into needs priority and others
+                                    const needsPriorityRequests = sortedRequests.filter(r => {
+                                        const ai = r.ai_analysis as any;
+                                        return ai?.priority_score != null && r.manual_priority_score == null;
+                                    });
+                                    const otherRequests = sortedRequests.filter(r => {
+                                        const ai = r.ai_analysis as any;
+                                        return !(ai?.priority_score != null && r.manual_priority_score == null);
+                                    });
+
+                                    // Render a single request item
+                                    const renderRequest = (request: typeof sortedRequests[0]) => (
+                                        <motion.button
+                                            key={request.id}
+                                            onClick={() => loadRequestDetail(request.service_request_id)}
+                                            className={`w-full text-left p-4 hover:bg-white/5 transition-colors ${selectedRequest?.service_request_id === request.service_request_id
+                                                ? 'bg-white/10'
+                                                : ''
+                                                }`}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-mono text-xs text-white/50">
+                                                        {request.service_request_id}
+                                                    </span>
+                                                    {/* NEW badge for requests < 24 hours old */}
+                                                    {Date.now() - new Date(request.requested_datetime).getTime() < 24 * 60 * 60 * 1000 && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold animate-pulse">
+                                                            NEW
                                                         </span>
-                                                        {/* NEW badge for requests < 24 hours old */}
-                                                        {Date.now() - new Date(request.requested_datetime).getTime() < 24 * 60 * 60 * 1000 && (
-                                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold animate-pulse">
-                                                                NEW
+                                                    )}
+                                                </div>
+                                                <StatusBadge status={request.status} />
+                                            </div>
+                                            <h3 className="font-medium text-white mb-1">{request.service_name}</h3>
+                                            <p className="text-sm text-white/50 line-clamp-2">{request.description}</p>
+                                            <div className="flex items-center justify-between mt-2">
+                                                <div className="flex items-center gap-2 text-xs text-white/40">
+                                                    <Clock className="w-3 h-3" />
+                                                    {new Date(request.requested_datetime).toLocaleDateString()}
+                                                </div>
+                                                {/* Priority indicator */}
+                                                {request.assigned_to === user?.username ? (
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-400">
+                                                        🎯 Mine
+                                                    </span>
+                                                ) : request.assigned_department_id && userDepartmentIds.includes(request.assigned_department_id) && !request.assigned_to ? (
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200">
+                                                        🏢 Dept
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                        </motion.button>
+                                    );
+
+                                    return (
+                                        <div>
+                                            {/* Needs Priority Review Section - Bordered box at top */}
+                                            {needsPriorityRequests.length > 0 && (
+                                                <div className="m-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/5 overflow-hidden">
+                                                    {/* Chip Header */}
+                                                    <div className="flex items-center justify-center py-2 bg-amber-500/10 border-b border-amber-500/20">
+                                                        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-400 text-sm font-semibold">
+                                                            <span className="relative flex h-2 w-2">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                                                             </span>
-                                                        )}
-                                                        {/* NEEDS PRIORITY badge - AI analyzed but not accepted */}
-                                                        {(() => {
-                                                            const ai = request.ai_analysis as any;
-                                                            const hasAiPriority = ai?.priority_score != null;
-                                                            const hasManualPriority = request.manual_priority_score != null;
-                                                            if (hasAiPriority && !hasManualPriority) {
-                                                                return (
-                                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/50 animate-pulse">
-                                                                        ⚠️ NEEDS PRIORITY
-                                                                    </span>
-                                                                );
-                                                            }
-                                                            return null;
-                                                        })()}
-                                                    </div>
-                                                    <StatusBadge status={request.status} />
-                                                </div>
-                                                <h3 className="font-medium text-white mb-1">{request.service_name}</h3>
-                                                <p className="text-sm text-white/50 line-clamp-2">{request.description}</p>
-                                                <div className="flex items-center justify-between mt-2">
-                                                    <div className="flex items-center gap-2 text-xs text-white/40">
-                                                        <Clock className="w-3 h-3" />
-                                                        {new Date(request.requested_datetime).toLocaleDateString()}
-                                                    </div>
-                                                    {/* Priority indicator */}
-                                                    {request.assigned_to === user?.username ? (
-                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-400">
-                                                            🎯 Mine
+                                                            Needs Priority Review ({needsPriorityRequests.length})
                                                         </span>
-                                                    ) : request.assigned_department_id && userDepartmentIds.includes(request.assigned_department_id) && !request.assigned_to ? (
-                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200">
-                                                            🏢 Dept
-                                                        </span>
-                                                    ) : null}
+                                                    </div>
+                                                    {/* Requests in this section */}
+                                                    <div className="divide-y divide-amber-500/10">
+                                                        {needsPriorityRequests.map(renderRequest)}
+                                                    </div>
                                                 </div>
-                                            </motion.button>
-                                        ))}
-                                    </div>
-                                )}
+                                            )}
+
+                                            {/* Other Requests */}
+                                            {otherRequests.length > 0 && (
+                                                <div className="divide-y divide-white/5">
+                                                    {otherRequests.map(renderRequest)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
 
