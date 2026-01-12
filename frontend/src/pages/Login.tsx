@@ -137,6 +137,18 @@ export default function Login() {
                             >
                                 <span aria-hidden="true">←</span> Back to public portal
                             </Link>
+                            <p className="text-white/20 text-xs mt-4">
+                                Powered by{' '}
+                                <a
+                                    href="https://github.com/WestWindsorForward/WWF-Open-Source-311-Template"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary-400/50 hover:text-primary-300 transition-colors"
+                                >
+                                    Pinpoint 311
+                                </a>
+                                {' '}— Free &amp; Open Source
+                            </p>
                         </div>
                     </Card>
                 </motion.div>

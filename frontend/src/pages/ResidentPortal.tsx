@@ -1205,6 +1205,21 @@ export default function ResidentPortal() {
                         </a>
                     </div>
                 </div>
+                {/* Powered by Pinpoint 311 */}
+                <div className="max-w-6xl mx-auto mt-4 pt-4 border-t border-white/10 text-center">
+                    <p className="text-white/30 text-xs">
+                        Powered by{' '}
+                        <a
+                            href="https://github.com/WestWindsorForward/WWF-Open-Source-311-Template"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary-400/70 hover:text-primary-300 transition-colors"
+                        >
+                            Pinpoint 311
+                        </a>
+                        {' '}— Free &amp; Open Source Municipal Platform
+                    </p>
+                </div>
             </footer>
         </div>
     );
