@@ -258,33 +258,36 @@ function ToggleRow({
                 <p className="text-sm font-medium text-white">{label}</p>
                 <p className="text-xs text-white/50">{description}</p>
             </div>
-            {/* Toggle switch with fixed pixel dimensions */}
-            <button
-                type="button"
-                onClick={onChange}
-                disabled={disabled}
-                className={`relative rounded-full transition-colors duration-200 ${enabled ? 'bg-primary-500' : 'bg-slate-600'
-                    } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            {/* Toggle switch */}
+            <div
+                onClick={disabled ? undefined : onChange}
+                className={disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
                 role="switch"
                 aria-checked={enabled}
                 aria-label={`Toggle ${label}`}
-                style={{
-                    width: '48px',
-                    height: '26px',
-                    flexShrink: 0
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+                        e.preventDefault();
+                        onChange();
+                    }
                 }}
             >
-                <span
-                    className="absolute rounded-full bg-white shadow-md transition-all duration-200"
-                    style={{
-                        width: '20px',
-                        height: '20px',
-                        top: '3px',
-                        left: enabled ? '25px' : '3px'
-                    }}
-                    aria-hidden="true"
-                />
-            </button>
+                <div
+                    className={`flex items-center rounded-full p-[2px] transition-colors duration-200 ${enabled ? 'bg-primary-500' : 'bg-slate-600'
+                        }`}
+                    style={{ width: '44px', height: '24px' }}
+                >
+                    <div
+                        className="bg-white rounded-full shadow transition-all duration-200"
+                        style={{
+                            width: '20px',
+                            height: '20px',
+                            marginLeft: enabled ? '20px' : '0px'
+                        }}
+                    />
+                </div>
+            </div>
         </div>
     );
 }
