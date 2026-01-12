@@ -98,6 +98,37 @@ All API responses include government-grade security headers:
 - SQL injection protection via SQLAlchemy ORM
 - XSS prevention through React's built-in escaping
 
+### Vertex AI Security
+
+AI analysis is powered by **Google Cloud Vertex AI** with enterprise-grade security:
+
+| Feature | Protection |
+|---------|------------|
+| **Data Residency** | Processing stays within configured GCP region (no cross-border transfers) |
+| **Encryption** | TLS 1.3+ in transit, AES-256 at rest |
+| **No Training on Customer Data** | Your data is NEVER used to train Google's models |
+| **Audit Logging** | All API calls logged in Cloud Audit Logs |
+| **Certifications** | SOC 1/2/3, ISO 27001, FedRAMP, HIPAA eligible |
+| **Access Control** | Service Account with minimal IAM permissions |
+
+#### Human-in-the-Loop Priority Scoring
+
+AI priority suggestions follow a **strict human accountability model**:
+
+| Stage | Behavior |
+|-------|----------|
+| **AI Analysis** | Gemini generates priority score (1-10) stored in `ai_analysis` JSON field |
+| **Display** | Staff sees "AI Suggested: X.X" with prominent Accept button |
+| **Acceptance** | Staff must explicitly click "Accept AI Priority" to confirm |
+| **Audit Trail** | Acceptance creates audit log entry: `action=priority_accepted` |
+| **Override** | Staff can set manual priority at any time, superseding AI suggestion |
+
+**Key Liability Protections:**
+- AI scores are **suggestions only** and never automatically become official priority
+- Complete audit trail of who accepted which AI suggestion and when
+- Manual override capability ensures human judgment prevails
+- No automatic actions taken based solely on AI assessment
+
 ---
 
 ## 3. Known Gaps & Vulnerabilities
@@ -107,6 +138,8 @@ All API responses include government-grade security headers:
 | **MFA** | Single-factor only | Moderate | Integrate TOTP or SSO (OIDC/SAML) for staff |
 | **Rate Limiting** | ✅ **Implemented** (slowapi 500/min) | Resolved | N/A |
 | **Encryption at Rest** | ✅ **Implemented** (Fernet AES-128-CBC) | Resolved | N/A |
+| **AI Human-in-the-Loop** | ✅ **Implemented** | Resolved | AI priority requires explicit staff acceptance |
+| **Vertex AI Security** | ✅ **Enterprise-grade** (GCP Vertex AI) | Resolved | SOC/FedRAMP compliant, no data training |
 | **Audit Retention** | Permanent (no purge) | Low | Implement configurable archival policy |
 | **PII in Comments** | Text input only | Moderate | Add AI/regex PII scanning for public fields |
 

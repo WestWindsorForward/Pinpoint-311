@@ -26,8 +26,8 @@ Beyond the UI, it features a sophisticated **AI & Geospatial Engine** that autom
 
 ### 🧠 Advanced Intelligence
 - **Information Redaction**: Automatically strips PII (names, phones, emails) from public request logs.
-- **Visual Analysis**: Uses **Gemini 3.0 Flash** to "see" uploaded photos and categorize hazards (e.g., "pothole caused by water damage").
-- **Priority Scoring**: AI assigns a 1-10 urgency score based on safety risks and recurrence history.
+- **Visual Analysis**: Uses **Gemini 3.0 Flash** via Google Cloud **Vertex AI** to "see" uploaded photos and categorize hazards (e.g., "pothole caused by water damage").
+- **Priority Scoring (Human-in-the-Loop)**: AI suggests a 1-10 urgency score, but scores are **never automatically saved**. Staff must explicitly accept or override the AI suggestion, ensuring human accountability for all priority decisions.
 
 ### 🗺️ Geospatial Power
 - **Asset Matching**: snaps user pins to verified infrastructure (e.g., streetlights, hydrants) using PostGIS `ST_DWithin`.
@@ -97,13 +97,14 @@ The Staff Dashboard is the command center for municipal operations, protected by
     - **Resolved**: Work complete.
     - **Closed**: Final state (includes optional "Completion Photo" proof).
 
-### 4. AI Insights Panel
+### 4. AI Insights Panel (Vertex AI Powered)
 - **Safety Flags**: Highlights potential liabilities (e.g., "Downed power line detected").
 - **Proximity Analysis**: Checks if the issue is near critical infrastructure (Schools, Hospitals, Fire Stations) via PostGIS, with a **Nominatim (OpenStreetMap)** fallback for unmapped areas.
 - **Sentiment Analysis**: Gauges the tone of the resident's description (Neutral, Frustrated, Urgent).
 - **Weather Context**: Automatically fetches real-time weather (e.g., "Heavy Rain, 45°F") to validiate hazards.
 - **Gemini 3.0 Flash**: Powered by Google's latest model with "Thinking Config" for deep reasoning and lower latency.
 - **Duplicate Detection**: Suggests potential duplicate reports based on location (within 50m) and time window.
+- **Human-in-the-Loop Priority**: AI priority suggestions are stored in a JSON field and displayed with an **"Accept AI Priority"** button. Staff must explicitly accept the score before it becomes the official priority, creating a complete audit trail.
 - **PostGIS Geospatial Analytics**:
     - **Hotspot Analysis**: Automatically clusters requests to identify problem areas (e.g., "Pothole Clusters" on specific roads).
     - **User Bias Detection**: Flags suspicious activity using spatial statistics (e.g., single user spamming requests in a 10m radius).
@@ -332,6 +333,22 @@ All API keys and sensitive secrets (Google Maps, Twilio, SMTP, Vertex AI credent
 - **CORS**: Configurable Cross-Origin Resource Sharing
 - **Input Validation**: Pydantic schema validation on all API inputs
 - **Audit Logging**: Immutable trail of all request lifecycle events
+
+#### Vertex AI Security
+All AI analysis is powered by **Google Cloud Vertex AI**, which provides enterprise-grade security:
+
+| Feature | Protection |
+|---------|------------|
+| **Data Residency** | Processing within configured Google Cloud region |
+| **Encryption in Transit** | TLS 1.3+ for all API calls |
+| **Encryption at Rest** | AES-256 encryption for stored data |
+| **Access Control** | Service Account with principle of least privilege |
+| **No Data Training** | Customer data is NOT used to train Google's models |
+| **SOC Compliance** | SOC 1, SOC 2, SOC 3 certified |
+| **HIPAA Ready** | Supports HIPAA-compliant workloads |
+| **Human-in-the-Loop** | AI suggestions require explicit staff approval before becoming official priorities |
+
+For more details, see [Vertex AI Security](https://cloud.google.com/vertex-ai/docs/general/security).
 
 ### 📋 Document Retention Engine
 

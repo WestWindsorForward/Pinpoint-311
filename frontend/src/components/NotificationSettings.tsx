@@ -261,14 +261,14 @@ function ToggleRow({
             <button
                 onClick={onChange}
                 disabled={disabled}
-                className={`relative w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-primary-500' : 'bg-white/20'
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${enabled ? 'bg-primary-500' : 'bg-white/20'
                     } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                 role="switch"
                 aria-checked={enabled}
                 aria-label={`Toggle ${label}`}
             >
                 <span
-                    className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-0'
+                    className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${enabled ? 'left-[22px]' : 'left-0.5'
                         }`}
                     aria-hidden="true"
                 />
