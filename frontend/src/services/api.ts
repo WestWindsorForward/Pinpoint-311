@@ -210,6 +210,13 @@ class ApiClient {
         });
     }
 
+    async acceptAiPriority(requestId: string): Promise<{ message: string; priority_score: number }> {
+        return this.request<{ message: string; priority_score: number }>(`/open311/v2/requests/${requestId}/accept-ai-priority`, {
+            method: 'POST',
+            body: JSON.stringify({}),
+        });
+    }
+
     async createManualIntake(data: ManualIntakeCreate): Promise<ServiceRequest> {
         return this.request<ServiceRequest>('/open311/v2/requests/manual', {
             method: 'POST',

@@ -1694,7 +1694,33 @@ export default function StaffDashboard() {
 
                                                                 {/* Priority Score Badge - Editable */}
                                                                 {(priorityScore || selectedRequest.manual_priority_score) && !hasError && (
-                                                                    <div className="relative">
+                                                                    <div className="relative flex items-center gap-2">
+                                                                        {/* Accept AI button - only shows when AI score exists but no manual override */}
+                                                                        {priorityScore && !selectedRequest.manual_priority_score && (
+                                                                            <button
+                                                                                onClick={async () => {
+                                                                                    setIsUpdatingPriority(true);
+                                                                                    try {
+                                                                                        await api.acceptAiPriority(selectedRequest.service_request_id);
+                                                                                        setSelectedRequest(prev => prev ? { ...prev, manual_priority_score: priorityScore } : null);
+                                                                                        setAllRequests(prev => prev.map(r =>
+                                                                                            r.service_request_id === selectedRequest.service_request_id
+                                                                                                ? { ...r, manual_priority_score: priorityScore }
+                                                                                                : r
+                                                                                        ));
+                                                                                    } catch (e) {
+                                                                                        console.error('Failed to accept AI priority:', e);
+                                                                                    } finally {
+                                                                                        setIsUpdatingPriority(false);
+                                                                                    }
+                                                                                }}
+                                                                                disabled={isUpdatingPriority}
+                                                                                className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-500/30 disabled:opacity-50 transition-colors flex items-center gap-1 border border-emerald-500/30"
+                                                                            >
+                                                                                <Check className="w-3 h-3" />
+                                                                                Accept
+                                                                            </button>
+                                                                        )}
                                                                         <button
                                                                             onClick={() => {
                                                                                 setShowPriorityEditor(!showPriorityEditor);
@@ -1707,7 +1733,7 @@ export default function StaffDashboard() {
                                                                                 }`}
                                                                         >
                                                                             <span className="text-[10px] uppercase tracking-wider opacity-60 font-medium">
-                                                                                {selectedRequest.manual_priority_score ? 'Override' : 'Priority'}
+                                                                                {selectedRequest.manual_priority_score ? 'Priority' : 'AI Suggested'}
                                                                             </span>
                                                                             <span className="text-base">{Number(selectedRequest.manual_priority_score ?? priorityScore).toFixed(1)}</span>
                                                                             <Edit3 className="w-3 h-3 opacity-50" />

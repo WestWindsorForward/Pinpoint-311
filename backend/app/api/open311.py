@@ -656,6 +656,49 @@ async def restore_request(
     return {"message": "Request restored", "request_id": request_id}
 
 
+@router.post("/requests/{request_id}/accept-ai-priority")
+async def accept_ai_priority(
+    request_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_staff)
+):
+    """Accept AI-suggested priority score (copies to manual_priority_score)"""
+    result = await db.execute(
+        select(ServiceRequest).where(ServiceRequest.service_request_id == request_id)
+    )
+    request = result.scalar_one_or_none()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Get AI priority from stored analysis
+    ai_priority = None
+    if request.ai_analysis and isinstance(request.ai_analysis, dict):
+        ai_priority = request.ai_analysis.get("priority_score")
+    
+    if ai_priority is None:
+        raise HTTPException(status_code=400, detail="No AI priority score available")
+    
+    # Set the manual priority score to the AI suggestion
+    request.manual_priority_score = float(ai_priority)
+    request.updated_datetime = datetime.utcnow()
+    
+    # Add audit log entry
+    audit_entry = RequestAuditLog(
+        service_request_id=request.id,
+        action="priority_accepted",
+        actor_type="staff",
+        actor_name=current_user.username,
+        old_value=str(request.manual_priority_score) if request.manual_priority_score else None,
+        new_value=str(ai_priority)
+    )
+    db.add(audit_entry)
+    
+    await db.commit()
+    await db.refresh(request)
+    
+    return {"message": "AI priority accepted", "priority_score": ai_priority}
+
+
 @router.get("/requests/asset/{asset_id}/related")
 async def get_asset_related_requests(
     asset_id: str,

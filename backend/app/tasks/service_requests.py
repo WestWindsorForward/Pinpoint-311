@@ -194,16 +194,17 @@ def analyze_request(self, request_id: int):
             if historical_context.get("similar_reports"):
                 analysis_result["similar_reports"] = historical_context["similar_reports"]
             
-            # Store the analysis
+            # Store the analysis (but NOT the priority - staff must explicitly accept)
             request.ai_analysis = analysis_result
-            request.priority = min(10, max(1, int(analysis_result.get("priority_score", 5))))
+            # NOTE: We no longer auto-set request.priority or request.vertex_ai_priority_score
+            # The AI suggestion is stored in ai_analysis['priority_score'] 
+            # Staff must click "Accept AI Score" or manually set priority
             request.flagged = len(analysis_result.get("safety_flags", [])) > 0
             if request.flagged:
                 request.flag_reason = ", ".join(analysis_result.get("safety_flags", [])[:3])
             
-            # Store in vertex_ai columns for easier querying
+            # Store summary and timestamp for display (but NOT the priority score)
             request.vertex_ai_summary = analysis_result.get("qualitative_analysis", "")
-            request.vertex_ai_priority_score = analysis_result.get("priority_score", 5.0)
             request.vertex_ai_analyzed_at = datetime.utcnow()
             
             await db.commit()
