@@ -258,20 +258,30 @@ function ToggleRow({
                 <p className="text-sm font-medium text-white">{label}</p>
                 <p className="text-xs text-white/50">{description}</p>
             </div>
+            {/* Toggle switch with fixed pixel dimensions */}
             <button
                 type="button"
                 onClick={onChange}
                 disabled={disabled}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${enabled ? 'bg-primary-500' : 'bg-slate-600'
+                className={`relative rounded-full transition-colors duration-200 ${enabled ? 'bg-primary-500' : 'bg-slate-600'
                     } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                 role="switch"
                 aria-checked={enabled}
                 aria-label={`Toggle ${label}`}
-                style={{ minWidth: '44px', maxWidth: '44px' }}
+                style={{
+                    width: '48px',
+                    height: '26px',
+                    flexShrink: 0
+                }}
             >
                 <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-200 ease-in-out ${enabled ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                    className="absolute rounded-full bg-white shadow-md transition-all duration-200"
+                    style={{
+                        width: '20px',
+                        height: '20px',
+                        top: '3px',
+                        left: enabled ? '25px' : '3px'
+                    }}
                     aria-hidden="true"
                 />
             </button>
