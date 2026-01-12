@@ -142,10 +142,9 @@ class ApiClient {
 
     async getPublicRequests(status?: string, serviceCode?: string): Promise<PublicServiceRequest[]> {
         const params = new URLSearchParams();
-        params.append('limit', '500'); // Fetch all recent requests
         if (status) params.append('status', status);
         if (serviceCode) params.append('service_code', serviceCode);
-        const queryString = `?${params.toString()}`;
+        const queryString = params.toString() ? `?${params.toString()}` : '';
         return this.request<PublicServiceRequest[]>(`/open311/v2/public/requests${queryString}`);
     }
 

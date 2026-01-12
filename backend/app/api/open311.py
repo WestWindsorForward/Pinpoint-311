@@ -39,7 +39,7 @@ CACHE_TTL = 60  # seconds
 async def list_public_requests(
     status: Optional[str] = Query(None, description="Filter by status"),
     service_code: Optional[str] = Query(None, description="Filter by service category"),
-    limit: int = Query(50, ge=1, le=500),
+    limit: Optional[int] = Query(None, ge=1, description="Max number of results (no limit by default)"),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
@@ -62,7 +62,11 @@ async def list_public_requests(
     if service_code:
         query = query.where(ServiceRequest.service_code == service_code)
     
-    query = query.order_by(ServiceRequest.requested_datetime.desc()).limit(limit).offset(offset)
+    query = query.order_by(ServiceRequest.requested_datetime.desc())
+    if limit:
+        query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
     result = await db.execute(query)
     requests = result.scalars().all()
     
