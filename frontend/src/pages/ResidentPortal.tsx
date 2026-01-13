@@ -25,13 +25,11 @@ import {
 import { Button, Input, Textarea, Card } from '../components/ui';
 import GoogleMapsLocationPicker from '../components/GoogleMapsLocationPicker';
 import TrackRequests from '../components/TrackRequests';
-import LanguageSelector from '../components/LanguageSelector';
 import StaffDashboardMap from '../components/StaffDashboardMap';
 import { useSettings } from '../context/SettingsContext';
 import { api, MapLayer } from '../services/api';
 import { ServiceDefinition, ServiceRequestCreate, ServiceRequest, Department, User } from '../types';
 import { usePageNavigation } from '../hooks/usePageNavigation';
-import { useTranslation } from 'react-i18next';
 
 // Icon mapping for service categories
 const iconMap: Record<string, React.FC<{ className?: string }>> = {
@@ -49,7 +47,6 @@ const iconMap: Record<string, React.FC<{ className?: string }>> = {
 type Step = 'categories' | 'form' | 'success';
 
 export default function ResidentPortal() {
-    const { t } = useTranslation();
     const { settings } = useSettings();
     const { requestId: urlRequestId } = useParams<{ requestId?: string }>();
 
@@ -438,15 +435,12 @@ export default function ResidentPortal() {
                     </h1>
                 </button>
 
-                <div className="flex items-center gap-4">
-                    <LanguageSelector />
-                    <Link
-                        to="/login"
-                        className="text-white/60 hover:text-white text-sm font-medium transition-colors"
-                    >
-                        {t('staff_login')}
-                    </Link>
-                </div>
+                <Link
+                    to="/login"
+                    className="text-white/60 hover:text-white text-sm font-medium transition-colors"
+                >
+                    Staff Login
+                </Link>
             </nav>
 
             {/* Main Content */}
@@ -1136,7 +1130,7 @@ export default function ResidentPortal() {
                                                 isLoading={isSubmitting}
                                                 rightIcon={<Send className="w-5 h-5" />}
                                             >
-                                                {t('submit_request')}
+                                                Submit Request
                                             </Button>
                                         ) : isLocationOutOfBounds ? (
                                             <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-center">

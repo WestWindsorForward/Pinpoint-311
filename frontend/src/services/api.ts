@@ -30,18 +30,14 @@ class ApiClient {
         endpoint: string,
         options: RequestInit = {}
     ): Promise<T> {
-        const headers: Record<string, string> = {
+        const headers: HeadersInit = {
             'Content-Type': 'application/json',
-            ...(options.headers as Record<string, string> || {}),
+            ...options.headers,
         };
 
         if (this.token) {
             headers['Authorization'] = `Bearer ${this.token}`;
         }
-
-        // Add Accept-Language header for translation support
-        const preferredLanguage = localStorage.getItem('i18nextLng') || 'en';
-        headers['Accept-Language'] = preferredLanguage;
 
         const response = await fetch(`${API_BASE}${endpoint}`, {
             ...options,
