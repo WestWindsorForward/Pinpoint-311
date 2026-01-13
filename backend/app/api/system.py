@@ -1238,3 +1238,114 @@ async def upload_image(
         "filename": unique_filename
     }
 
+
+# ============ Translation ============
+
+from pydantic import BaseModel
+
+class TranslationRequest(BaseModel):
+    text: str
+    source_lang: str = "en"
+    target_lang: str = "es"
+
+
+class MultiTranslationRequest(BaseModel):
+    data: dict  # e.g., {"name": "Pothole", "description": "..."}
+    source_lang: str = "en"
+    target_languages: list[str] = None  # If None, translates to all supported languages
+
+
+@router.get("/translate/languages")
+async def get_supported_languages():
+    """Get list of supported languages (public)"""
+    from app.services.translation import get_supported_languages
+    languages = get_supported_languages()
+    return {
+        "languages": [
+            {"code": code, "name": name} 
+            for code, name in languages.items()
+        ]
+    }
+
+
+@router.post("/translate/health")
+async def check_translation_service(
+    _: User = Depends(get_current_admin)
+):
+    """Check if LibreTranslate service is available (admin only)"""
+    from app.services.translation import check_translation_service
+    is_available = await check_translation_service()
+    return {
+        "available": is_available,
+        "service": "LibreTranslate",
+        "url": "http://libretranslate:5000"
+    }
+
+
+@router.post("/translate/suggest")
+async def suggest_translation(
+    request: TranslationRequest,
+    _: User = Depends(get_current_admin)
+):
+    """
+    Auto-translate text using LibreTranslate (admin only).
+    Used by Admin Console to suggest translations for service categories, departments, etc.
+    """
+    from app.services.translation import translate_text
+    
+    translated = await translate_text(
+        request.text,
+        request.source_lang,
+        request.target_lang
+    )
+    
+    if translated is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Translation service unavailable"
+        )
+    
+    return {
+        "original": request.text,
+        "translated": translated,
+        "source_lang": request.source_lang,
+        "target_lang": request.target_lang
+    }
+
+
+@router.post("/translate/auto")
+async def auto_translate_object(
+    request: MultiTranslationRequest,
+    _: User = Depends(get_current_admin)
+):
+    """
+    Auto-translate an object (dictionary) to multiple languages (admin only).
+    Returns translation dictionary ready to be saved to database.
+    
+    Example input:
+    {
+        "data": {"name": "Pothole Repair", "description": "Report road damage"},
+        "source_lang": "en",
+        "target_languages": ["es", "zh"]
+    }
+    
+    Example output:
+    {
+        "translations": {
+            "en": {"name": "Pothole Repair", "description": "Report road damage"},
+            "es": {"name": "Repar
+
+ación de Baches", "description": "Reportar daños en carreteras"},
+            "zh": {"name": "坑洼修复", "description": "报告道路损坏"}
+        }
+    }
+    """
+    from app.services.translation import auto_translate_object as translate_obj
+    
+    translations = await translate_obj(
+        request.data,
+        request.source_lang,
+        request.target_languages
+    )
+    
+    return {"translations": translations}
