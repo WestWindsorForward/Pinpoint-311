@@ -135,26 +135,35 @@ async def ensure_translations(obj, db, target_lang: str):
         db: Database session
         target_lang: Target language code
     """
+    logger.info(f"ensure_translations called for {getattr(obj, 'service_name', 'unknown')} to language {target_lang}")
+    
     if not hasattr(obj, 'translations') or not hasattr(obj, 'service_name'):
+        logger.warning(f"Object missing translations or service_name attribute")
         return
     
     # Initialize translations if None
     if obj.translations is None:
         obj.translations = {}
+        logger.info(f"Initialized empty translations dict")
     
     # Check if translation already exists
     if target_lang in obj.translations and obj.translations[target_lang]:
         # Return translated fields
+        logger.info(f"Using existing translation from database")
         obj.service_name = obj.translations[target_lang].get('service_name', obj.service_name)
         if hasattr(obj, 'description'):
             obj.description = obj.translations[target_lang].get('description', obj.description)
         return
     
     # Translation missing - generate it
+    logger.info(f"Translation missing, calling Google Translate API...")
     translated_name = await translate_text(obj.service_name, 'en', target_lang)
+    logger.info(f"Translated name: {translated_name}")
+    
     translated_desc = None
     if hasattr(obj, 'description') and obj.description:
         translated_desc = await translate_text(obj.description, 'en', target_lang)
+        logger.info(f"Translated description: {translated_desc}")
     
     # Store in database
     if translated_name:
@@ -166,8 +175,11 @@ async def ensure_translations(obj, db, target_lang: str):
         from sqlalchemy.orm.attributes import flag_modified
         flag_modified(obj, 'translations')
         await db.commit()
+        logger.info(f"Saved translations to database")
         
         # Update current object fields
         obj.service_name = translated_name
         if translated_desc:
             obj.description = translated_desc
+    else:
+        logger.error(f"Translation failed - translated_name is None")
