@@ -61,6 +61,10 @@ class Department(Base):
     routing_email = Column(String(255))
     is_active = Column(Boolean, default=True)
     
+    # Multi-language support
+    translations = Column(JSON, default={})
+    # Format: {"en": {"name": "Public Works", "description": "..."}, "es": {...}}
+    
     services = relationship(
         "ServiceDefinition",
         secondary=service_departments,
@@ -95,6 +99,14 @@ class ServiceDefinition(Base):
     #   "county_roads": ["County Rd 1", ...],
     #   "third_party_url": "...", 
     #   "third_party_message": "..." 
+    # }
+    
+    # Multi-language support
+    translations = Column(JSON, default={})
+    # Format: {
+    #   "en": {"service_name": "Pothole Repair", "description": "Report road damage"},
+    #   "es": {"service_name": "Reparación de Baches", "description": "Reportar daños"},
+    #   ...
     # }
     
     assigned_department_id = Column(Integer, ForeignKey("departments.id"))
@@ -248,6 +260,10 @@ class SystemSettings(Base):
     custom_domain = Column(String(255))  # For custom domain configuration
     modules = Column(JSON, default={"ai_analysis": False, "sms_alerts": False, "email_notifications": True})
     township_boundary = Column(JSON)  # GeoJSON boundary from OpenStreetMap
+    
+    # Multi-language support
+    translations = Column(JSON, default={})
+    # Format: {"en": {"township_name": "...", "hero_text": "..."}, "es": {...}}
     
     # Document retention configuration
     retention_state_code = Column(String(2), default="NJ")  # State for retention rules
