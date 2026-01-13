@@ -22,7 +22,7 @@ GOOGLE_TRANSLATE_API_URL = "https://translation.googleapis.com/language/translat
 
 
 async def get_api_key() -> Optional[str]:
-    """Get Google Translate API key from database"""
+    """Get Google Maps API key (also used for Translation API)"""
     try:
         from app.db.session import AsyncSessionLocal
         from app.models import SystemSecret
@@ -31,7 +31,7 @@ async def get_api_key() -> Optional[str]:
         
         async with AsyncSessionLocal() as db:
             result = await db.execute(
-                select(SystemSecret).where(SystemSecret.key_name == "GOOGLE_TRANSLATE_API_KEY")
+                select(SystemSecret).where(SystemSecret.key_name == "GOOGLE_MAPS_API_KEY")
             )
             secret = result.scalar_one_or_none()
             
@@ -39,7 +39,7 @@ async def get_api_key() -> Optional[str]:
                 return decrypt(secret.key_value)
             return None
     except Exception as e:
-        logger.error(f"Failed to get Google Translate API key: {e}")
+        logger.error(f"Failed to get Google API key: {e}")
         return None
 
 

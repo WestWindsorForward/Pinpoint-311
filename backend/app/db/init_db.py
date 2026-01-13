@@ -72,7 +72,7 @@ DEFAULT_DEPARTMENTS = [
 # Default secrets (keys only, not values)
 DEFAULT_SECRETS = [
     # Google Maps / GIS
-    {"key_name": "GOOGLE_MAPS_API_KEY", "description": "Google Maps API key for geocoding and maps"},
+    {"key_name": "GOOGLE_MAPS_API_KEY", "description": "Google Maps API key for geocoding, maps, and translation"},
     {"key_name": "GOOGLE_MAPS_MAP_ID", "description": "Google Maps Map ID (from Cloud Console, with Feature Layers enabled)"},
     {"key_name": "TOWNSHIP_PLACE_ID", "description": "Google Places ID of the township boundary"},
     
@@ -100,9 +100,6 @@ DEFAULT_SECRETS = [
     {"key_name": "SMTP_FROM_EMAIL", "description": "From email address"},
     {"key_name": "SMTP_FROM_NAME", "description": "From name (e.g., Township 311)"},
     {"key_name": "SMTP_USE_TLS", "description": "Use TLS: true (port 587) or false (SSL on 465)"},
-    
-    # Translation
-    {"key_name": "GOOGLE_TRANSLATE_API_KEY", "description": "Google Cloud Translation API key for automatic translations"},
 ]
 
 
