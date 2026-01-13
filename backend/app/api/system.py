@@ -1272,13 +1272,13 @@ async def get_supported_languages():
 async def check_translation_service(
     _: User = Depends(get_current_admin)
 ):
-    """Check if LibreTranslate service is available (admin only)"""
+    """Check if Google Cloud Translation API key is configured (admin only)"""
     from app.services.translation import check_translation_service
     is_available = await check_translation_service()
     return {
         "available": is_available,
-        "service": "LibreTranslate",
-        "url": "http://libretranslate:5000"
+        "service": "Google Cloud Translation",
+        "url": "https://cloud.google.com/translate"
     }
 
 

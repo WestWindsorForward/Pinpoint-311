@@ -100,6 +100,9 @@ DEFAULT_SECRETS = [
     {"key_name": "SMTP_FROM_EMAIL", "description": "From email address"},
     {"key_name": "SMTP_FROM_NAME", "description": "From name (e.g., Township 311)"},
     {"key_name": "SMTP_USE_TLS", "description": "Use TLS: true (port 587) or false (SSL on 465)"},
+    
+    # Translation
+    {"key_name": "GOOGLE_TRANSLATE_API_KEY", "description": "Google Cloud Translation API key for automatic translations"},
 ]
 
 
