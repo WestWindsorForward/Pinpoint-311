@@ -25,6 +25,7 @@ import {
 import { Button, Input, Textarea, Card } from '../components/ui';
 import GoogleMapsLocationPicker from '../components/GoogleMapsLocationPicker';
 import TrackRequests from '../components/TrackRequests';
+import LanguageSelector from '../components/LanguageSelector';
 import StaffDashboardMap from '../components/StaffDashboardMap';
 import { useSettings } from '../context/SettingsContext';
 import { api, MapLayer } from '../services/api';
@@ -435,12 +436,15 @@ export default function ResidentPortal() {
                     </h1>
                 </button>
 
-                <Link
-                    to="/login"
-                    className="text-white/60 hover:text-white text-sm font-medium transition-colors"
-                >
-                    Staff Login
-                </Link>
+                <div className="flex items-center gap-4">
+                    <LanguageSelector />
+                    <Link
+                        to="/login"
+                        className="text-white/60 hover:text-white text-sm font-medium transition-colors"
+                    >
+                        Staff Login
+                    </Link>
+                </div>
             </nav>
 
             {/* Main Content */}
