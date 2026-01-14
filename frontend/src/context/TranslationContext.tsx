@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { Languages } from 'lucide-react';
 
 interface TranslationContextType {
     t: (text: string) => string;
@@ -6,6 +7,8 @@ interface TranslationContextType {
     setLanguage: (lang: string) => void;
     isLoading: boolean;
     refreshKey: number; // Used to trigger re-fetches in components
+    showDisclaimer: boolean;
+    setShowDisclaimer: (show: boolean) => void;
 }
 
 const TranslationContext = createContext<TranslationContextType | null>(null);
@@ -165,12 +168,20 @@ export function TranslationProvider({ children }: TranslationProviderProps) {
     const [translations, setTranslations] = useState<Record<string, string>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [showDisclaimer, setShowDisclaimer] = useState(false);
 
     const setLanguage = useCallback((lang: string) => {
         setLanguageState(lang);
         localStorage.setItem('preferredLanguage', lang);
         // Trigger refresh in dependent components
         setRefreshKey(prev => prev + 1);
+
+        // Show disclaimer if switching to non-English
+        if (lang !== 'en') {
+            setShowDisclaimer(true);
+            // Auto-hide after 8 seconds
+            setTimeout(() => setShowDisclaimer(false), 8000);
+        }
     }, []);
 
     // Load translations when language changes
@@ -181,7 +192,7 @@ export function TranslationProvider({ children }: TranslationProviderProps) {
         }
 
         // Check localStorage cache first
-        const cacheKey = `translations_v2_${language}`;
+        const cacheKey = `translations_v3_${language}`;
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
             try {
@@ -233,8 +244,36 @@ export function TranslationProvider({ children }: TranslationProviderProps) {
     }, [language, translations]);
 
     return (
-        <TranslationContext.Provider value={{ t, language, setLanguage, isLoading, refreshKey }}>
+        <TranslationContext.Provider value={{ t, language, setLanguage, isLoading, refreshKey, showDisclaimer, setShowDisclaimer }}>
             {children}
+
+            {/* Translation Disclaimer */}
+            {showDisclaimer && language !== 'en' && (
+                <div className="fixed bottom-4 right-4 z-[9999] max-w-sm">
+                    <div className="bg-gradient-to-r from-blue-500/90 to-purple-500/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-2xl p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2 bg-white/10 rounded-lg">
+                                <Languages className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-white text-sm font-medium mb-1">Translated by Google Translate</p>
+                                <p className="text-white/80 text-xs leading-relaxed">
+                                    This page has been automatically translated and may contain inaccuracies. User-submitted content may not reflect the original meaning.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowDisclaimer(false)}
+                                className="text-white/60 hover:text-white transition-colors"
+                                aria-label="Close disclaimer"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </TranslationContext.Provider>
     );
 }
