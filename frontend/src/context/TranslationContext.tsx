@@ -241,7 +241,7 @@ export function TranslationProvider({ children }: TranslationProviderProps) {
         }
 
         // Check localStorage cache first
-        const cacheKey = `translations_v3_${language}`;
+        const cacheKey = `translations_v4_${language}`;
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
             try {
