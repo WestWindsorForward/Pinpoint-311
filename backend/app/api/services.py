@@ -13,6 +13,7 @@ router = APIRouter()
 
 
 
+
 @router.get("/", response_model=List[ServiceResponse])
 async def list_services(
     request: Request,
@@ -27,16 +28,35 @@ async def list_services(
     )
     services = result.scalars().all()
     
-    # Auto-populate translations if requested language is not English
+    # Get target language from header
     accept_language = request.headers.get('Accept-Language', 'en')
     target_lang = accept_language.split(',')[0].split('-')[0].strip()
     
+    # If not English, translate the response (not the database objects)
     if target_lang != 'en':
-        from app.services.translation import ensure_translations
+        from app.services.translation import translate_service_response
+        translated_services = []
         for service in services:
-            await ensure_translations(service, db, target_lang)
+            # Convert to dict, translate, add back
+            service_dict = {
+                "id": service.id,
+                "service_code": service.service_code,
+                "service_name": service.service_name,
+                "description": service.description,
+                "icon": service.icon,
+                "is_active": service.is_active,
+                "routing_mode": service.routing_mode,
+                "routing_config": service.routing_config,
+                "assigned_department_id": service.assigned_department_id,
+                "departments": [{"id": d.id, "name": d.name, "description": d.description, "is_active": d.is_active, "routing_email": d.routing_email} for d in service.departments],
+                "assigned_department": {"id": service.assigned_department.id, "name": service.assigned_department.name, "description": service.assigned_department.description, "is_active": service.assigned_department.is_active, "routing_email": service.assigned_department.routing_email} if service.assigned_department else None
+            }
+            translated = await translate_service_response(service_dict, target_lang)
+            translated_services.append(translated)
+        return translated_services
     
     return services
+
 
 
 

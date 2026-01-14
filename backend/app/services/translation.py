@@ -1,5 +1,6 @@
 """
 Translation service using Google Cloud Translation API.
+Uses in-memory cache to minimize API calls.
 """
 from typing import Optional, Dict, List
 import logging
@@ -7,15 +8,8 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-# Supported languages
-SUPPORTED_LANGUAGES = {
-    "en": "English",
-    "es": "Español", 
-    "zh": "中文",
-    "fr": "Français",
-    "hi": "हिन्दी",
-    "ar": "العربية"
-}
+# In-memory translation cache: {("text", "target_lang"): "translated_text"}
+_translation_cache: Dict[tuple, str] = {}
 
 GOOGLE_TRANSLATE_API_URL = "https://translation.googleapis.com/language/translate/v2"
 
@@ -34,19 +28,13 @@ async def get_api_key() -> Optional[str]:
             )
             secret = result.scalar_one_or_none()
             
-            if secret:
-                logger.info(f"Found secret, is_configured={secret.is_configured}, key_value len={len(secret.key_value) if secret.key_value else 0}")
-                if secret.key_value:
-                    decrypted = decrypt_safe(secret.key_value)
-                    logger.info(f"Decrypted key length: {len(decrypted) if decrypted else 0}")
-                    return decrypted
-            else:
-                logger.warning("GOOGLE_MAPS_API_KEY not found in database")
+            if secret and secret.key_value:
+                decrypted = decrypt_safe(secret.key_value)
+                return decrypted if decrypted else None
             return None
     except Exception as e:
-        logger.error(f"Failed to get Google API key: {e}", exc_info=True)
+        logger.error(f"Failed to get Google API key: {e}")
         return None
-
 
 
 async def translate_text(
@@ -56,20 +44,18 @@ async def translate_text(
 ) -> Optional[str]:
     """
     Translate text using Google Cloud Translation API.
-    
-    Args:
-        text: Text to translate
-        source_lang: Source language code (default: en)
-        target_lang: Target language code (default: es)
-        
-    Returns:
-        Translated text or None if translation fails
+    Uses in-memory cache to minimize API usage.
     """
     if not text or not text.strip():
         return text
         
     if source_lang == target_lang:
         return text
+    
+    # Check cache first
+    cache_key = (text, target_lang)
+    if cache_key in _translation_cache:
+        return _translation_cache[cache_key]
     
     api_key = await get_api_key()
     if not api_key:
@@ -92,100 +78,55 @@ async def translate_text(
             result = response.json()
             
             if "data" in result and "translations" in result["data"]:
-                return result["data"]["translations"][0]["translatedText"]
+                translated = result["data"]["translations"][0]["translatedText"]
+                # Cache the result
+                _translation_cache[cache_key] = translated
+                logger.info(f"Translated and cached: '{text[:30]}...' -> '{translated[:30]}...'")
+                return translated
             return None
     except Exception as e:
         logger.error(f"Translation failed ({source_lang} -> {target_lang}): {e}")
         return None
 
 
-async def translate_multiple(
-    texts: List[str],
-    source_lang: str = "en",
-    target_lang: str = "es"
-) -> List[Optional[str]]:
+async def translate_service_response(service_dict: dict, target_lang: str) -> dict:
     """
-    Translate multiple texts using Google Cloud Translation.
+    Translate service response dict without modifying database.
+    Returns a new dict with translated fields.
+    """
+    if target_lang == 'en':
+        return service_dict
     
-    Args:
-        texts: List of texts to translate
-        source_lang: Source language code
-        target_lang: Target language code
-        
-    Returns:
-        List of translated texts (None for failed translations)
-    """
-    import asyncio
-    tasks = [translate_text(text, source_lang, target_lang) for text in texts]
-    return await asyncio.gather(*tasks)
+    result = dict(service_dict)
+    
+    # Translate service name
+    if result.get('service_name'):
+        translated = await translate_text(result['service_name'], 'en', target_lang)
+        if translated:
+            result['service_name'] = translated
+    
+    # Translate description
+    if result.get('description'):
+        translated = await translate_text(result['description'], 'en', target_lang)
+        if translated:
+            result['description'] = translated
+    
+    return result
 
 
 def get_supported_languages() -> Dict[str, str]:
     """Get list of supported language codes and names."""
-    return SUPPORTED_LANGUAGES.copy()
+    return {
+        "en": "English",
+        "es": "Español", 
+        "zh": "中文",
+        "fr": "Français",
+        "hi": "हिन्दी",
+        "ar": "العربية"
+    }
 
 
 async def check_translation_service() -> bool:
     """Check if Google Translate API key is configured."""
     api_key = await get_api_key()
     return api_key is not None
-
-
-async def ensure_translations(obj, db, target_lang: str):
-    """
-    Ensure translations exist in database for the given object.
-    Auto-populates missing translations on-the-fly.
-    
-    Args:
-        obj: Database object (ServiceDefinition, Department, etc.)
-        db: Database session
-        target_lang: Target language code
-    """
-    logger.info(f"ensure_translations called for {getattr(obj, 'service_name', 'unknown')} to language {target_lang}")
-    
-    if not hasattr(obj, 'translations') or not hasattr(obj, 'service_name'):
-        logger.warning(f"Object missing translations or service_name attribute")
-        return
-    
-    # Initialize translations if None
-    if obj.translations is None:
-        obj.translations = {}
-        logger.info(f"Initialized empty translations dict")
-    
-    # Check if translation already exists
-    if target_lang in obj.translations and obj.translations[target_lang]:
-        # Return translated fields
-        logger.info(f"Using existing translation from database")
-        obj.service_name = obj.translations[target_lang].get('service_name', obj.service_name)
-        if hasattr(obj, 'description'):
-            obj.description = obj.translations[target_lang].get('description', obj.description)
-        return
-    
-    # Translation missing - generate it
-    logger.info(f"Translation missing, calling Google Translate API...")
-    translated_name = await translate_text(obj.service_name, 'en', target_lang)
-    logger.info(f"Translated name: {translated_name}")
-    
-    translated_desc = None
-    if hasattr(obj, 'description') and obj.description:
-        translated_desc = await translate_text(obj.description, 'en', target_lang)
-        logger.info(f"Translated description: {translated_desc}")
-    
-    # Store in database
-    if translated_name:
-        obj.translations[target_lang] = {
-            'service_name': translated_name,
-            'description': translated_desc or obj.description
-        }
-        # Mark as modified for SQLAlchemy
-        from sqlalchemy.orm.attributes import flag_modified
-        flag_modified(obj, 'translations')
-        await db.commit()
-        logger.info(f"Saved translations to database")
-        
-        # Update current object fields
-        obj.service_name = translated_name
-        if translated_desc:
-            obj.description = translated_desc
-    else:
-        logger.error(f"Translation failed - translated_name is None")
