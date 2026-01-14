@@ -364,7 +364,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                             <Clock className="w-5 h-5 text-white/50" />
                             {t('Timeline & Status')}
                             {auditLog.length > 0 && (
-                                <span className="ml-auto px-2 py-0.5 rounded-full text-xs bg-white/10 text-white/60">{auditLog.length} events</span>
+                                <span className="ml-auto px-2 py-0.5 rounded-full text-xs bg-white/10 text-white/60">{auditLog.length} {t('events')}</span>
                             )}
                         </h3>
 
@@ -492,7 +492,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                         <Card className="p-4">
                             <h3 className="font-semibold text-white flex items-center gap-2 mb-4">
                                 <Image className="w-5 h-5 text-primary-400" />
-                                Submitted Photos ({selectedRequest.media_urls.length})
+                                {t('Submitted Photos')} ({selectedRequest.media_urls.length})
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {selectedRequest.media_urls.map((url, index) => (
@@ -520,7 +520,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                                 <div className="p-4 border-b border-white/10">
                                     <h3 className="font-semibold text-white flex items-center gap-2">
                                         <CheckCircle className="w-5 h-5 text-emerald-400" />
-                                        Completion Photo
+                                        {t('Completion Photo')}
                                     </h3>
                                 </div>
                                 <a
@@ -566,14 +566,14 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                         </div>
                         {t('Community Discussion')}
                         <span className="ml-auto text-sm font-normal text-white/40">
-                            {comments.length} comment{comments.length !== 1 ? 's' : ''}
+                            {comments.length} {comments.length !== 1 ? t('comments') : t('comment')}
                         </span>
                     </h3>
 
                     {/* Add Comment */}
                     <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
                         <Textarea
-                            placeholder="Share your thoughts or updates..."
+                            placeholder={t('Share your thoughts or updates...')}
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             rows={3}
@@ -586,7 +586,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                                 size="sm"
                             >
                                 <Send className="w-4 h-4 mr-2" />
-                                {isSubmittingComment ? 'Posting...' : 'Post Comment'}
+                                {isSubmittingComment ? t('Posting...') : t('Post Comment')}
                             </Button>
                         </div>
                     </div>
@@ -600,8 +600,8 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                         ) : comments.length === 0 ? (
                             <div className="text-center py-8">
                                 <MessageSquare className="w-12 h-12 mx-auto mb-3 text-white/60" />
-                                <p className="text-white/70">No comments yet</p>
-                                <p className="text-white/60 text-sm">Be the first to share an update!</p>
+                                <p className="text-white/70">{t('No comments yet')}</p>
+                                <p className="text-white/60 text-sm">{t('Be the first to share an update!')}</p>
                             </div>
                         ) : (
                             comments.map((comment, index) => {
@@ -788,7 +788,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                                         {(request.photo_count || 0) > 0 && (
                                             <div className="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-primary-500/20 flex flex-col items-center justify-center">
                                                 <Image className="w-8 h-8 text-primary-400" />
-                                                <span className="text-primary-300 text-xs mt-1">{request.photo_count} photo{request.photo_count !== 1 ? 's' : ''}</span>
+                                                <span className="text-primary-300 text-xs mt-1">{request.photo_count} {request.photo_count !== 1 ? t('photos') : t('photo')}</span>
                                             </div>
                                         )}
 

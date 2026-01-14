@@ -159,6 +159,25 @@ const UI_STRINGS = [
     // Translation disclaimer
     'Translated by Google Translate',
     'This page has been automatically translated and may contain inaccuracies. User-submitted content may not reflect the original meaning.',
+
+    // Additional missing strings
+    'Back to Home',
+    'Posting...',
+    'Assigned',
+    'Public Works',
+    'Filters',
+    'Request Status',
+    'Categories',
+    'Departments',
+    'Assigned Staff',
+    'Priority Level',
+    'Map',
+    'Satellite',
+    'events',
+    'photo',
+    'photos',
+    'comment',
+    'comments',
 ];
 
 interface TranslationProviderProps {
