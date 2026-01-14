@@ -209,6 +209,8 @@ const UI_STRINGS = [
     'Staff, address, description...',
     'Filter by assigned staff, address, or description',
     'Search services...',
+    'Unassigned',
+    'View Full Details',
 ];
 
 interface TranslationProviderProps {

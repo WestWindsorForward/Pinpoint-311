@@ -311,6 +311,7 @@ export default function StaffDashboardMap({
 
             marker.addListener('click', () => {
                 if (infoWindowRef.current) {
+                    const viewDetailsText = t('View Full Details');
                     infoWindowRef.current.setContent(`
                         <div style="padding: 16px; max-width: 300px; font-family: system-ui, -apple-system, sans-serif;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -328,7 +329,7 @@ export default function StaffDashboardMap({
                                 onmouseover="this.style.transform='scale(1.02)'"
                                 onmouseout="this.style.transform='scale(1)'"
                             >
-                                View Full Details →
+                                ${viewDetailsText} →
                             </button>
                         </div>
                     `);
@@ -722,7 +723,7 @@ export default function StaffDashboardMap({
                             onClick={() => toggleSection('staff')}
                             className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
                         >
-                            <span className="text-sm font-semibold text-white">{t(' Staff')}</span>
+                            <span className="text-sm font-semibold text-white">{t('Assigned Staff')}</span>
                             {expandedSections.staff ? (
                                 <ChevronDown className="w-4 h-4 text-white/50" />
                             ) : (
@@ -736,14 +737,14 @@ export default function StaffDashboardMap({
                                         onClick={() => toggleAllStaff(true)}
                                         className="text-xs text-primary-400 hover:text-primary-300 font-medium"
                                     >
-                                        Select All
+                                        {t('Select All')}
                                     </button>
                                     <span className="text-white/20">|</span>
                                     <button
                                         onClick={() => toggleAllStaff(false)}
                                         className="text-xs text-primary-400 hover:text-primary-300 font-medium"
                                     >
-                                        Clear All
+                                        {t('Clear All')}
                                     </button>
                                 </div>
                                 <label className="flex items-center gap-3 cursor-pointer group">
@@ -754,7 +755,7 @@ export default function StaffDashboardMap({
                                         className="w-5 h-5 rounded border-2 border-white/20 bg-transparent text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
                                     />
                                     <span className="text-sm text-white/70 truncate group-hover:text-white transition-colors italic">
-                                        Unassigned
+                                        {t('Unassigned')}
                                     </span>
                                 </label>
                                 {users.filter(u => u.role === 'staff' || u.role === 'admin').map(user => (
