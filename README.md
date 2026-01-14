@@ -28,6 +28,7 @@ Beyond the UI, it features a sophisticated **AI & Geospatial Engine** that autom
 ### 🧠 Advanced Intelligence
 - **Information Redaction**: Automatically strips PII (names, phones, emails) from public request logs.
 - **Visual Analysis**: Uses **Gemini 3.0 Flash** via Google Cloud **Vertex AI** to "see" uploaded photos and categorize hazards (e.g., "pothole caused by water damage").
+- **Multilingual AI Analysis**: When residents submit requests in non-English languages, the AI automatically provides a literal English translation first before performing its analysis, ensuring staff can understand all submissions regardless of language.
 - **Priority Scoring (Human-in-the-Loop)**: AI suggests a 1-10 urgency score, but scores are **never automatically saved**. Staff must explicitly accept or override the AI suggestion, ensuring human accountability for all priority decisions.
 
 ### 🗺️ Geospatial Power
