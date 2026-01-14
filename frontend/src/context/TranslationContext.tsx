@@ -102,8 +102,13 @@ const UI_STRINGS = [
     'Free & Open Source Municipal Platform',
     'Powered by',
 
-    // Tracking
+    // Tracking page
+    'Track Requests',
     'Track Your Request',
+    'View the status of community-reported issues',
+    'Back to all requests',
+    'Timeline & Status',
+    'Community Discussion',
     'Enter your Request ID or Email',
     'Request ID or Email',
     'Track',
@@ -118,8 +123,20 @@ const UI_STRINGS = [
     'Timeline',
     'Comments',
     'Add a Comment',
-    'Send',
+    'Post Comment',
+    'Share',
+    'Link Copied!',
+    'No comments yet',
+    'Be the first to share an update!',
     'No requests found',
+    'All Requests',
+    'Open',
+    'Try adjusting your search or filters',
+    'Search by ID, category, or address...',
+    'Click anywhere to close',
+    'Submitted Photos',
+    'Completion Photo',
+    'Share your thoughts or updates...',
     'Enter your request ID or email to track your submission',
 
     // Misc

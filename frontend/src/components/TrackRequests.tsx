@@ -22,6 +22,7 @@ import {
 import { Card, Input, Button, Textarea } from './ui';
 import { api } from '../services/api';
 import { PublicServiceRequest, RequestComment, AuditLogEntry } from '../types';
+import { useTranslation } from '../context/TranslationContext';
 
 type StatusFilter = 'all' | 'open' | 'in_progress' | 'closed';
 
@@ -56,6 +57,7 @@ const statusColors: Record<string, { bg: string; text: string; border: string; l
 };
 
 export default function TrackRequests({ initialRequestId, selectedRequestId, onRequestSelect }: TrackRequestsProps) {
+    const { t } = useTranslation();
     const [requests, setRequests] = useState<PublicServiceRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -250,7 +252,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                         className="flex items-center gap-2 text-white/60 hover:text-white transition-colors group"
                     >
                         <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                        <span className="font-medium">Back to all requests</span>
+                        <span className="font-medium">{t('Back to all requests')}</span>
                     </button>
 
                     <button
@@ -335,7 +337,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                                     <div className="p-2 rounded-lg bg-primary-500/20">
                                         <MapPin className="w-5 h-5 text-primary-400" />
                                     </div>
-                                    Location
+                                    {t('Location')}
                                 </h3>
                                 <p className="text-white/70">{selectedRequest.address}</p>
                             </div>
@@ -359,7 +361,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                     <Card className="p-5">
                         <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                             <Clock className="w-5 h-5 text-white/50" />
-                            Timeline & Status
+                            {t('Timeline & Status')}
                             {auditLog.length > 0 && (
                                 <span className="ml-auto px-2 py-0.5 rounded-full text-xs bg-white/10 text-white/60">{auditLog.length} events</span>
                             )}
@@ -545,7 +547,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                         <div className="p-2 rounded-lg bg-white/10">
                             <ExternalLink className="w-5 h-5 text-white/70" />
                         </div>
-                        Description
+                        {t('Description')}
                     </h3>
                     <p className="text-white/80 text-lg leading-relaxed whitespace-pre-wrap">
                         {selectedRequest.description}
@@ -558,7 +560,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                         <div className="p-2 rounded-lg bg-primary-500/20">
                             <MessageSquare className="w-5 h-5 text-primary-400" />
                         </div>
-                        Community Discussion
+                        {t('Community Discussion')}
                         <span className="ml-auto text-sm font-normal text-white/40">
                             {comments.length} comment{comments.length !== 1 ? 's' : ''}
                         </span>
@@ -686,8 +688,8 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
         <div className="min-h-screen">
             {/* Header */}
             <div className="mb-8">
-                <h2 className="text-3xl font-bold text-white mb-2">Track Requests</h2>
-                <p className="text-white/60 text-lg">View the status of community-reported issues</p>
+                <h2 className="text-3xl font-bold text-white mb-2">{t('Track Requests')}</h2>
+                <p className="text-white/60 text-lg">{t('View the status of community-reported issues')}</p>
             </div>
 
             {/* Filters */}
