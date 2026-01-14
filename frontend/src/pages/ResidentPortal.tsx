@@ -28,6 +28,7 @@ import TrackRequests from '../components/TrackRequests';
 import LanguageSelector from '../components/LanguageSelector';
 import StaffDashboardMap from '../components/StaffDashboardMap';
 import { useSettings } from '../context/SettingsContext';
+import { useTranslation } from '../context/TranslationContext';
 import { api, MapLayer } from '../services/api';
 import { ServiceDefinition, ServiceRequestCreate, ServiceRequest, Department, User } from '../types';
 import { usePageNavigation } from '../hooks/usePageNavigation';
@@ -47,8 +48,10 @@ const iconMap: Record<string, React.FC<{ className?: string }>> = {
 
 type Step = 'categories' | 'form' | 'success';
 
+
 export default function ResidentPortal() {
     const { settings } = useSettings();
+    const { t } = useTranslation();
     const { requestId: urlRequestId } = useParams<{ requestId?: string }>();
 
     // Initialize state based on URL hash (not pathname)
@@ -442,7 +445,7 @@ export default function ResidentPortal() {
                         to="/login"
                         className="text-white/60 hover:text-white text-sm font-medium transition-colors"
                     >
-                        Staff Login
+                        {t('Staff Login')}
                     </Link>
                 </div>
             </nav>
@@ -509,7 +512,7 @@ export default function ResidentPortal() {
                                         transition={{ delay: 0.2 }}
                                         className="text-4xl md:text-5xl lg:text-6xl font-bold text-gradient"
                                     >
-                                        {settings?.hero_text || 'How can we help?'}
+                                        {t(settings?.hero_text || 'How can we help?')}
                                     </motion.h1>
 
                                     <motion.p
@@ -518,8 +521,7 @@ export default function ResidentPortal() {
                                         transition={{ delay: 0.3 }}
                                         className="text-lg text-white/60 max-w-xl mx-auto"
                                     >
-                                        Report issues, request services, and help make our community better.
-                                        Select a category below to get started.
+                                        {t('Report issues, request services, and help make our community better. Select a category below to get started.')}
                                     </motion.p>
 
                                     {/* Search */}
@@ -530,7 +532,7 @@ export default function ResidentPortal() {
                                         className="max-w-md mx-auto"
                                     >
                                         <div className="relative">
-                                            <label htmlFor="service-search" className="sr-only">Search services</label>
+                                            <label htmlFor="service-search" className="sr-only">{t('Search services...')}</label>
                                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" aria-hidden="true" />
                                             <input
                                                 id="service-search"
@@ -662,7 +664,7 @@ export default function ResidentPortal() {
                                         className="px-8 py-4"
                                     >
                                         <ClipboardList className="w-5 h-5 mr-2" />
-                                        Track My Requests
+                                        {t('Track My Requests')}
                                     </Button>
                                 </motion.div>
                             </motion.div>

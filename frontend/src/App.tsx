@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
+import { TranslationProvider } from './context/TranslationContext';
 import ResidentPortal from './pages/ResidentPortal';
 import StaffDashboard from './pages/StaffDashboard';
 import AdminConsole from './pages/AdminConsole';
@@ -89,9 +90,11 @@ export default function App() {
         <BrowserRouter>
             <AccessibilityProvider>
                 <SettingsProvider>
-                    <AuthProvider>
-                        <AppRoutes />
-                    </AuthProvider>
+                    <TranslationProvider>
+                        <AuthProvider>
+                            <AppRoutes />
+                        </AuthProvider>
+                    </TranslationProvider>
                 </SettingsProvider>
             </AccessibilityProvider>
         </BrowserRouter>

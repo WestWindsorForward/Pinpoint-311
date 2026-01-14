@@ -1349,3 +1349,29 @@ ación de Baches", "description": "Reportar daños en carreteras"},
     )
     
     return {"translations": translations}
+
+
+@router.post("/translate/batch")
+async def batch_translate(
+    request: Request
+):
+    """
+    Batch translate multiple UI strings (public endpoint).
+    Used by frontend to translate static UI text.
+    """
+    from app.services.translation import translate_text
+    
+    data = await request.json()
+    texts = data.get("texts", [])
+    target_lang = data.get("target_lang", "es")
+    
+    if not texts:
+        return {"translations": []}
+    
+    # Translate all texts
+    translations = []
+    for text in texts:
+        translated = await translate_text(text, "en", target_lang)
+        translations.append(translated or text)
+    
+    return {"translations": translations}

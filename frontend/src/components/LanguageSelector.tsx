@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Globe, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from '../context/TranslationContext';
 
 const LANGUAGES = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -13,18 +14,13 @@ const LANGUAGES = [
 
 export default function LanguageSelector() {
     const [isOpen, setIsOpen] = useState(false);
-    const [currentLang, setCurrentLang] = useState(() => {
-        return localStorage.getItem('preferredLanguage') || 'en';
-    });
+    const { language, setLanguage, isLoading } = useTranslation();
 
-    const currentLanguage = LANGUAGES.find(lang => lang.code === currentLang) || LANGUAGES[0];
+    const currentLanguage = LANGUAGES.find(lang => lang.code === language) || LANGUAGES[0];
 
     const changeLanguage = (code: string) => {
-        setCurrentLang(code);
-        localStorage.setItem('preferredLanguage', code);
+        setLanguage(code);
         setIsOpen(false);
-        // Reload page to fetch translated content from API
-        window.location.reload();
     };
 
     return (
@@ -33,8 +29,9 @@ export default function LanguageSelector() {
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
                 aria-label="Select language"
+                disabled={isLoading}
             >
-                <Globe className="w-5 h-5" />
+                <Globe className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">{currentLanguage.flag} {currentLanguage.name}</span>
                 <span className="sm:hidden">{currentLanguage.flag}</span>
             </button>
@@ -55,18 +52,18 @@ export default function LanguageSelector() {
                             exit={{ opacity: 0, y: -10 }}
                             className="absolute right-0 mt-2 w-56 rounded-xl glass-card p-2 shadow-xl z-50"
                         >
-                            {LANGUAGES.map((language) => (
+                            {LANGUAGES.map((lang) => (
                                 <button
-                                    key={language.code}
-                                    onClick={() => changeLanguage(language.code)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${currentLang === language.code
+                                    key={lang.code}
+                                    onClick={() => changeLanguage(lang.code)}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${language === lang.code
                                             ? 'bg-primary-500/30 text-white'
                                             : 'text-white/70 hover:bg-white/10 hover:text-white'
                                         }`}
                                 >
-                                    <span className="text-2xl">{language.flag}</span>
-                                    <span className="flex-1 text-left font-medium">{language.name}</span>
-                                    {currentLang === language.code && (
+                                    <span className="text-2xl">{lang.flag}</span>
+                                    <span className="flex-1 text-left font-medium">{lang.name}</span>
+                                    {language === lang.code && (
                                         <Check className="w-5 h-5 text-primary-400" />
                                     )}
                                 </button>
