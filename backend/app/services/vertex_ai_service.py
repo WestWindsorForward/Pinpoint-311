@@ -134,6 +134,8 @@ def build_analysis_prompt(
 
 ## Analysis Required
 
+**IMPORTANT**: If the text is not in English, provide a literal English translation first.
+
 Analyze the provided description, photos, and deep context to provide a professional triage assessment.
 
 ### Diagnostic Instructions:
