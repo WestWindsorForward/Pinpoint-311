@@ -33,32 +33,33 @@ interface TrackRequestsProps {
     onRequestSelect?: (requestId: string | null) => void;  // Callback for when a request is selected/deselected
 }
 
-const statusColors: Record<string, { bg: string; text: string; border: string; label: string; icon: React.ReactNode }> = {
+const getStatusColors = (t: (text: string) => string): Record<string, { bg: string; text: string; border: string; label: string; icon: React.ReactNode }> => ({
     open: {
         bg: 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20',
         text: 'text-amber-200',  // Was 300, now 200 for better contrast
         border: 'border-amber-500/30',
-        label: 'Open',
+        label: t('Open'),
         icon: <AlertCircle className="w-4 h-4" />
     },
     in_progress: {
         bg: 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20',
         text: 'text-blue-200',  // Was 300, now 200 for better contrast
         border: 'border-blue-500/30',
-        label: 'In Progress',
+        label: t('In Progress'),
         icon: <Clock className="w-4 h-4" />
     },
     closed: {
         bg: 'bg-gradient-to-r from-emerald-500/20 to-green-500/20',
         text: 'text-emerald-200',  // Was 300, now 200 for better contrast
         border: 'border-emerald-500/30',
-        label: 'Resolved',
+        label: t('Resolved'),
         icon: <CheckCircle className="w-4 h-4" />
     },
-};
+});
 
 export default function TrackRequests({ initialRequestId, selectedRequestId, onRequestSelect }: TrackRequestsProps) {
     const { t } = useTranslation();
+    const statusColors = getStatusColors(t);
     const [requests, setRequests] = useState<PublicServiceRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -394,7 +395,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                                             let actionConfig: { color: string; text: string };
 
                                             if (entry.action === 'submitted') {
-                                                actionConfig = { color: 'bg-emerald-500', text: 'Request submitted' };
+                                                actionConfig = { color: 'bg-emerald-500', text: t('Request submitted') };
                                             } else if (entry.action === 'status_change') {
                                                 const newStatus = entry.new_value || 'unknown';
                                                 const oldStatus = entry.old_value || 'unknown';
@@ -416,11 +417,11 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                                                     text: statusText
                                                 };
                                             } else if (entry.action === 'department_assigned') {
-                                                actionConfig = { color: 'bg-purple-500', text: `Assigned to ${entry.new_value}` };
+                                                actionConfig = { color: 'bg-purple-500', text: `${t('Assigned to')} ${entry.new_value}` };
                                             } else if (entry.action === 'staff_assigned') {
-                                                actionConfig = { color: 'bg-indigo-500', text: 'Assigned to staff' };
+                                                actionConfig = { color: 'bg-indigo-500', text: t('Assigned to staff') };
                                             } else if (entry.action === 'comment_added') {
-                                                actionConfig = { color: 'bg-teal-500', text: 'Comment added' };
+                                                actionConfig = { color: 'bg-teal-500', text: t('Comment added') };
                                             } else {
                                                 actionConfig = { color: 'bg-gray-500', text: entry.action };
                                             }
@@ -449,7 +450,7 @@ export default function TrackRequests({ initialRequestId, selectedRequestId, onR
                                             <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm ring-2 ring-white/30" />
                                             <div className="flex-1 min-w-0 -mt-0.5">
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-white/90 text-sm font-medium">Request submitted</span>
+                                                    <span className="text-white/90 text-sm font-medium">{t('Request submitted')}</span>
                                                     <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-300">Resident</span>
                                                 </div>
                                                 <div className="text-white/40 text-xs mt-0.5">{new Date(selectedRequest.requested_datetime).toLocaleString()}</div>

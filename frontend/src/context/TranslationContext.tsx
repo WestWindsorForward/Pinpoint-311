@@ -178,6 +178,20 @@ const UI_STRINGS = [
     'photos',
     'comment',
     'comments',
+
+    // Timeline events
+    'Request submitted',
+    'Assigned to',
+    'Closed',
+    'Reopened',
+    'Marked as In Progress',
+    'Reverted to Open',
+    'Status set to Open',
+    'Reopened as In Progress',
+    'Closed - Resolved',
+    'Closed - No Action Needed',
+    'Closed - Third Party',
+    'Comment added',
 ];
 
 interface TranslationProviderProps {
